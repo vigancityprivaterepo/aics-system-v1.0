@@ -1,0 +1,511 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum AssistanceType {
+  medicine
+  burial
+  hospital
+  medical
+  eyeglass
+  plain
+}
+
+enum CaseStatus {
+  intake
+  requirements
+  encoding
+  for_review
+  recommending_approval
+  for_approval
+  approved
+  released
+  rejected
+}
+
+enum UserRole {
+  employee
+  admin
+  city_health_office
+}
+
+enum ApprovalStage {
+  for_review
+  recommending_approval
+  for_approval
+}
+
+enum ApprovalAction {
+  approved
+  rejected
+}
+
+enum ClientCategory {
+  walk_in
+  referred
+  rescued
+}
+
+model User {
+  id           String          @id @default(uuid()) @db.Uuid
+  name         String          @db.VarChar(200)
+  username     String?         @unique @map("username") @db.VarChar(50)
+  employeeId   String          @unique @map("employee_id") @db.VarChar(50)
+  role         UserRole
+  approvalLevel String         @default("none") @map("approval_level") @db.VarChar(100)
+  signatureParam String?        @unique @map("signature_param") @db.VarChar(50)
+  position     String?         @db.VarChar(200)
+  department   String?         @db.VarChar(200)
+  contactNumber String?        @map("contact_number") @db.VarChar(30)
+  officeAddress String?        @map("office_address") @db.VarChar(300)
+  photoUrl     String?         @map("photo_url")
+  email        String          @unique @db.VarChar(200)
+  passwordHash String          @map("password_hash")
+  eSignatureUrl String?        @map("e_signature_url")
+  eSignatureUploadedAt DateTime? @map("e_signature_uploaded_at") @db.Timestamptz(6)
+  isActive     Boolean         @default(true) @map("is_active")
+  createdAt    DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
+  cases        Case[]
+  statusLogs   CaseStatusLog[] @relation("changed_by_user")
+  caseApprovals CaseApproval[] @relation("case_approval_actor")
+  reviewedBySettings SystemSettings[] @relation("settings_reviewed_by_user")
+  recommendingSettings SystemSettings[] @relation("settings_recommending_user")
+  approvedBySettings SystemSettings[] @relation("settings_approved_by_user")
+
+  @@map("users")
+}
+
+model Client {
+  id             String         @id @default(uuid()) @db.Uuid
+  applicantId    String?        @unique @map("applicant_id") @db.Uuid
+  mergedIntoClientId String?    @map("merged_into_client_id") @db.Uuid
+  mergedAt       DateTime?      @map("merged_at") @db.Timestamptz(6)
+  mergedByUserId String?        @map("merged_by_user_id") @db.Uuid
+  caseNumber     String         @unique @map("case_number") @db.VarChar(20)
+  lastName       String         @map("last_name") @db.VarChar(100)
+  firstName      String         @map("first_name") @db.VarChar(100)
+  middleName     String?        @map("middle_name") @db.VarChar(100)
+  dateOfBirth    DateTime?      @map("date_of_birth") @db.Date
+  sex            String?        @db.VarChar(10)
+  civilStatus    String?        @map("civil_status") @db.VarChar(20)
+  barangay       String?        @db.VarChar(100)
+  municipality   String?        @db.VarChar(100)
+  province       String?        @db.VarChar(100)
+  region         String?        @db.VarChar(50)
+  contactNumber  String?        @map("contact_number") @db.VarChar(20)
+  occupation     String?        @db.VarChar(200)
+  religion       String?        @db.VarChar(100)
+  is4ps          Boolean        @default(false) @map("is_4ps")
+  isPwd          Boolean        @default(false) @map("is_pwd")
+  isSenior       Boolean        @default(false) @map("is_senior")
+  clientCategory ClientCategory @default(walk_in) @map("client_category")
+  referralSource String?        @map("referral_source") @db.VarChar(200)
+  photoUrl       String?        @map("photo_url")
+  createdAt      DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+  applicant      Applicant?     @relation(fields: [applicantId], references: [id], onDelete: SetNull)
+  mergedIntoClient Client?      @relation("client_merge_target", fields: [mergedIntoClientId], references: [id], onDelete: SetNull)
+  mergedClients  Client[]       @relation("client_merge_target")
+  cases          Case[]
+
+  @@index([lastName, firstName, dateOfBirth])
+  @@index([mergedIntoClientId])
+  @@map("clients")
+}
+
+model Case {
+  id                 String            @id @default(uuid()) @db.Uuid
+  clientId           String            @map("client_id") @db.Uuid
+  caseNumber         String?           @unique @map("case_number") @db.VarChar(20)
+  assistanceType     AssistanceType    @map("assistance_type")
+  status             CaseStatus        @default(intake)
+  socialWorkerId     String?           @map("social_worker_id") @db.Uuid
+  dateOfAssessment   DateTime?         @map("date_of_assessment") @db.Date
+  socialWorkerName   String?           @map("social_worker_name") @db.VarChar(200)
+  socialWorkerEmpId  String?           @map("social_worker_emp_id") @db.VarChar(100)
+  presentingProblem  String?           @map("presenting_problem")
+  familyComposition  Json?             @map("family_composition")
+  backgroundOfProblem String?          @map("background_of_problem")
+  assessment         String?
+  recommendation     String?
+  amount             Decimal?          @db.Decimal(12, 2)
+  hospitalClinic     String?           @map("hospital_clinic") @db.VarChar(200)
+  remarks            String?
+  auditFlags         Json?             @map("audit_flags")
+  createdAt          DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  client             Client            @relation(fields: [clientId], references: [id])
+  socialWorker       User?             @relation(fields: [socialWorkerId], references: [id])
+  requirements       CaseRequirement[]
+  medicines          CaseMedicine[]
+  burialDetails      BurialDetail?
+  hospitalDetails    HospitalDetail?
+  medicalDetails     MedicalDetail?
+  eyeglassDetails    EyeglassDetail?
+  plainDetails       PlainDetail?
+  applicantApplication ApplicantApplication?
+  statusLogs         CaseStatusLog[]
+  approvals          CaseApproval[]
+
+  @@index([assistanceType, status])
+  @@index([createdAt])
+  @@map("cases")
+}
+
+model CaseRequirement {
+  id              String   @id @default(uuid()) @db.Uuid
+  caseId          String   @map("case_id") @db.Uuid
+  requirementName String   @map("requirement_name") @db.VarChar(100)
+  isSubmitted     Boolean  @default(false) @map("is_submitted")
+  notes           String?
+  submittedAt     DateTime? @map("submitted_at") @db.Timestamptz(6)
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  case            Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@unique([caseId, requirementName])
+  @@map("case_requirements")
+}
+
+model MedicineItem {
+  id          String        @id @default(uuid()) @db.Uuid
+  genericName String        @map("generic_name") @db.VarChar(200)
+  brandName   String?       @map("brand_name") @db.VarChar(200)
+  unit        String?       @db.VarChar(50)
+  strength    String?       @db.VarChar(50)
+  category    String?       @db.VarChar(100)
+  unitPrice   Decimal       @map("unit_price") @db.Decimal(10, 2)
+  createdAt   DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+  caseMedicines CaseMedicine[]
+
+  @@index([genericName])
+  @@map("medicine_items")
+}
+
+model HospitalFacility {
+  id           String   @id @default(uuid()) @db.Uuid
+  province     String   @db.VarChar(100)
+  municipality String   @db.VarChar(100)
+  facilityName String   @map("facility_name") @db.VarChar(300)
+  facilityType String   @map("facility_type") @db.VarChar(100)
+  fullAddress  String?  @map("full_address") @db.VarChar(500)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([facilityName])
+  @@index([province, municipality])
+  @@map("hospital_facilities")
+}
+
+model CaseMedicine {
+  id         String   @id @default(uuid()) @db.Uuid
+  caseId      String   @map("case_id") @db.Uuid
+  medicineId  String?  @map("medicine_id") @db.Uuid
+  medicineName String  @map("medicine_name") @db.VarChar(200)
+  quantity    Decimal  @db.Decimal(10, 2)
+  unit        String?  @db.VarChar(50)
+  unitPrice   Decimal  @map("unit_price") @db.Decimal(10, 2)
+  totalPrice  Decimal  @map("total_price") @db.Decimal(10, 2)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  case        Case      @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  medicine    MedicineItem? @relation(fields: [medicineId], references: [id])
+
+  @@map("case_medicines")
+}
+
+model BurialDetail {
+  id                  String   @id @default(uuid()) @db.Uuid
+  caseId               String   @unique @map("case_id") @db.Uuid
+  deceasedName         String?  @map("deceased_name") @db.VarChar(200)
+  deceasedAddress      String?  @map("deceased_address") @db.VarChar(300)
+  deceasedAge          Int?     @map("deceased_age")
+  deceasedOccupation   String?  @map("deceased_occupation") @db.VarChar(200)
+  deceasedCivilStatus  String?  @map("deceased_civil_status") @db.VarChar(50)
+  deceasedSex          String?  @map("deceased_sex") @db.VarChar(20)
+  dateOfDeath          DateTime? @map("date_of_death") @db.Date
+  causeOfDeath         String?  @map("cause_of_death")
+  funeralHome          String?  @map("funeral_home") @db.VarChar(200)
+  funeralHomeOwner     String?  @map("funeral_home_owner") @db.VarChar(200)
+  funeralOwnerAddress  String?  @map("funeral_owner_address") @db.VarChar(300)
+  typeOfBill           String?  @map("type_of_bill") @db.VarChar(200)
+  intermentPlace       String?  @map("interment_place") @db.VarChar(300)
+  conformeName         String?  @map("conforme_name") @db.VarChar(200)
+  conformeRelationship String?  @map("conforme_relationship") @db.VarChar(100)
+  guaranteeLetterUrl   String?  @map("guarantee_letter_url")
+  signedGlUrl          String?  @map("signed_gl_url")
+  glUploadedAt         DateTime? @map("gl_uploaded_at") @db.Timestamptz(6)
+  createdAt            DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  case                 Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@map("burial_details")
+}
+
+model FuneralHome {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String   @db.VarChar(200)
+  ownerName String?  @map("owner_name") @db.VarChar(200)
+  address   String?  @db.VarChar(300)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("funeral_homes")
+}
+
+model HospitalDetail {
+  id                   String    @id @default(uuid()) @db.Uuid
+  caseId               String    @unique @map("case_id") @db.Uuid
+  templateType         String    @default("personal") @map("template_type") @db.VarChar(20)
+  patientName          String?   @map("patient_name") @db.VarChar(200)
+  hospitalName         String?   @map("hospital_name") @db.VarChar(200)
+  hospitalAddress      String?   @map("hospital_address")
+  doctorName           String?   @map("doctor_name") @db.VarChar(200)
+  mdPosition           String?   @map("md_position") @db.VarChar(200)
+  admissionDate        DateTime? @map("admission_date") @db.Date
+  diagnosis            String?
+  typeOfBill           String?   @map("type_of_bill") @db.VarChar(200)
+  conformeName         String?   @map("conforme_name") @db.VarChar(200)
+  conformeRelationship String?   @map("conforme_relationship") @db.VarChar(100)
+  guaranteeLetterUrl   String?   @map("guarantee_letter_url")
+  signedGlUrl          String?   @map("signed_gl_url")
+  glUploadedAt         DateTime? @map("gl_uploaded_at") @db.Timestamptz(6)
+  createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  case                 Case      @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@map("hospital_details")
+}
+
+model MedicalDetail {
+  id                   String    @id @default(uuid()) @db.Uuid
+  caseId               String    @unique @map("case_id") @db.Uuid
+  templateType         String    @default("personal") @map("template_type") @db.VarChar(20)
+  clinicName           String?   @map("clinic_name") @db.VarChar(200)
+  clinicAddress        String?   @map("clinic_address")
+  doctorName           String?   @map("doctor_name") @db.VarChar(200)
+  mdPosition           String?   @map("md_position") @db.VarChar(200)
+  consultationDate     DateTime? @map("consultation_date") @db.Date
+  medicalType          String?   @map("medical_type") @db.VarChar(200)
+  diagnosedType        String?   @map("diagnosed_type") @db.VarChar(200)
+  operationType        String?   @map("operation_type") @db.VarChar(200)
+  diagnosis            String?
+  typeOfBill           String?   @map("type_of_bill") @db.VarChar(200)
+  conformeName         String?   @map("conforme_name") @db.VarChar(200)
+  conformeRelationship String?   @map("conforme_relationship") @db.VarChar(100)
+  guaranteeLetterUrl   String?   @map("guarantee_letter_url")
+  signedGlUrl          String?   @map("signed_gl_url")
+  glUploadedAt         DateTime? @map("gl_uploaded_at") @db.Timestamptz(6)
+  createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  case                 Case      @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@map("medical_details")
+}
+
+model EyeglassDetail {
+  id                   String    @id @default(uuid()) @db.Uuid
+  caseId               String    @unique @map("case_id") @db.Uuid
+  doctorName           String?   @map("doctor_name") @db.VarChar(200)
+  clinicName           String?   @map("clinic_name") @db.VarChar(200)
+  clinicAddress        String?   @map("clinic_address")
+  conformeName         String?   @map("conforme_name") @db.VarChar(200)
+  conformeRelationship String?   @map("conforme_relationship") @db.VarChar(100)
+  guaranteeLetterUrl   String?   @map("guarantee_letter_url")
+  signedGlUrl          String?   @map("signed_gl_url")
+  glUploadedAt         DateTime? @map("gl_uploaded_at") @db.Timestamptz(6)
+  createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  case                 Case      @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@map("eyeglass_details")
+}
+
+model PlainDetail {
+  id                 String   @id @default(uuid()) @db.Uuid
+  caseId             String   @unique @map("case_id") @db.Uuid
+  natureOfAssistance String?  @map("nature_of_assistance")
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  case               Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@map("plain_details")
+}
+
+model SystemSettings {
+  id             String   @id @default("singleton")
+  locationCode   String   @default("VGN") @map("location_code") @db.VarChar(10)
+  agencyCode     String   @default("AICS") @map("agency_code") @db.VarChar(10)
+  medicinePrefix String   @default("MD") @map("medicine_prefix") @db.VarChar(10)
+  burialPrefix   String   @default("BUR") @map("burial_prefix") @db.VarChar(10)
+  hospitalPrefix String   @default("HSP") @map("hospital_prefix") @db.VarChar(10)
+  medicalPrefix  String   @default("MED") @map("medical_prefix") @db.VarChar(10)
+  eyeglassPrefix String   @default("EYE") @map("eyeglass_prefix") @db.VarChar(10)
+  plainPrefix    String   @default("PLN") @map("plain_prefix") @db.VarChar(10)
+  clientPrefix   String   @default("CID") @map("client_prefix") @db.VarChar(10)
+  sequenceDigits Int      @default(3) @map("sequence_digits")
+  reviewedByUserId String? @map("reviewed_by_user_id") @db.Uuid
+  recommendingUserId String? @map("recommending_user_id") @db.Uuid
+  approvedByUserId String? @map("approved_by_user_id") @db.Uuid
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  reviewedByUser User? @relation("settings_reviewed_by_user", fields: [reviewedByUserId], references: [id])
+  recommendingUser User? @relation("settings_recommending_user", fields: [recommendingUserId], references: [id])
+  approvedByUser User? @relation("settings_approved_by_user", fields: [approvedByUserId], references: [id])
+
+  @@map("system_settings")
+}
+
+model CaseApproval {
+  id                  String         @id @default(uuid()) @db.Uuid
+  caseId              String         @map("case_id") @db.Uuid
+  stage               ApprovalStage
+  actedByUserId       String?        @map("acted_by_user_id") @db.Uuid
+  actedByName         String         @map("acted_by_name") @db.VarChar(200)
+  actedByTitle        String?        @map("acted_by_title") @db.VarChar(120)
+  signatureUrlSnapshot String?       @map("signature_url_snapshot")
+  actedAt             DateTime       @map("acted_at") @db.Timestamptz(6)
+  action              ApprovalAction
+  notes               String?
+  createdAt           DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  case                Case           @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  actedByUser         User?          @relation("case_approval_actor", fields: [actedByUserId], references: [id])
+
+  @@unique([caseId, stage])
+  @@index([caseId, actedAt])
+  @@map("case_approvals")
+}
+
+model Applicant {
+  id              String    @id @default(uuid()) @db.Uuid
+  email           String    @unique @db.VarChar(200)
+  mobileNumber    String?   @map("mobile_number") @db.VarChar(20)
+  passwordHash    String    @map("password_hash")
+  isVerified      Boolean   @default(false) @map("is_verified")
+  otpHash         String?   @map("otp_hash")
+  otpExpiresAt    DateTime? @map("otp_expires_at") @db.Timestamptz(6)
+  otpAttempts     Int       @default(0) @map("otp_attempts")
+  firstName       String    @map("first_name") @db.VarChar(100)
+  lastName        String    @map("last_name") @db.VarChar(100)
+  middleName      String?   @map("middle_name") @db.VarChar(100)
+  dateOfBirth     DateTime? @map("date_of_birth") @db.Date
+  sex             String?   @db.VarChar(10)
+  civilStatus     String?   @map("civil_status") @db.VarChar(20)
+  barangay        String?   @db.VarChar(100)
+  municipality    String?   @db.VarChar(100)
+  province        String?   @db.VarChar(100)
+  region          String?   @db.VarChar(50)
+  occupation      String?   @db.VarChar(200)
+  religion        String?   @db.VarChar(100)
+  is4ps           Boolean   @default(false) @map("is_4ps")
+  isPwd           Boolean   @default(false) @map("is_pwd")
+  isSenior        Boolean   @default(false) @map("is_senior")
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  client          Client?
+  applications    ApplicantApplication[]
+
+  @@index([email])
+  @@map("applicants")
+}
+
+enum ApplicantApplicationStatus {
+  draft
+  submitted
+  under_review
+  resubmission_required
+  approved
+  disapproved
+  released
+}
+
+model ApplicantApplication {
+  id                 String                     @id @default(uuid()) @db.Uuid
+  applicantId        String                     @map("applicant_id") @db.Uuid
+  caseId             String?                    @unique @map("case_id") @db.Uuid
+  applicant          Applicant                  @relation(fields: [applicantId], references: [id], onDelete: Cascade)
+  case               Case?                      @relation(fields: [caseId], references: [id], onDelete: SetNull)
+  assistanceType     AssistanceType             @map("assistance_type")
+  status             ApplicantApplicationStatus @default(draft)
+  referenceNumber    String?                    @unique @map("reference_number") @db.VarChar(30)
+  contactNumber      String?                    @map("contact_number") @db.VarChar(20)
+  preferredSchedule  DateTime?                  @map("preferred_schedule") @db.Timestamptz(6)
+  reason             String?                    @map("reason")
+  householdMembers   Json?                      @map("household_members")
+  metadata           Json?                      @map("metadata")
+  submittedAt        DateTime?                  @map("submitted_at") @db.Timestamptz(6)
+  reviewedAt         DateTime?                  @map("reviewed_at") @db.Timestamptz(6)
+  adminNotes         String?                    @map("admin_notes")
+  createdAt          DateTime                   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime                   @updatedAt @map("updated_at") @db.Timestamptz(6)
+  documents          ApplicantApplicationDocument[]
+
+  @@index([applicantId, status])
+  @@index([status, createdAt])
+  @@map("applicant_applications")
+}
+
+model ApplicantApplicationDocument {
+  id             String               @id @default(uuid()) @db.Uuid
+  applicationId  String               @map("application_id") @db.Uuid
+  application    ApplicantApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  documentType   String               @map("document_type") @db.VarChar(100)
+  originalName   String               @map("original_name") @db.VarChar(255)
+  fileUrl        String               @map("file_url")
+  mimeType       String?              @map("mime_type") @db.VarChar(100)
+  sizeBytes      Int?                 @map("size_bytes")
+  uploadedAt     DateTime             @default(now()) @map("uploaded_at") @db.Timestamptz(6)
+
+  @@index([applicationId, documentType])
+  @@map("applicant_application_documents")
+}
+
+model ClientDedupEvent {
+  id             String   @id @default(uuid()) @db.Uuid
+  actorId        String?  @map("actor_id") @db.Uuid
+  applicantId    String?  @map("applicant_id") @db.Uuid
+  sourceClientId String?  @map("source_client_id") @db.Uuid
+  targetClientId String?  @map("target_client_id") @db.Uuid
+  action         String   @db.VarChar(60)
+  notes          String?
+  payload        Json?
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([sourceClientId, createdAt])
+  @@index([targetClientId, createdAt])
+  @@index([applicantId, createdAt])
+  @@map("client_dedup_events")
+}
+
+model CaseStatusLog {
+  id         String     @id @default(uuid()) @db.Uuid
+  caseId      String     @map("case_id") @db.Uuid
+  changedById String?    @map("changed_by") @db.Uuid
+  changedAt   DateTime   @default(now()) @map("changed_at") @db.Timestamptz(6)
+  fromStatus  CaseStatus @map("from_status")
+  toStatus    CaseStatus @map("to_status")
+  notes       String?
+
+  case        Case       @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  changedBy   User?      @relation("changed_by_user", fields: [changedById], references: [id])
+
+  @@index([caseId, changedAt])
+  @@map("case_status_logs")
+}

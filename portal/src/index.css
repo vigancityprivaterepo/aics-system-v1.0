@@ -1,0 +1,79 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    font-family: 'Inter', system-ui, sans-serif;
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-slate-50 text-slate-800 antialiased;
+    margin: 0;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: 'Merriweather', Georgia, serif;
+  }
+}
+
+@layer components {
+  .portal-input {
+    @apply w-full rounded-md border border-slate-300 bg-white px-4 py-3 text-sm transition-all duration-200 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#10b981];
+  }
+
+  .portal-label {
+    @apply mb-1 block text-xs font-medium text-slate-600;
+  }
+
+  .btn-primary {
+    @apply flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .btn-secondary {
+    @apply flex w-full items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:opacity-50;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 transition;
+  }
+
+  .card {
+    @apply rounded-lg border border-slate-200 bg-white p-6 shadow-sm;
+  }
+
+  .portal-surface {
+    @apply border border-slate-300 bg-white shadow-sm;
+  }
+
+  .portal-panel {
+    @apply border border-slate-200 bg-slate-50;
+  }
+
+  .portal-button-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-md border border-[#064e3b] bg-[#064e3b] px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#047857];
+  }
+
+  .portal-button-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:border-[#0c2340] hover:text-[#0c2340];
+  }
+
+  .portal-kicker {
+    @apply text-sm font-semibold text-slate-700;
+  }
+
+  .portal-page-title {
+    @apply font-display text-2xl font-semibold text-slate-900;
+  }
+
+  .portal-page-subtitle {
+    @apply mt-1 text-sm text-slate-500;
+  }
+}

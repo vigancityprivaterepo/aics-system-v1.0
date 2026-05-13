@@ -1,0 +1,67 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: aics_db
+    volumes:
+      - aics_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d aics_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: development
+      PORT: 5001
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/aics_db?schema=public
+      API_BASE_URL: http://localhost:5001
+      CORS_ORIGIN: http://localhost:8080,http://localhost:8081
+      JWT_SECRET: replace-with-a-32-char-minimum-secret
+      PORTAL_JWT_SECRET: replace-with-a-different-32-char-minimum-secret
+      DOCUMENT_VERIFY_SECRET: replace-with-a-third-32-char-minimum-secret
+      SMTP_HOST: ""
+      SMTP_PORT: 587
+      SMTP_USER: ""
+      SMTP_PASS: ""
+      SMTP_FROM: AICS Vigan City <noreply@localhost>
+      SEMAPHORE_API_KEY: ""
+      SEMAPHORE_SENDER_ID: AICS
+      TRUST_PROXY: "true"
+      RATE_LIMIT_MODE: memory
+    volumes:
+      - aics_uploads:/app/uploads
+    ports:
+      - "5001:5001"
+
+  frontend:
+    build:
+      context: ./frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "8080:80"
+
+  portal:
+    build:
+      context: ./portal
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "8081:80"
+
+volumes:
+  aics_pg_data:
+  aics_uploads:

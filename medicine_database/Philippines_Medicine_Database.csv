@@ -1,0 +1,775 @@
+﻿"Philippine Medicine Database — Brands, Dosage Forms & Strengths (One Row Per Strength)",,,,,,,,
+Sources: FDA Philippines Verification Portal (Jan 2026) | MIMS Philippines | Philippine National Drug Formulary (PNDF) | DOH | WHO EML,,,,,,,,
+No.,Generic Name,Brand Name,Classification,Drug Category,Dosage Form,Strength / Concentration,Indication,Notes / Manufacturer
+1,Amoxicillin,Amoxil,Rx,Antibiotics,Capsules,250mg,"Bacterial infections: ENT, UTI, skin, RTI",Pfizer/GSK brand
+2,Amoxicillin,Amoxil,Rx,Antibiotics,Capsules,500mg,"Bacterial infections: ENT, UTI, skin, RTI",Pfizer/GSK brand
+3,Amoxicillin,Amoxil,Rx,Antibiotics,Suspension,125mg/5mL,"Bacterial infections: ENT, UTI, skin, RTI",Pfizer/GSK brand
+4,Amoxicillin,Amoxil,Rx,Antibiotics,Suspension,250mg/5mL,"Bacterial infections: ENT, UTI, skin, RTI",Pfizer/GSK brand
+5,Amoxicillin,Trimox,Rx,Antibiotics,Capsules,250mg,Bacterial infections,Generic-equivalent brand
+6,Amoxicillin,Trimox,Rx,Antibiotics,Capsules,500mg,Bacterial infections,Generic-equivalent brand
+7,Amoxicillin,Trimox,Rx,Antibiotics,Suspension,125mg/5mL,Bacterial infections,Generic-equivalent brand
+8,Amoxicillin,Trimox,Rx,Antibiotics,Suspension,250mg/5mL,Bacterial infections,Generic-equivalent brand
+9,Amoxicillin,RiteMED Amoxicillin,Rx,Antibiotics,Capsules,250mg,Bacterial infections,United Lab affordable brand
+10,Amoxicillin,RiteMED Amoxicillin,Rx,Antibiotics,Capsules,500mg,Bacterial infections,United Lab affordable brand
+11,Amoxicillin,RiteMED Amoxicillin,Rx,Antibiotics,Suspension,125mg/5mL,Bacterial infections,United Lab affordable brand
+12,Amoxicillin,RiteMED Amoxicillin,Rx,Antibiotics,Suspension,250mg/5mL,Bacterial infections,United Lab affordable brand
+13,Amoxicillin,RiteMED Amoxicillin,Rx,Antibiotics,Drops,100mg/mL,Bacterial infections,United Lab affordable brand
+14,Amoxicillin,Ospamox,Rx,Antibiotics,Dispersible Tablets,500mg,Bacterial infections incl. lower RTI,Sandoz brand
+15,Amoxicillin,Ospamox,Rx,Antibiotics,Dispersible Tablets,750mg,Bacterial infections incl. lower RTI,Sandoz brand
+16,Amoxicillin,Ospamox,Rx,Antibiotics,Dispersible Tablets,1000mg,Bacterial infections incl. lower RTI,Sandoz brand
+17,Amoxicillin,Ospamox,Rx,Antibiotics,Suspension,250mg/5mL,Bacterial infections incl. lower RTI,Sandoz brand
+18,Azithromycin,Zithromax,Rx,Antibiotics,Tablets,250mg,"Community-acquired pneumonia, pharyngitis, STIs",Pfizer originator; Z-pack 3-day regimen
+19,Azithromycin,Zithromax,Rx,Antibiotics,Tablets,500mg,"Community-acquired pneumonia, pharyngitis, STIs",Pfizer originator; Z-pack 3-day regimen
+20,Azithromycin,Zithromax,Rx,Antibiotics,Suspension,200mg/5mL,"Community-acquired pneumonia, pharyngitis, STIs",Pfizer originator; Z-pack 3-day regimen
+21,Azithromycin,Zithromax,Rx,Antibiotics,IV Infusion,500mg/vial,"Community-acquired pneumonia, pharyngitis, STIs",Pfizer originator; Z-pack 3-day regimen
+22,Azithromycin,Zithromed,Rx,Antibiotics,Tablets,250mg,"RTIs, skin infections, STIs",Local brand
+23,Azithromycin,Zithromed,Rx,Antibiotics,Tablets,500mg,"RTIs, skin infections, STIs",Local brand
+24,Azithromycin,Azicin,Rx,Antibiotics,Tablets,250mg,Bacterial infections,Natrapharm brand
+25,Azithromycin,Azicin,Rx,Antibiotics,Tablets,500mg,Bacterial infections,Natrapharm brand
+26,Azithromycin,Azicin,Rx,Antibiotics,Suspension,200mg/5mL,Bacterial infections,Natrapharm brand
+27,Azithromycin,Azitrex,Rx,Antibiotics,Tablets,250mg,"RTIs, skin infections",Generic brand in PH
+28,Azithromycin,Azitrex,Rx,Antibiotics,Tablets,500mg,"RTIs, skin infections",Generic brand in PH
+29,Co-amoxiclav,Augmentin,Rx,Antibiotics,Tablets,375mg (250/125mg),Beta-lactamase resistant bacterial infections,GSK originator; most prescribed co-amoxiclav in PH
+30,Co-amoxiclav,Augmentin,Rx,Antibiotics,Tablets,625mg (500/125mg),Beta-lactamase resistant bacterial infections,GSK originator; most prescribed co-amoxiclav in PH
+31,Co-amoxiclav,Augmentin,Rx,Antibiotics,Tablets,1g (875/125mg),Beta-lactamase resistant bacterial infections,GSK originator; most prescribed co-amoxiclav in PH
+32,Co-amoxiclav,Augmentin,Rx,Antibiotics,Suspension,228.5mg/5mL,Beta-lactamase resistant bacterial infections,GSK originator; most prescribed co-amoxiclav in PH
+33,Co-amoxiclav,Augmentin,Rx,Antibiotics,IV Infusion,1.2g/vial,Beta-lactamase resistant bacterial infections,GSK originator; most prescribed co-amoxiclav in PH
+34,Co-amoxiclav,Clavox,Rx,Antibiotics,Tablets,625mg,"RTIs, UTIs, skin infections",Local generic brand
+35,Co-amoxiclav,Clavox,Rx,Antibiotics,Suspension,228.5mg/5mL,"RTIs, UTIs, skin infections",Local generic brand
+36,Co-amoxiclav,Clavam,Rx,Antibiotics,Tablets,625mg,Bacterial infections,Generic brand
+37,Co-amoxiclav,Clavam,Rx,Antibiotics,Suspension,228.5mg/5mL,Bacterial infections,Generic brand
+38,Co-amoxiclav,RiteMED Co-amoxiclav,Rx,Antibiotics,Tablets,625mg,Bacterial infections,United Lab affordable brand
+39,Co-amoxiclav,RiteMED Co-amoxiclav,Rx,Antibiotics,Suspension,228.5mg/5mL,Bacterial infections,United Lab affordable brand
+40,Ciprofloxacin,Ciprobay,Rx,Antibiotics,Tablets,250mg,"UTIs, GI infections, RTIs, typhoid fever",Bayer originator brand
+41,Ciprofloxacin,Ciprobay,Rx,Antibiotics,Tablets,500mg,"UTIs, GI infections, RTIs, typhoid fever",Bayer originator brand
+42,Ciprofloxacin,Ciprobay,Rx,Antibiotics,Tablets,750mg,"UTIs, GI infections, RTIs, typhoid fever",Bayer originator brand
+43,Ciprofloxacin,Ciprobay,Rx,Antibiotics,IV Infusion,200mg/100mL,"UTIs, GI infections, RTIs, typhoid fever",Bayer originator brand
+44,Ciprofloxacin,Ciprobay,Rx,Antibiotics,IV Infusion,400mg/200mL,"UTIs, GI infections, RTIs, typhoid fever",Bayer originator brand
+45,Ciprofloxacin,Cipro,Rx,Antibiotics,Tablets,250mg,Bacterial infections,Generic-equivalent
+46,Ciprofloxacin,Cipro,Rx,Antibiotics,Tablets,500mg,Bacterial infections,Generic-equivalent
+47,Ciprofloxacin,Cipro,Rx,Antibiotics,Tablets,750mg,Bacterial infections,Generic-equivalent
+48,Ciprofloxacin,Cipro,Rx,Antibiotics,Suspension,250mg/5mL,Bacterial infections,Generic-equivalent
+49,Ciprofloxacin,Cipromed,Rx,Antibiotics,Tablets,500mg,"UTIs, typhoid",Local brand
+50,Ciprofloxacin,Pharex Ciprofloxacin,Rx,Antibiotics,Tablets,500mg,"UTIs, respiratory, GI infections",Pharex affordable brand
+51,Metronidazole,Flagyl,Rx,Antibiotics,Tablets,200mg,"Anaerobic infections, amoebiasis, giardiasis, H. pylori combo, BV",Sanofi originator
+52,Metronidazole,Flagyl,Rx,Antibiotics,Tablets,400mg,"Anaerobic infections, amoebiasis, giardiasis, H. pylori combo, BV",Sanofi originator
+53,Metronidazole,Flagyl,Rx,Antibiotics,Tablets,500mg,"Anaerobic infections, amoebiasis, giardiasis, H. pylori combo, BV",Sanofi originator
+54,Metronidazole,Flagyl,Rx,Antibiotics,IV Infusion,500mg/100mL,"Anaerobic infections, amoebiasis, giardiasis, H. pylori combo, BV",Sanofi originator
+55,Metronidazole,Flagyl,Rx,Antibiotics,Suppository,500mg,"Anaerobic infections, amoebiasis, giardiasis, H. pylori combo, BV",Sanofi originator
+56,Metronidazole,Flagyl,Rx,Antibiotics,Vaginal Gel,0.75%,"Anaerobic infections, amoebiasis, giardiasis, H. pylori combo, BV",Sanofi originator
+57,Metronidazole,Metroken,Rx,Antibiotics,Tablets,500mg,Anaerobic/protozoal infections,Local brand
+58,Metronidazole,Metrodex,Rx,Antibiotics,Tablets,250mg,"GI/pelvic infections, BV",Generic brand
+59,Metronidazole,Metrodex,Rx,Antibiotics,Tablets,500mg,"GI/pelvic infections, BV",Generic brand
+60,Metronidazole,Metrodex,Rx,Antibiotics,Vaginal Tablet,500mg,"GI/pelvic infections, BV",Generic brand
+61,Doxycycline,Vibramycin,Rx,Antibiotics,Capsules,100mg,"RTIs, STIs, leptospirosis, malaria prophylaxis",Pfizer originator brand
+62,Doxycycline,Vibramycin,Rx,Antibiotics,Syrup,50mg/5mL,"RTIs, STIs, leptospirosis, malaria prophylaxis",Pfizer originator brand
+63,Doxycycline,Doxin,Rx,Antibiotics,Capsules,100mg,"RTIs, STIs, leptospirosis",Most widely used brand in PH
+64,Doxycycline,Doxycycline Generics,Rx,Antibiotics,Capsules,50mg,"RTIs, malaria prophylaxis, rickettsial diseases",Various generic manufacturers; PNDF listed
+65,Doxycycline,Doxycycline Generics,Rx,Antibiotics,Capsules,100mg,"RTIs, malaria prophylaxis, rickettsial diseases",Various generic manufacturers; PNDF listed
+66,Cotrimoxazole,Bactrim,Rx,Antibiotics,Tablets SS,400mg/80mg,"UTIs, shigellosis, PCP prophylaxis/treatment","Roche brand; SS=single strength, DS=double strength"
+67,Cotrimoxazole,Bactrim,Rx,Antibiotics,Tablets DS,800mg/160mg,"UTIs, shigellosis, PCP prophylaxis/treatment","Roche brand; SS=single strength, DS=double strength"
+68,Cotrimoxazole,Bactrim,Rx,Antibiotics,Suspension,200mg/40mg per 5mL,"UTIs, shigellosis, PCP prophylaxis/treatment","Roche brand; SS=single strength, DS=double strength"
+69,Cotrimoxazole,Septrin,Rx,Antibiotics,Tablets SS,400mg/80mg,"UTIs, respiratory infections",GSK brand
+70,Cotrimoxazole,Septrin,Rx,Antibiotics,Tablets DS,800mg/160mg,"UTIs, respiratory infections",GSK brand
+71,Cotrimoxazole,Septrin,Rx,Antibiotics,Suspension,200mg/40mg per 5mL,"UTIs, respiratory infections",GSK brand
+72,Cotrimoxazole,RiteMED Cotrimoxazole,Rx,Antibiotics,Tablets DS,800mg/160mg,"UTIs, PCP prophylaxis",United Lab affordable brand
+73,Cotrimoxazole,RiteMED Cotrimoxazole,Rx,Antibiotics,Suspension,200mg/40mg per 5mL,"UTIs, PCP prophylaxis",United Lab affordable brand
+74,Clindamycin,Dalacin C,Rx,Antibiotics,Capsules,150mg,"Anaerobic & gram-positive infections, dental infections, PID",Pfizer originator brand
+75,Clindamycin,Dalacin C,Rx,Antibiotics,Capsules,300mg,"Anaerobic & gram-positive infections, dental infections, PID",Pfizer originator brand
+76,Clindamycin,Dalacin C,Rx,Antibiotics,IV/IM Solution,150mg/mL,"Anaerobic & gram-positive infections, dental infections, PID",Pfizer originator brand
+77,Clindamycin,Dalacin C,Rx,Antibiotics,Vaginal Cream,2%,"Anaerobic & gram-positive infections, dental infections, PID",Pfizer originator brand
+78,Clindamycin,Cleocin,Rx,Antibiotics,Capsules,150mg,Serious bacterial infections,Generic equivalent; Pfizer
+79,Clindamycin,Cleocin,Rx,Antibiotics,Capsules,300mg,Serious bacterial infections,Generic equivalent; Pfizer
+80,Clindamycin,Cleocin,Rx,Antibiotics,IV Solution,150mg/mL,Serious bacterial infections,Generic equivalent; Pfizer
+81,Clindamycin,Clindamycin Generics,Rx,Antibiotics,Capsules,150mg,"Anaerobic infections, dental",Various PH generic manufacturers
+82,Clindamycin,Clindamycin Generics,Rx,Antibiotics,Capsules,300mg,"Anaerobic infections, dental",Various PH generic manufacturers
+83,Cefalexin,Keflex,Rx,Antibiotics,Capsules,250mg,"Skin, bone, UTI, respiratory infections",Eli Lilly originator; 1st-gen cephalosporin
+84,Cefalexin,Keflex,Rx,Antibiotics,Capsules,500mg,"Skin, bone, UTI, respiratory infections",Eli Lilly originator; 1st-gen cephalosporin
+85,Cefalexin,Keflex,Rx,Antibiotics,Capsules,750mg,"Skin, bone, UTI, respiratory infections",Eli Lilly originator; 1st-gen cephalosporin
+86,Cefalexin,Keflex,Rx,Antibiotics,Suspension,125mg/5mL,"Skin, bone, UTI, respiratory infections",Eli Lilly originator; 1st-gen cephalosporin
+87,Cefalexin,Keflex,Rx,Antibiotics,Suspension,250mg/5mL,"Skin, bone, UTI, respiratory infections",Eli Lilly originator; 1st-gen cephalosporin
+88,Cefalexin,Ceporex,Rx,Antibiotics,Capsules,250mg,Bacterial infections,GSK brand
+89,Cefalexin,Ceporex,Rx,Antibiotics,Capsules,500mg,Bacterial infections,GSK brand
+90,Cefalexin,Ceporex,Rx,Antibiotics,Suspension,125mg/5mL,Bacterial infections,GSK brand
+91,Cefalexin,Ceporex,Rx,Antibiotics,Suspension,250mg/5mL,Bacterial infections,GSK brand
+92,Cefalexin,Cephalexin Generics,Rx,Antibiotics,Capsules,250mg,"Skin, UTI, respiratory infections",Various generic manufacturers in PH
+93,Cefalexin,Cephalexin Generics,Rx,Antibiotics,Capsules,500mg,"Skin, UTI, respiratory infections",Various generic manufacturers in PH
+94,Cefalexin,Cephalexin Generics,Rx,Antibiotics,Suspension,125mg/5mL,"Skin, UTI, respiratory infections",Various generic manufacturers in PH
+95,Cefalexin,Cephalexin Generics,Rx,Antibiotics,Suspension,250mg/5mL,"Skin, UTI, respiratory infections",Various generic manufacturers in PH
+96,Paracetamol,Biogesic,OTC,Analgesics / Antipyretics,Tablets,325mg,Fever and mild-to-moderate pain,United Lab; most popular OTC brand in PH
+97,Paracetamol,Biogesic,OTC,Analgesics / Antipyretics,Tablets,500mg,Fever and mild-to-moderate pain,United Lab; most popular OTC brand in PH
+98,Paracetamol,Biogesic,OTC,Analgesics / Antipyretics,Caplets,500mg,Fever and mild-to-moderate pain,United Lab; most popular OTC brand in PH
+99,Paracetamol,Tempra,OTC,Analgesics / Antipyretics,Drops,100mg/mL,Fever and pain in children and adults,Mead Johnson; pediatric formulations widely used
+100,Paracetamol,Tempra,OTC,Analgesics / Antipyretics,Syrup,160mg/5mL,Fever and pain in children and adults,Mead Johnson; pediatric formulations widely used
+101,Paracetamol,Tempra,OTC,Analgesics / Antipyretics,Forte Tablets,500mg,Fever and pain in children and adults,Mead Johnson; pediatric formulations widely used
+102,Paracetamol,Calpol,OTC,Analgesics / Antipyretics,Drops,100mg/mL,Fever and pain,GSK brand; multiple strengths
+103,Paracetamol,Calpol,OTC,Analgesics / Antipyretics,Suspension,120mg/5mL,Fever and pain,GSK brand; multiple strengths
+104,Paracetamol,Calpol,OTC,Analgesics / Antipyretics,Suspension,250mg/5mL,Fever and pain,GSK brand; multiple strengths
+105,Paracetamol,Calpol,OTC,Analgesics / Antipyretics,Tablets,500mg,Fever and pain,GSK brand; multiple strengths
+106,Paracetamol,Tylenol,OTC,Analgesics / Antipyretics,Tablets,325mg,Fever and pain,J&J brand
+107,Paracetamol,Tylenol,OTC,Analgesics / Antipyretics,Tablets,500mg,Fever and pain,J&J brand
+108,Paracetamol,Tylenol,OTC,Analgesics / Antipyretics,Extended-Release Tablets,650mg,Fever and pain,J&J brand
+109,Paracetamol,Panadol,OTC,Analgesics / Antipyretics,Tablets,500mg,Fever and pain,GSK consumer brand
+110,Paracetamol,Panadol,OTC,Analgesics / Antipyretics,Suspension,120mg/5mL,Fever and pain,GSK consumer brand
+111,Paracetamol,Panadol,OTC,Analgesics / Antipyretics,Suspension,250mg/5mL,Fever and pain,GSK consumer brand
+112,Paracetamol,Panadol,OTC,Analgesics / Antipyretics,Suppository,125mg,Fever and pain,GSK consumer brand
+113,Paracetamol,Panadol,OTC,Analgesics / Antipyretics,Suppository,250mg,Fever and pain,GSK consumer brand
+114,Paracetamol,Panadol,OTC,Analgesics / Antipyretics,Extend SR Tablets,665mg,Fever and pain,GSK consumer brand
+115,Ibuprofen,Advil,OTC,Analgesics / Antipyretics,Tablets,200mg,"Pain, fever, inflammation, dysmenorrhea",Pfizer consumer brand
+116,Ibuprofen,Advil,OTC,Analgesics / Antipyretics,Tablets,400mg,"Pain, fever, inflammation, dysmenorrhea",Pfizer consumer brand
+117,Ibuprofen,Advil,OTC,Analgesics / Antipyretics,Liquid Gels,200mg,"Pain, fever, inflammation, dysmenorrhea",Pfizer consumer brand
+118,Ibuprofen,Advil,OTC,Analgesics / Antipyretics,Suspension,100mg/5mL,"Pain, fever, inflammation, dysmenorrhea",Pfizer consumer brand
+119,Ibuprofen,Motrin,OTC,Analgesics / Antipyretics,Tablets,200mg,"Pain, fever, arthritis",J&J brand; pediatric forms available
+120,Ibuprofen,Motrin,OTC,Analgesics / Antipyretics,Tablets,400mg,"Pain, fever, arthritis",J&J brand; pediatric forms available
+121,Ibuprofen,Motrin,OTC,Analgesics / Antipyretics,Tablets,600mg,"Pain, fever, arthritis",J&J brand; pediatric forms available
+122,Ibuprofen,Motrin,OTC,Analgesics / Antipyretics,Drops,40mg/mL,"Pain, fever, arthritis",J&J brand; pediatric forms available
+123,Ibuprofen,Motrin,OTC,Analgesics / Antipyretics,Suspension,100mg/5mL,"Pain, fever, arthritis",J&J brand; pediatric forms available
+124,Ibuprofen,Medicol,OTC,Analgesics / Antipyretics,Tablets,200mg,"Pain, dysmenorrhea, fever",Popular local brand
+125,Ibuprofen,Medicol,OTC,Analgesics / Antipyretics,Advance Tablets,400mg,"Pain, dysmenorrhea, fever",Popular local brand
+126,Ibuprofen,Alaxan FR,OTC,Analgesics / Antipyretics,Tablets (combo),Ibuprofen 200mg + Paracetamol 325mg,Pain and fever combination,United Lab; fast-release combination
+127,Mefenamic acid,Ponstan,OTC,Analgesics / Antipyretics,Capsules,250mg,"Mild-to-moderate pain, dysmenorrhea",Pfizer originator; most prescribed in PH
+128,Mefenamic acid,Ponstan,OTC,Analgesics / Antipyretics,Capsules,500mg,"Mild-to-moderate pain, dysmenorrhea",Pfizer originator; most prescribed in PH
+129,Mefenamic acid,Ponstan,OTC,Analgesics / Antipyretics,Suspension,50mg/5mL,"Mild-to-moderate pain, dysmenorrhea",Pfizer originator; most prescribed in PH
+130,Mefenamic acid,Dolfenal,OTC,Analgesics / Antipyretics,Capsules,500mg,"Pain, dysmenorrhea",Popular local brand
+131,Mefenamic acid,Feminax,OTC,Analgesics / Antipyretics,Capsules,500mg,Dysmenorrhea,Marketed for menstrual pain
+132,Mefenamic acid,RiteMED Mefenamic Acid,OTC,Analgesics / Antipyretics,Capsules,500mg,"Pain, dysmenorrhea",United Lab affordable brand
+133,Tramadol,Tramal,Controlled,Analgesics / Antipyretics,Capsules,50mg,"Moderate-to-severe pain, post-operative pain",Grünenthal; PDEA regulated; requires Rx
+134,Tramadol,Tramal,Controlled,Analgesics / Antipyretics,SR Tablets,100mg,"Moderate-to-severe pain, post-operative pain",Grünenthal; PDEA regulated; requires Rx
+135,Tramadol,Tramal,Controlled,Analgesics / Antipyretics,SR Tablets,150mg,"Moderate-to-severe pain, post-operative pain",Grünenthal; PDEA regulated; requires Rx
+136,Tramadol,Tramal,Controlled,Analgesics / Antipyretics,SR Tablets,200mg,"Moderate-to-severe pain, post-operative pain",Grünenthal; PDEA regulated; requires Rx
+137,Tramadol,Tramal,Controlled,Analgesics / Antipyretics,IV/IM Solution,50mg/mL (2mL amp),"Moderate-to-severe pain, post-operative pain",Grünenthal; PDEA regulated; requires Rx
+138,Tramadol,Ultram,Controlled,Analgesics / Antipyretics,Tablets,50mg,Moderate-to-severe pain,Generic-equivalent brand in PH
+139,Tramadol,Ultram,Controlled,Analgesics / Antipyretics,ER Tablets,100mg,Moderate-to-severe pain,Generic-equivalent brand in PH
+140,Tramadol,Ultram,Controlled,Analgesics / Antipyretics,ER Tablets,200mg,Moderate-to-severe pain,Generic-equivalent brand in PH
+141,Tramadol,Ultram,Controlled,Analgesics / Antipyretics,ER Tablets,300mg,Moderate-to-severe pain,Generic-equivalent brand in PH
+142,Tramadol,Tradol,Controlled,Analgesics / Antipyretics,Capsules,50mg,Pain management,Local brand; PDEA controlled
+143,Morphine sulfate,MS Contin,Controlled,Analgesics / Antipyretics,SR Tablets,15mg,"Severe chronic pain, palliative care",Sustained-release; PDEA Schedule; yellow Rx required
+144,Morphine sulfate,MS Contin,Controlled,Analgesics / Antipyretics,SR Tablets,30mg,"Severe chronic pain, palliative care",Sustained-release; PDEA Schedule; yellow Rx required
+145,Morphine sulfate,MS Contin,Controlled,Analgesics / Antipyretics,SR Tablets,60mg,"Severe chronic pain, palliative care",Sustained-release; PDEA Schedule; yellow Rx required
+146,Morphine sulfate,MS Contin,Controlled,Analgesics / Antipyretics,SR Tablets,100mg,"Severe chronic pain, palliative care",Sustained-release; PDEA Schedule; yellow Rx required
+147,Morphine sulfate,MS Contin,Controlled,Analgesics / Antipyretics,SR Tablets,200mg,"Severe chronic pain, palliative care",Sustained-release; PDEA Schedule; yellow Rx required
+148,Morphine sulfate,Morphine Sulfate Generics,Controlled,Analgesics / Antipyretics,Tablets,10mg,"Severe acute/chronic pain, dyspnea in palliative care",PDEA controlled; yellow Rx required in PH
+149,Morphine sulfate,Morphine Sulfate Generics,Controlled,Analgesics / Antipyretics,Tablets,15mg,"Severe acute/chronic pain, dyspnea in palliative care",PDEA controlled; yellow Rx required in PH
+150,Morphine sulfate,Morphine Sulfate Generics,Controlled,Analgesics / Antipyretics,Tablets,30mg,"Severe acute/chronic pain, dyspnea in palliative care",PDEA controlled; yellow Rx required in PH
+151,Morphine sulfate,Morphine Sulfate Generics,Controlled,Analgesics / Antipyretics,IV/IM/SC Solution,10mg/mL,"Severe acute/chronic pain, dyspnea in palliative care",PDEA controlled; yellow Rx required in PH
+152,Morphine sulfate,Morphine Sulfate Generics,Controlled,Analgesics / Antipyretics,Oral Solution,10mg/5mL,"Severe acute/chronic pain, dyspnea in palliative care",PDEA controlled; yellow Rx required in PH
+153,Amlodipine,Norvasc,Rx,Cardiovascular,Tablets,2.5mg,"Hypertension, stable and vasospastic angina",Pfizer originator; most prescribed CCB in PH
+154,Amlodipine,Norvasc,Rx,Cardiovascular,Tablets,5mg,"Hypertension, stable and vasospastic angina",Pfizer originator; most prescribed CCB in PH
+155,Amlodipine,Norvasc,Rx,Cardiovascular,Tablets,10mg,"Hypertension, stable and vasospastic angina",Pfizer originator; most prescribed CCB in PH
+156,Amlodipine,Amlovasc,Rx,Cardiovascular,Tablets,5mg,"Hypertension, angina",Generic brand
+157,Amlodipine,Amlovasc,Rx,Cardiovascular,Tablets,10mg,"Hypertension, angina",Generic brand
+158,Amlodipine,Pharex Amlodipine,Rx,Cardiovascular,Tablets,5mg,Hypertension,Pharex affordable brand
+159,Amlodipine,Pharex Amlodipine,Rx,Cardiovascular,Tablets,10mg,Hypertension,Pharex affordable brand
+160,Amlodipine,RiteMED Amlodipine,Rx,Cardiovascular,Tablets,2.5mg,"Hypertension, angina",United Lab brand; PNDF listed
+161,Amlodipine,RiteMED Amlodipine,Rx,Cardiovascular,Tablets,5mg,"Hypertension, angina",United Lab brand; PNDF listed
+162,Amlodipine,RiteMED Amlodipine,Rx,Cardiovascular,Tablets,10mg,"Hypertension, angina",United Lab brand; PNDF listed
+163,Losartan potassium,Cozaar,Rx,Cardiovascular,Tablets,25mg,"Hypertension, diabetic nephropathy, stroke risk reduction",MSD originator brand
+164,Losartan potassium,Cozaar,Rx,Cardiovascular,Tablets,50mg,"Hypertension, diabetic nephropathy, stroke risk reduction",MSD originator brand
+165,Losartan potassium,Cozaar,Rx,Cardiovascular,Tablets,100mg,"Hypertension, diabetic nephropathy, stroke risk reduction",MSD originator brand
+166,Losartan potassium,Lifezar,Rx,Cardiovascular,Tablets,50mg,Hypertension,Local brand; widely prescribed in PH
+167,Losartan potassium,Lifezar,Rx,Cardiovascular,Tablets,100mg,Hypertension,Local brand; widely prescribed in PH
+168,Losartan potassium,RiteMED Losartan,Rx,Cardiovascular,Tablets,25mg,"Hypertension, renal protection",United Lab affordable brand
+169,Losartan potassium,RiteMED Losartan,Rx,Cardiovascular,Tablets,50mg,"Hypertension, renal protection",United Lab affordable brand
+170,Losartan potassium,RiteMED Losartan,Rx,Cardiovascular,Tablets,100mg,"Hypertension, renal protection",United Lab affordable brand
+171,Enalapril maleate,Renitec,Rx,Cardiovascular,Tablets,5mg,"Hypertension, heart failure, asymptomatic LV dysfunction",MSD originator brand
+172,Enalapril maleate,Renitec,Rx,Cardiovascular,Tablets,10mg,"Hypertension, heart failure, asymptomatic LV dysfunction",MSD originator brand
+173,Enalapril maleate,Renitec,Rx,Cardiovascular,Tablets,20mg,"Hypertension, heart failure, asymptomatic LV dysfunction",MSD originator brand
+174,Enalapril maleate,Enacard,Rx,Cardiovascular,Tablets,5mg,"Hypertension, heart failure",Local brand
+175,Enalapril maleate,Enacard,Rx,Cardiovascular,Tablets,10mg,"Hypertension, heart failure",Local brand
+176,Enalapril maleate,Enacard,Rx,Cardiovascular,Tablets,20mg,"Hypertension, heart failure",Local brand
+177,Enalapril maleate,Pharex Enalapril,Rx,Cardiovascular,Tablets,5mg,Hypertension,Pharex affordable brand
+178,Enalapril maleate,Pharex Enalapril,Rx,Cardiovascular,Tablets,10mg,Hypertension,Pharex affordable brand
+179,Enalapril maleate,Pharex Enalapril,Rx,Cardiovascular,Tablets,20mg,Hypertension,Pharex affordable brand
+180,Metoprolol,Betaloc,Rx,Cardiovascular,Tablets — tartrate,50mg,"Hypertension, angina, heart failure, post-MI",AstraZeneca originator; most used beta-blocker in PH
+181,Metoprolol,Betaloc,Rx,Cardiovascular,Tablets — tartrate,100mg,"Hypertension, angina, heart failure, post-MI",AstraZeneca originator; most used beta-blocker in PH
+182,Metoprolol,Betaloc,Rx,Cardiovascular,SR Tablets — succinate,25mg,"Hypertension, angina, heart failure, post-MI",AstraZeneca originator; most used beta-blocker in PH
+183,Metoprolol,Betaloc,Rx,Cardiovascular,SR Tablets — succinate,50mg,"Hypertension, angina, heart failure, post-MI",AstraZeneca originator; most used beta-blocker in PH
+184,Metoprolol,Betaloc,Rx,Cardiovascular,SR Tablets — succinate,100mg,"Hypertension, angina, heart failure, post-MI",AstraZeneca originator; most used beta-blocker in PH
+185,Metoprolol,Betaloc,Rx,Cardiovascular,SR Tablets — succinate,200mg,"Hypertension, angina, heart failure, post-MI",AstraZeneca originator; most used beta-blocker in PH
+186,Metoprolol,Lopressor,Rx,Cardiovascular,Tablets,50mg,"Hypertension, angina, post-MI",Novartis brand; tartrate salt
+187,Metoprolol,Lopressor,Rx,Cardiovascular,Tablets,100mg,"Hypertension, angina, post-MI",Novartis brand; tartrate salt
+188,Metoprolol,Neobloc,Rx,Cardiovascular,SR Tablets — succinate,25mg,"Heart failure, hypertension",Local brand; once-daily succinate
+189,Metoprolol,Neobloc,Rx,Cardiovascular,SR Tablets — succinate,50mg,"Heart failure, hypertension",Local brand; once-daily succinate
+190,Metoprolol,Neobloc,Rx,Cardiovascular,SR Tablets — succinate,100mg,"Heart failure, hypertension",Local brand; once-daily succinate
+191,Atorvastatin,Lipitor,Rx,Cardiovascular,Tablets,10mg,"Dyslipidemia, primary and secondary CV prevention",Pfizer originator; top-selling statin in PH
+192,Atorvastatin,Lipitor,Rx,Cardiovascular,Tablets,20mg,"Dyslipidemia, primary and secondary CV prevention",Pfizer originator; top-selling statin in PH
+193,Atorvastatin,Lipitor,Rx,Cardiovascular,Tablets,40mg,"Dyslipidemia, primary and secondary CV prevention",Pfizer originator; top-selling statin in PH
+194,Atorvastatin,Lipitor,Rx,Cardiovascular,Tablets,80mg,"Dyslipidemia, primary and secondary CV prevention",Pfizer originator; top-selling statin in PH
+195,Atorvastatin,Atorlip,Rx,Cardiovascular,Tablets,10mg,"Dyslipidemia, CV risk reduction",Local brand
+196,Atorvastatin,Atorlip,Rx,Cardiovascular,Tablets,20mg,"Dyslipidemia, CV risk reduction",Local brand
+197,Atorvastatin,Atorlip,Rx,Cardiovascular,Tablets,40mg,"Dyslipidemia, CV risk reduction",Local brand
+198,Atorvastatin,RiteMED Atorvastatin,Rx,Cardiovascular,Tablets,10mg,Dyslipidemia,United Lab affordable brand
+199,Atorvastatin,RiteMED Atorvastatin,Rx,Cardiovascular,Tablets,20mg,Dyslipidemia,United Lab affordable brand
+200,Atorvastatin,RiteMED Atorvastatin,Rx,Cardiovascular,Tablets,40mg,Dyslipidemia,United Lab affordable brand
+201,Atorvastatin,RiteMED Atorvastatin,Rx,Cardiovascular,Tablets,80mg,Dyslipidemia,United Lab affordable brand
+202,Atorvastatin,Torvast,Rx,Cardiovascular,Tablets,10mg,Dyslipidemia,Pfizer alternate brand name
+203,Atorvastatin,Torvast,Rx,Cardiovascular,Tablets,20mg,Dyslipidemia,Pfizer alternate brand name
+204,Atorvastatin,Torvast,Rx,Cardiovascular,Tablets,40mg,Dyslipidemia,Pfizer alternate brand name
+205,Atorvastatin,Torvast,Rx,Cardiovascular,Tablets,80mg,Dyslipidemia,Pfizer alternate brand name
+206,Simvastatin,Zocor,Rx,Cardiovascular,Tablets,10mg,"Dyslipidemia, cardiovascular prevention",MSD originator brand
+207,Simvastatin,Zocor,Rx,Cardiovascular,Tablets,20mg,"Dyslipidemia, cardiovascular prevention",MSD originator brand
+208,Simvastatin,Zocor,Rx,Cardiovascular,Tablets,40mg,"Dyslipidemia, cardiovascular prevention",MSD originator brand
+209,Simvastatin,Zocor,Rx,Cardiovascular,Tablets,80mg,"Dyslipidemia, cardiovascular prevention",MSD originator brand
+210,Simvastatin,Simcard,Rx,Cardiovascular,Tablets,10mg,Dyslipidemia,Local brand
+211,Simvastatin,Simcard,Rx,Cardiovascular,Tablets,20mg,Dyslipidemia,Local brand
+212,Simvastatin,Simcard,Rx,Cardiovascular,Tablets,40mg,Dyslipidemia,Local brand
+213,Simvastatin,Pharex Simvastatin,Rx,Cardiovascular,Tablets,10mg,Dyslipidemia,Pharex affordable brand
+214,Simvastatin,Pharex Simvastatin,Rx,Cardiovascular,Tablets,20mg,Dyslipidemia,Pharex affordable brand
+215,Simvastatin,Pharex Simvastatin,Rx,Cardiovascular,Tablets,40mg,Dyslipidemia,Pharex affordable brand
+216,Aspirin (low-dose antiplatelet),Cardiprin,OTC,Cardiovascular,Enteric-Coated Tablets,100mg,Secondary prevention of MI and stroke,Bayer; enteric-coated to reduce GI irritation
+217,Aspirin (low-dose antiplatelet),Micropirin,OTC,Cardiovascular,Enteric-Coated Tablets,75mg,"Antiplatelet — post-MI, stroke, ACS",Local brand; enteric-coated
+218,Aspirin (low-dose antiplatelet),Micropirin,OTC,Cardiovascular,Enteric-Coated Tablets,100mg,"Antiplatelet — post-MI, stroke, ACS",Local brand; enteric-coated
+219,Aspirin (low-dose antiplatelet),Ecotrin,OTC,Cardiovascular,Enteric-Coated Tablets,81mg,Antiplatelet therapy,GSK consumer brand
+220,Aspirin (low-dose antiplatelet),Ecotrin,OTC,Cardiovascular,Enteric-Coated Tablets,325mg,Antiplatelet therapy,GSK consumer brand
+221,Aspirin (low-dose antiplatelet),Aspirin Generics,OTC,Cardiovascular,Tablets,80mg,"Antiplatelet, analgesic, antipyretic",Various PH manufacturers; PNDF listed
+222,Aspirin (low-dose antiplatelet),Aspirin Generics,OTC,Cardiovascular,Tablets,100mg,"Antiplatelet, analgesic, antipyretic",Various PH manufacturers; PNDF listed
+223,Aspirin (low-dose antiplatelet),Aspirin Generics,OTC,Cardiovascular,Enteric-Coated Tablets,100mg,"Antiplatelet, analgesic, antipyretic",Various PH manufacturers; PNDF listed
+224,Aspirin (low-dose antiplatelet),Aspirin Generics,OTC,Cardiovascular,Tablets,325mg,"Antiplatelet, analgesic, antipyretic",Various PH manufacturers; PNDF listed
+225,Clopidogrel,Plavix,Rx,Cardiovascular,Tablets,75mg,"ACS, post-PCI/stent, stroke/TIA prevention, PAD",Sanofi/BMS originator
+226,Clopidogrel,Plavix,Rx,Cardiovascular,Tablets — loading dose,300mg,"ACS, post-PCI/stent, stroke/TIA prevention, PAD",Sanofi/BMS originator
+227,Clopidogrel,Clopid,Rx,Cardiovascular,Tablets,75mg,Antiplatelet therapy,Local generic brand
+228,Clopidogrel,RiteMED Clopidogrel,Rx,Cardiovascular,Tablets,75mg,"Antiplatelet — post-ACS, stent",United Lab affordable brand
+229,Carvedilol,Dilatrend,Rx,Cardiovascular,Tablets,3.125mg,"Heart failure (NYHA II–IV), post-MI LV dysfunction, hypertension",Roche originator brand
+230,Carvedilol,Dilatrend,Rx,Cardiovascular,Tablets,6.25mg,"Heart failure (NYHA II–IV), post-MI LV dysfunction, hypertension",Roche originator brand
+231,Carvedilol,Dilatrend,Rx,Cardiovascular,Tablets,12.5mg,"Heart failure (NYHA II–IV), post-MI LV dysfunction, hypertension",Roche originator brand
+232,Carvedilol,Dilatrend,Rx,Cardiovascular,Tablets,25mg,"Heart failure (NYHA II–IV), post-MI LV dysfunction, hypertension",Roche originator brand
+233,Carvedilol,Coreg,Rx,Cardiovascular,Tablets,3.125mg,"Heart failure, hypertension",GSK brand in PH
+234,Carvedilol,Coreg,Rx,Cardiovascular,Tablets,6.25mg,"Heart failure, hypertension",GSK brand in PH
+235,Carvedilol,Coreg,Rx,Cardiovascular,Tablets,12.5mg,"Heart failure, hypertension",GSK brand in PH
+236,Carvedilol,Coreg,Rx,Cardiovascular,Tablets,25mg,"Heart failure, hypertension",GSK brand in PH
+237,Carvedilol,Carvedilol Generics,Rx,Cardiovascular,Tablets,3.125mg,"Heart failure, hypertension",Various generic manufacturers; PNDF listed
+238,Carvedilol,Carvedilol Generics,Rx,Cardiovascular,Tablets,6.25mg,"Heart failure, hypertension",Various generic manufacturers; PNDF listed
+239,Carvedilol,Carvedilol Generics,Rx,Cardiovascular,Tablets,12.5mg,"Heart failure, hypertension",Various generic manufacturers; PNDF listed
+240,Carvedilol,Carvedilol Generics,Rx,Cardiovascular,Tablets,25mg,"Heart failure, hypertension",Various generic manufacturers; PNDF listed
+241,Furosemide,Lasix,Rx,Cardiovascular,Tablets,20mg,"Edema (CHF, cirrhosis, renal), hypertension, hypercalcemia",Sanofi originator; most used loop diuretic in PH
+242,Furosemide,Lasix,Rx,Cardiovascular,Tablets,40mg,"Edema (CHF, cirrhosis, renal), hypertension, hypercalcemia",Sanofi originator; most used loop diuretic in PH
+243,Furosemide,Lasix,Rx,Cardiovascular,Tablets,80mg,"Edema (CHF, cirrhosis, renal), hypertension, hypercalcemia",Sanofi originator; most used loop diuretic in PH
+244,Furosemide,Lasix,Rx,Cardiovascular,IV/IM Solution,10mg/mL (2mL amp),"Edema (CHF, cirrhosis, renal), hypertension, hypercalcemia",Sanofi originator; most used loop diuretic in PH
+245,Furosemide,Lasix,Rx,Cardiovascular,IV/IM Solution,10mg/mL (4mL amp),"Edema (CHF, cirrhosis, renal), hypertension, hypercalcemia",Sanofi originator; most used loop diuretic in PH
+246,Furosemide,Lasix,Rx,Cardiovascular,IV/IM Solution,10mg/mL (10mL amp),"Edema (CHF, cirrhosis, renal), hypertension, hypercalcemia",Sanofi originator; most used loop diuretic in PH
+247,Furosemide,Diurin,Rx,Cardiovascular,Tablets,40mg,"Edema, hypertension",Local brand
+248,Furosemide,Pharex Furosemide,Rx,Cardiovascular,Tablets,40mg,"Edema, hypertension",Pharex affordable brand
+249,Furosemide,Pharex Furosemide,Rx,Cardiovascular,IV Solution,10mg/mL,"Edema, hypertension",Pharex affordable brand
+250,Digoxin,Lanoxin,Rx,Cardiovascular,Tablets,0.0625mg,"Heart failure, AF rate control",Aspen brand; narrow therapeutic index
+251,Digoxin,Lanoxin,Rx,Cardiovascular,Tablets,0.25mg,"Heart failure, AF rate control",Aspen brand; narrow therapeutic index
+252,Digoxin,Lanoxin,Rx,Cardiovascular,Elixir,0.05mg/mL,"Heart failure, AF rate control",Aspen brand; narrow therapeutic index
+253,Digoxin,Lanoxin,Rx,Cardiovascular,IV Solution,0.25mg/mL,"Heart failure, AF rate control",Aspen brand; narrow therapeutic index
+254,Digoxin,Digacin,Rx,Cardiovascular,Tablets,0.25mg,"Heart failure, AF",Local brand
+255,Digoxin,Pharex Digoxin,Rx,Cardiovascular,Tablets,0.25mg,"Heart failure, AF rate control",Pharex affordable brand
+256,Warfarin sodium,Coumadin,Rx,Cardiovascular,Tablets,1mg,"AF, DVT/PE treatment and prevention, prosthetic heart valves",BMS originator; dose adjusted per INR
+257,Warfarin sodium,Coumadin,Rx,Cardiovascular,Tablets,2mg,"AF, DVT/PE treatment and prevention, prosthetic heart valves",BMS originator; dose adjusted per INR
+258,Warfarin sodium,Coumadin,Rx,Cardiovascular,Tablets,2.5mg,"AF, DVT/PE treatment and prevention, prosthetic heart valves",BMS originator; dose adjusted per INR
+259,Warfarin sodium,Coumadin,Rx,Cardiovascular,Tablets,4mg,"AF, DVT/PE treatment and prevention, prosthetic heart valves",BMS originator; dose adjusted per INR
+260,Warfarin sodium,Coumadin,Rx,Cardiovascular,Tablets,5mg,"AF, DVT/PE treatment and prevention, prosthetic heart valves",BMS originator; dose adjusted per INR
+261,Warfarin sodium,Coumadin,Rx,Cardiovascular,Tablets,6mg,"AF, DVT/PE treatment and prevention, prosthetic heart valves",BMS originator; dose adjusted per INR
+262,Warfarin sodium,Coumadin,Rx,Cardiovascular,Tablets,7.5mg,"AF, DVT/PE treatment and prevention, prosthetic heart valves",BMS originator; dose adjusted per INR
+263,Warfarin sodium,Coumadin,Rx,Cardiovascular,Tablets,10mg,"AF, DVT/PE treatment and prevention, prosthetic heart valves",BMS originator; dose adjusted per INR
+264,Warfarin sodium,Warfarin Generics,Rx,Cardiovascular,Tablets,1mg,Anticoagulation therapy,Various PH manufacturers; regular INR monitoring required
+265,Warfarin sodium,Warfarin Generics,Rx,Cardiovascular,Tablets,2mg,Anticoagulation therapy,Various PH manufacturers; regular INR monitoring required
+266,Warfarin sodium,Warfarin Generics,Rx,Cardiovascular,Tablets,5mg,Anticoagulation therapy,Various PH manufacturers; regular INR monitoring required
+267,Enoxaparin sodium,Clexane,Rx,Cardiovascular,Prefilled SC Syringe,20mg,"DVT prophylaxis/treatment, ACS, PE",Sanofi originator; most used LMWH in PH
+268,Enoxaparin sodium,Clexane,Rx,Cardiovascular,Prefilled SC Syringe,40mg,"DVT prophylaxis/treatment, ACS, PE",Sanofi originator; most used LMWH in PH
+269,Enoxaparin sodium,Clexane,Rx,Cardiovascular,Prefilled SC Syringe,60mg,"DVT prophylaxis/treatment, ACS, PE",Sanofi originator; most used LMWH in PH
+270,Enoxaparin sodium,Clexane,Rx,Cardiovascular,Prefilled SC Syringe,80mg,"DVT prophylaxis/treatment, ACS, PE",Sanofi originator; most used LMWH in PH
+271,Enoxaparin sodium,Clexane,Rx,Cardiovascular,Prefilled SC Syringe,100mg,"DVT prophylaxis/treatment, ACS, PE",Sanofi originator; most used LMWH in PH
+272,Enoxaparin sodium,Lovenox,Rx,Cardiovascular,Prefilled SC Syringe,30mg,"DVT, ACS, PE",Alternative brand; same molecule
+273,Enoxaparin sodium,Lovenox,Rx,Cardiovascular,Prefilled SC Syringe,40mg,"DVT, ACS, PE",Alternative brand; same molecule
+274,Enoxaparin sodium,Lovenox,Rx,Cardiovascular,Prefilled SC Syringe,60mg,"DVT, ACS, PE",Alternative brand; same molecule
+275,Enoxaparin sodium,Lovenox,Rx,Cardiovascular,Prefilled SC Syringe,80mg,"DVT, ACS, PE",Alternative brand; same molecule
+276,Enoxaparin sodium,Lovenox,Rx,Cardiovascular,Prefilled SC Syringe,100mg,"DVT, ACS, PE",Alternative brand; same molecule
+277,Nifedipine,Adalat,Rx,Cardiovascular,Capsules,5mg,"Hypertension, angina, preterm labor tocolytic",Bayer originator; rapid-release caps for hypertensive urgency
+278,Nifedipine,Adalat,Rx,Cardiovascular,Capsules,10mg,"Hypertension, angina, preterm labor tocolytic",Bayer originator; rapid-release caps for hypertensive urgency
+279,Nifedipine,Adalat,Rx,Cardiovascular,SR Tablets,20mg,"Hypertension, angina, preterm labor tocolytic",Bayer originator; rapid-release caps for hypertensive urgency
+280,Nifedipine,Adalat,Rx,Cardiovascular,OROS Tablets,30mg,"Hypertension, angina, preterm labor tocolytic",Bayer originator; rapid-release caps for hypertensive urgency
+281,Nifedipine,Adalat,Rx,Cardiovascular,OROS Tablets,60mg,"Hypertension, angina, preterm labor tocolytic",Bayer originator; rapid-release caps for hypertensive urgency
+282,Nifedipine,Calcibloc,Rx,Cardiovascular,Tablets,5mg,"Hypertension, angina",Local brand; widely used in PH
+283,Nifedipine,Calcibloc,Rx,Cardiovascular,Tablets,10mg,"Hypertension, angina",Local brand; widely used in PH
+284,Nifedipine,Calcibloc,Rx,Cardiovascular,SR Tablets,20mg,"Hypertension, angina",Local brand; widely used in PH
+285,Nifedipine,Pharex Nifedipine,Rx,Cardiovascular,Tablets,10mg,"Hypertension, angina",Pharex affordable brand
+286,Spironolactone,Aldactone,Rx,Cardiovascular,Tablets,25mg,"Heart failure, edema, hyperaldosteronism, PCOS off-label",Pfizer originator; potassium-sparing diuretic
+287,Spironolactone,Aldactone,Rx,Cardiovascular,Tablets,50mg,"Heart failure, edema, hyperaldosteronism, PCOS off-label",Pfizer originator; potassium-sparing diuretic
+288,Spironolactone,Aldactone,Rx,Cardiovascular,Tablets,100mg,"Heart failure, edema, hyperaldosteronism, PCOS off-label",Pfizer originator; potassium-sparing diuretic
+289,Spironolactone,Spironolactone Generics,Rx,Cardiovascular,Tablets,25mg,"Heart failure, edema, ascites, hypertension",Various generic manufacturers; PNDF listed
+290,Spironolactone,Spironolactone Generics,Rx,Cardiovascular,Tablets,50mg,"Heart failure, edema, ascites, hypertension",Various generic manufacturers; PNDF listed
+291,Spironolactone,Spironolactone Generics,Rx,Cardiovascular,Tablets,100mg,"Heart failure, edema, ascites, hypertension",Various generic manufacturers; PNDF listed
+292,Metformin hydrochloride,Glucophage,Rx,Endocrine / Diabetes,Tablets,500mg,Type 2 DM — first-line insulin sensitizer,Merck Serono originator; XR reduces GI side effects
+293,Metformin hydrochloride,Glucophage,Rx,Endocrine / Diabetes,Tablets,850mg,Type 2 DM — first-line insulin sensitizer,Merck Serono originator; XR reduces GI side effects
+294,Metformin hydrochloride,Glucophage,Rx,Endocrine / Diabetes,Tablets,1000mg,Type 2 DM — first-line insulin sensitizer,Merck Serono originator; XR reduces GI side effects
+295,Metformin hydrochloride,Glucophage,Rx,Endocrine / Diabetes,XR Tablets,500mg,Type 2 DM — first-line insulin sensitizer,Merck Serono originator; XR reduces GI side effects
+296,Metformin hydrochloride,Glucophage,Rx,Endocrine / Diabetes,XR Tablets,750mg,Type 2 DM — first-line insulin sensitizer,Merck Serono originator; XR reduces GI side effects
+297,Metformin hydrochloride,Glucophage,Rx,Endocrine / Diabetes,XR Tablets,1000mg,Type 2 DM — first-line insulin sensitizer,Merck Serono originator; XR reduces GI side effects
+298,Metformin hydrochloride,Diabex,Rx,Endocrine / Diabetes,Tablets,500mg,Type 2 DM,Alphapharm/Mylan brand
+299,Metformin hydrochloride,Diabex,Rx,Endocrine / Diabetes,Tablets,850mg,Type 2 DM,Alphapharm/Mylan brand
+300,Metformin hydrochloride,Diabex,Rx,Endocrine / Diabetes,Tablets,1000mg,Type 2 DM,Alphapharm/Mylan brand
+301,Metformin hydrochloride,Neodipar,Rx,Endocrine / Diabetes,Tablets,500mg,Type 2 DM,Local brand; widely prescribed in PH
+302,Metformin hydrochloride,Neodipar,Rx,Endocrine / Diabetes,Tablets,850mg,Type 2 DM,Local brand; widely prescribed in PH
+303,Metformin hydrochloride,RiteMED Metformin,Rx,Endocrine / Diabetes,Tablets,500mg,Type 2 DM,United Lab affordable brand; PNDF listed
+304,Metformin hydrochloride,RiteMED Metformin,Rx,Endocrine / Diabetes,Tablets,850mg,Type 2 DM,United Lab affordable brand; PNDF listed
+305,Metformin hydrochloride,RiteMED Metformin,Rx,Endocrine / Diabetes,Tablets,1000mg,Type 2 DM,United Lab affordable brand; PNDF listed
+306,Metformin hydrochloride,RiteMED Metformin,Rx,Endocrine / Diabetes,XR Tablets,500mg,Type 2 DM,United Lab affordable brand; PNDF listed
+307,Glimepiride,Amaryl,Rx,Endocrine / Diabetes,Tablets,1mg,Type 2 DM — sulfonylurea stimulating insulin secretion,Sanofi originator; once-daily with breakfast
+308,Glimepiride,Amaryl,Rx,Endocrine / Diabetes,Tablets,2mg,Type 2 DM — sulfonylurea stimulating insulin secretion,Sanofi originator; once-daily with breakfast
+309,Glimepiride,Amaryl,Rx,Endocrine / Diabetes,Tablets,3mg,Type 2 DM — sulfonylurea stimulating insulin secretion,Sanofi originator; once-daily with breakfast
+310,Glimepiride,Amaryl,Rx,Endocrine / Diabetes,Tablets,4mg,Type 2 DM — sulfonylurea stimulating insulin secretion,Sanofi originator; once-daily with breakfast
+311,Glimepiride,Glimy,Rx,Endocrine / Diabetes,Tablets,1mg,Type 2 DM,Local brand
+312,Glimepiride,Glimy,Rx,Endocrine / Diabetes,Tablets,2mg,Type 2 DM,Local brand
+313,Glimepiride,Glimy,Rx,Endocrine / Diabetes,Tablets,4mg,Type 2 DM,Local brand
+314,Glimepiride,Glimyx,Rx,Endocrine / Diabetes,Tablets,1mg,Type 2 DM,Local brand; PNDF listed
+315,Glimepiride,Glimyx,Rx,Endocrine / Diabetes,Tablets,2mg,Type 2 DM,Local brand; PNDF listed
+316,Glimepiride,Glimyx,Rx,Endocrine / Diabetes,Tablets,3mg,Type 2 DM,Local brand; PNDF listed
+317,Glimepiride,Glimyx,Rx,Endocrine / Diabetes,Tablets,4mg,Type 2 DM,Local brand; PNDF listed
+318,"Insulin, regular (short-acting)",Humulin R,Rx,Endocrine / Diabetes,Vial,100 IU/mL (10mL),DM1 and DM2 glycemic control; DKA protocol,Eli Lilly; human insulin; IV use in ICU/DKA
+319,"Insulin, regular (short-acting)",Humulin R,Rx,Endocrine / Diabetes,Penfill,100 IU/mL (3mL),DM1 and DM2 glycemic control; DKA protocol,Eli Lilly; human insulin; IV use in ICU/DKA
+320,"Insulin, regular (short-acting)",Actrapid,Rx,Endocrine / Diabetes,Vial,100 IU/mL (10mL),Glycemic control; DKA,Novo Nordisk; human insulin; also IV use
+321,"Insulin, regular (short-acting)",Actrapid,Rx,Endocrine / Diabetes,Penfill,100 IU/mL (3mL),Glycemic control; DKA,Novo Nordisk; human insulin; also IV use
+322,"Insulin, regular (short-acting)",Insuman Rapid,Rx,Endocrine / Diabetes,Vial,100 IU/mL (5mL),Glycemic control,Sanofi brand; human insulin
+323,"Insulin, regular (short-acting)",Insuman Rapid,Rx,Endocrine / Diabetes,Cartridge,100 IU/mL (3mL),Glycemic control,Sanofi brand; human insulin
+324,Insulin glargine (long-acting),Lantus,Rx,Endocrine / Diabetes,Vial,100 IU/mL (10mL),Basal insulin for DM1 and DM2,Sanofi; peakless once-daily; do not mix with other insulins
+325,Insulin glargine (long-acting),Lantus,Rx,Endocrine / Diabetes,SoloStar Pen,100 IU/mL (3mL),Basal insulin for DM1 and DM2,Sanofi; peakless once-daily; do not mix with other insulins
+326,Insulin glargine (long-acting),Basaglar,Rx,Endocrine / Diabetes,KwikPen,100 IU/mL (3mL),Basal insulin DM1 and DM2,Eli Lilly biosimilar glargine
+327,Insulin glargine (long-acting),Toujeo,Rx,Endocrine / Diabetes,SoloStar Max Pen,300 IU/mL (1.5mL),Basal insulin DM1 and DM2; ultra-concentrated,Sanofi U-300; lower injection volume; less hypoglycemia
+328,Levothyroxine sodium,Synthroid,Rx,Endocrine / Diabetes,Tablets,25mcg,"Hypothyroidism, TSH suppression in thyroid cancer",AbbVie originator; color-coded by strength
+329,Levothyroxine sodium,Synthroid,Rx,Endocrine / Diabetes,Tablets,50mcg,"Hypothyroidism, TSH suppression in thyroid cancer",AbbVie originator; color-coded by strength
+330,Levothyroxine sodium,Synthroid,Rx,Endocrine / Diabetes,Tablets,75mcg,"Hypothyroidism, TSH suppression in thyroid cancer",AbbVie originator; color-coded by strength
+331,Levothyroxine sodium,Synthroid,Rx,Endocrine / Diabetes,Tablets,88mcg,"Hypothyroidism, TSH suppression in thyroid cancer",AbbVie originator; color-coded by strength
+332,Levothyroxine sodium,Synthroid,Rx,Endocrine / Diabetes,Tablets,100mcg,"Hypothyroidism, TSH suppression in thyroid cancer",AbbVie originator; color-coded by strength
+333,Levothyroxine sodium,Synthroid,Rx,Endocrine / Diabetes,Tablets,112mcg,"Hypothyroidism, TSH suppression in thyroid cancer",AbbVie originator; color-coded by strength
+334,Levothyroxine sodium,Synthroid,Rx,Endocrine / Diabetes,Tablets,125mcg,"Hypothyroidism, TSH suppression in thyroid cancer",AbbVie originator; color-coded by strength
+335,Levothyroxine sodium,Synthroid,Rx,Endocrine / Diabetes,Tablets,150mcg,"Hypothyroidism, TSH suppression in thyroid cancer",AbbVie originator; color-coded by strength
+336,Levothyroxine sodium,Synthroid,Rx,Endocrine / Diabetes,Tablets,175mcg,"Hypothyroidism, TSH suppression in thyroid cancer",AbbVie originator; color-coded by strength
+337,Levothyroxine sodium,Synthroid,Rx,Endocrine / Diabetes,Tablets,200mcg,"Hypothyroidism, TSH suppression in thyroid cancer",AbbVie originator; color-coded by strength
+338,Levothyroxine sodium,Eltroxin,Rx,Endocrine / Diabetes,Tablets,25mcg,"Hypothyroidism, myxedema coma",GSK brand; widely available in PH
+339,Levothyroxine sodium,Eltroxin,Rx,Endocrine / Diabetes,Tablets,50mcg,"Hypothyroidism, myxedema coma",GSK brand; widely available in PH
+340,Levothyroxine sodium,Eltroxin,Rx,Endocrine / Diabetes,Tablets,100mcg,"Hypothyroidism, myxedema coma",GSK brand; widely available in PH
+341,Levothyroxine sodium,Eltroxin,Rx,Endocrine / Diabetes,Tablets,150mcg,"Hypothyroidism, myxedema coma",GSK brand; widely available in PH
+342,Levothyroxine sodium,Euthyrox,Rx,Endocrine / Diabetes,Tablets,25mcg,Hypothyroidism,Merck brand
+343,Levothyroxine sodium,Euthyrox,Rx,Endocrine / Diabetes,Tablets,50mcg,Hypothyroidism,Merck brand
+344,Levothyroxine sodium,Euthyrox,Rx,Endocrine / Diabetes,Tablets,75mcg,Hypothyroidism,Merck brand
+345,Levothyroxine sodium,Euthyrox,Rx,Endocrine / Diabetes,Tablets,100mcg,Hypothyroidism,Merck brand
+346,Levothyroxine sodium,Euthyrox,Rx,Endocrine / Diabetes,Tablets,125mcg,Hypothyroidism,Merck brand
+347,Levothyroxine sodium,Euthyrox,Rx,Endocrine / Diabetes,Tablets,150mcg,Hypothyroidism,Merck brand
+348,Levothyroxine sodium,Thyronorm,Rx,Endocrine / Diabetes,Tablets,25mcg,Hypothyroidism,Abbott brand available in PH
+349,Levothyroxine sodium,Thyronorm,Rx,Endocrine / Diabetes,Tablets,50mcg,Hypothyroidism,Abbott brand available in PH
+350,Levothyroxine sodium,Thyronorm,Rx,Endocrine / Diabetes,Tablets,75mcg,Hypothyroidism,Abbott brand available in PH
+351,Levothyroxine sodium,Thyronorm,Rx,Endocrine / Diabetes,Tablets,100mcg,Hypothyroidism,Abbott brand available in PH
+352,Levothyroxine sodium,Thyronorm,Rx,Endocrine / Diabetes,Tablets,125mcg,Hypothyroidism,Abbott brand available in PH
+353,Levothyroxine sodium,Thyronorm,Rx,Endocrine / Diabetes,Tablets,150mcg,Hypothyroidism,Abbott brand available in PH
+354,Levothyroxine sodium,Thyronorm,Rx,Endocrine / Diabetes,Tablets,200mcg,Hypothyroidism,Abbott brand available in PH
+355,Sitagliptin,Januvia,Rx,Endocrine / Diabetes,Tablets,25mg,Type 2 DM — DPP-4 inhibitor,MSD originator; renal dose adjustment required
+356,Sitagliptin,Januvia,Rx,Endocrine / Diabetes,Tablets,50mg,Type 2 DM — DPP-4 inhibitor,MSD originator; renal dose adjustment required
+357,Sitagliptin,Januvia,Rx,Endocrine / Diabetes,Tablets,100mg,Type 2 DM — DPP-4 inhibitor,MSD originator; renal dose adjustment required
+358,Sitagliptin,Sitagra,Rx,Endocrine / Diabetes,Tablets,100mg,Type 2 DM,Local/generic brand in PH
+359,Salbutamol (Albuterol),Ventolin,OTC,Respiratory,MDI Inhaler,100mcg/puff (200 doses),"Acute bronchospasm (asthma, COPD), exercise-induced",GSK; most widely used SABA in PH
+360,Salbutamol (Albuterol),Ventolin,OTC,Respiratory,Nebulizing Solution,5mg/mL,"Acute bronchospasm (asthma, COPD), exercise-induced",GSK; most widely used SABA in PH
+361,Salbutamol (Albuterol),Ventolin,OTC,Respiratory,Tablets,2mg,"Acute bronchospasm (asthma, COPD), exercise-induced",GSK; most widely used SABA in PH
+362,Salbutamol (Albuterol),Ventolin,OTC,Respiratory,Tablets,4mg,"Acute bronchospasm (asthma, COPD), exercise-induced",GSK; most widely used SABA in PH
+363,Salbutamol (Albuterol),Ventolin,OTC,Respiratory,Syrup,2mg/5mL,"Acute bronchospasm (asthma, COPD), exercise-induced",GSK; most widely used SABA in PH
+364,Salbutamol (Albuterol),Salbuven,OTC,Respiratory,MDI Inhaler,100mcg/puff,"Bronchospasm, asthma",Local brand
+365,Salbutamol (Albuterol),Salbuven,OTC,Respiratory,Nebulizing Solution,0.5% (5mg/mL),"Bronchospasm, asthma",Local brand
+366,Salbutamol (Albuterol),Asthalin,OTC,Respiratory,Tablets,2mg,"Asthma, COPD bronchospasm",Cipla brand; tablets for oral use
+367,Salbutamol (Albuterol),Asthalin,OTC,Respiratory,Tablets,4mg,"Asthma, COPD bronchospasm",Cipla brand; tablets for oral use
+368,Salbutamol (Albuterol),Asthalin,OTC,Respiratory,Syrup,2mg/5mL,"Asthma, COPD bronchospasm",Cipla brand; tablets for oral use
+369,Salbutamol (Albuterol),Asthalin,OTC,Respiratory,MDI Inhaler,100mcg/puff,"Asthma, COPD bronchospasm",Cipla brand; tablets for oral use
+370,Salbutamol (Albuterol),Volmax,OTC,Respiratory,SR Tablets,4mg,Chronic asthma management,Extended-release salbutamol; twice-daily dosing
+371,Salbutamol (Albuterol),Volmax,OTC,Respiratory,SR Tablets,8mg,Chronic asthma management,Extended-release salbutamol; twice-daily dosing
+372,Budesonide,Pulmicort,Rx,Respiratory,Turbuhaler MDI,100mcg/dose,"Asthma maintenance, COPD",AstraZeneca; most prescribed ICS in PH
+373,Budesonide,Pulmicort,Rx,Respiratory,Turbuhaler MDI,200mcg/dose,"Asthma maintenance, COPD",AstraZeneca; most prescribed ICS in PH
+374,Budesonide,Pulmicort,Rx,Respiratory,Turbuhaler MDI,400mcg/dose,"Asthma maintenance, COPD",AstraZeneca; most prescribed ICS in PH
+375,Budesonide,Pulmicort,Rx,Respiratory,Nebulizing Suspension,0.25mg/2mL,"Asthma maintenance, COPD",AstraZeneca; most prescribed ICS in PH
+376,Budesonide,Pulmicort,Rx,Respiratory,Nebulizing Suspension,0.5mg/2mL,"Asthma maintenance, COPD",AstraZeneca; most prescribed ICS in PH
+377,Budesonide,Pulmicort,Rx,Respiratory,Nebulizing Suspension,1mg/2mL,"Asthma maintenance, COPD",AstraZeneca; most prescribed ICS in PH
+378,Budesonide,Budecort,Rx,Respiratory,MDI Inhaler,200mcg/dose,Asthma maintenance,Cipla brand; affordable alternative
+379,Budesonide,Budecort,Rx,Respiratory,Nebulizing Suspension,0.5mg/2mL,Asthma maintenance,Cipla brand; affordable alternative
+380,Budesonide,Symbicort (Budesonide + Formoterol),Rx,Respiratory,Turbuhaler MDI,80mcg/4.5mcg per dose,"Asthma maintenance, COPD; SMART therapy",AstraZeneca; ICS + LABA combination
+381,Budesonide,Symbicort (Budesonide + Formoterol),Rx,Respiratory,Turbuhaler MDI,160mcg/4.5mcg per dose,"Asthma maintenance, COPD; SMART therapy",AstraZeneca; ICS + LABA combination
+382,Budesonide,Symbicort (Budesonide + Formoterol),Rx,Respiratory,Turbuhaler MDI,320mcg/9mcg per dose,"Asthma maintenance, COPD; SMART therapy",AstraZeneca; ICS + LABA combination
+383,Fluticasone + Salmeterol,Seretide,Rx,Respiratory,Diskus DPI,100mcg/50mcg per dose,"Asthma maintenance (step 3–4), COPD maintenance",GSK originator; ICS + LABA; do not use as rescue
+384,Fluticasone + Salmeterol,Seretide,Rx,Respiratory,Diskus DPI,250mcg/50mcg per dose,"Asthma maintenance (step 3–4), COPD maintenance",GSK originator; ICS + LABA; do not use as rescue
+385,Fluticasone + Salmeterol,Seretide,Rx,Respiratory,Diskus DPI,500mcg/50mcg per dose,"Asthma maintenance (step 3–4), COPD maintenance",GSK originator; ICS + LABA; do not use as rescue
+386,Fluticasone + Salmeterol,Seretide,Rx,Respiratory,Evohaler MDI,50mcg/25mcg per dose,"Asthma maintenance (step 3–4), COPD maintenance",GSK originator; ICS + LABA; do not use as rescue
+387,Fluticasone + Salmeterol,Seretide,Rx,Respiratory,Evohaler MDI,125mcg/25mcg per dose,"Asthma maintenance (step 3–4), COPD maintenance",GSK originator; ICS + LABA; do not use as rescue
+388,Fluticasone + Salmeterol,Seretide,Rx,Respiratory,Evohaler MDI,250mcg/25mcg per dose,"Asthma maintenance (step 3–4), COPD maintenance",GSK originator; ICS + LABA; do not use as rescue
+389,Fluticasone + Salmeterol,Advair,Rx,Respiratory,Diskus DPI,100mcg/50mcg per dose,Asthma and COPD maintenance,GSK alternate brand name; same formulation
+390,Fluticasone + Salmeterol,Advair,Rx,Respiratory,Diskus DPI,250mcg/50mcg per dose,Asthma and COPD maintenance,GSK alternate brand name; same formulation
+391,Fluticasone + Salmeterol,Advair,Rx,Respiratory,Diskus DPI,500mcg/50mcg per dose,Asthma and COPD maintenance,GSK alternate brand name; same formulation
+392,Montelukast sodium,Singulair,Rx,Respiratory,Tablets,10mg,"Asthma maintenance, allergic rhinitis, EIB",MSD originator; neuropsychiatric warning (FDA black box 2020)
+393,Montelukast sodium,Singulair,Rx,Respiratory,Chewable Tablets,4mg,"Asthma maintenance, allergic rhinitis, EIB",MSD originator; neuropsychiatric warning (FDA black box 2020)
+394,Montelukast sodium,Singulair,Rx,Respiratory,Chewable Tablets,5mg,"Asthma maintenance, allergic rhinitis, EIB",MSD originator; neuropsychiatric warning (FDA black box 2020)
+395,Montelukast sodium,Singulair,Rx,Respiratory,Granule Sachets,4mg,"Asthma maintenance, allergic rhinitis, EIB",MSD originator; neuropsychiatric warning (FDA black box 2020)
+396,Montelukast sodium,Montair,Rx,Respiratory,Tablets,10mg,"Asthma, allergic rhinitis",Cipla brand; affordable alternative
+397,Montelukast sodium,Montair,Rx,Respiratory,Chewable Tablets,4mg,"Asthma, allergic rhinitis",Cipla brand; affordable alternative
+398,Montelukast sodium,Montair,Rx,Respiratory,Chewable Tablets,5mg,"Asthma, allergic rhinitis",Cipla brand; affordable alternative
+399,Montelukast sodium,RiteMED Montelukast,Rx,Respiratory,Tablets,10mg,"Asthma maintenance, allergic rhinitis",United Lab affordable brand
+400,Montelukast sodium,RiteMED Montelukast,Rx,Respiratory,Chewable Tablets,4mg,"Asthma maintenance, allergic rhinitis",United Lab affordable brand
+401,Montelukast sodium,RiteMED Montelukast,Rx,Respiratory,Chewable Tablets,5mg,"Asthma maintenance, allergic rhinitis",United Lab affordable brand
+402,Ambroxol hydrochloride,Mucosolvan,OTC,Respiratory,Tablets,30mg,"Respiratory disorders with excessive mucus, COPD, bronchitis",Boehringer Ingelheim; most used mucolytic in PH
+403,Ambroxol hydrochloride,Mucosolvan,OTC,Respiratory,Syrup,15mg/5mL,"Respiratory disorders with excessive mucus, COPD, bronchitis",Boehringer Ingelheim; most used mucolytic in PH
+404,Ambroxol hydrochloride,Mucosolvan,OTC,Respiratory,SR Capsules,75mg,"Respiratory disorders with excessive mucus, COPD, bronchitis",Boehringer Ingelheim; most used mucolytic in PH
+405,Ambroxol hydrochloride,Mucosolvan,OTC,Respiratory,Nebulizing Solution,7.5mg/mL,"Respiratory disorders with excessive mucus, COPD, bronchitis",Boehringer Ingelheim; most used mucolytic in PH
+406,Ambroxol hydrochloride,Mucosolvan,OTC,Respiratory,Drops,7.5mg/mL,"Respiratory disorders with excessive mucus, COPD, bronchitis",Boehringer Ingelheim; most used mucolytic in PH
+407,Ambroxol hydrochloride,Mucoangin,OTC,Respiratory,Lozenges,20mg,"Mucus in throat, productive cough",Abbott brand; lozenge form
+408,Ambroxol hydrochloride,Ambro,OTC,Respiratory,Syrup,15mg/5mL,"Productive cough, bronchitis",Local brand
+409,Ambroxol hydrochloride,Ambro,OTC,Respiratory,Tablets,30mg,"Productive cough, bronchitis",Local brand
+410,N-Acetylcysteine,Mucomyst,OTC,Respiratory,Oral Solution 10%,100mg/mL,"Mucolytic, acetaminophen overdose (IV)",Originator; IV form used in ER for paracetamol overdose
+411,N-Acetylcysteine,Mucomyst,OTC,Respiratory,Oral Solution 20%,200mg/mL,"Mucolytic, acetaminophen overdose (IV)",Originator; IV form used in ER for paracetamol overdose
+412,N-Acetylcysteine,Mucomyst,OTC,Respiratory,IV Solution,200mg/mL,"Mucolytic, acetaminophen overdose (IV)",Originator; IV form used in ER for paracetamol overdose
+413,N-Acetylcysteine,Solmux Forte,OTC,Respiratory,Capsules,600mg,"Productive cough, COPD",Local popular brand
+414,N-Acetylcysteine,Solmux Forte,OTC,Respiratory,Syrup,100mg/5mL,"Productive cough, COPD",Local popular brand
+415,N-Acetylcysteine,Fluimucil,OTC,Respiratory,Effervescent Sachets,200mg,"Mucolytic, COPD, cystic fibrosis adjunct; IV for paracetamol OD",Zambon brand; effervescent preferred
+416,N-Acetylcysteine,Fluimucil,OTC,Respiratory,Effervescent Sachets,600mg,"Mucolytic, COPD, cystic fibrosis adjunct; IV for paracetamol OD",Zambon brand; effervescent preferred
+417,N-Acetylcysteine,Fluimucil,OTC,Respiratory,IV Solution,200mg/mL,"Mucolytic, COPD, cystic fibrosis adjunct; IV for paracetamol OD",Zambon brand; effervescent preferred
+418,Cetirizine hydrochloride,Zyrtec,OTC,Allergy / Antihistamines,Tablets,10mg,"Allergic rhinitis (seasonal & perennial), urticaria, allergic conjunctivitis",UCB originator; most popular 2nd-gen antihistamine in PH
+419,Cetirizine hydrochloride,Zyrtec,OTC,Allergy / Antihistamines,Syrup,5mg/5mL,"Allergic rhinitis (seasonal & perennial), urticaria, allergic conjunctivitis",UCB originator; most popular 2nd-gen antihistamine in PH
+420,Cetirizine hydrochloride,Zyrtec,OTC,Allergy / Antihistamines,Drops,10mg/mL,"Allergic rhinitis (seasonal & perennial), urticaria, allergic conjunctivitis",UCB originator; most popular 2nd-gen antihistamine in PH
+421,Cetirizine hydrochloride,Riztec,OTC,Allergy / Antihistamines,Tablets,10mg,"Allergic rhinitis, urticaria",Local brand
+422,Cetirizine hydrochloride,Riztec,OTC,Allergy / Antihistamines,Syrup,5mg/5mL,"Allergic rhinitis, urticaria",Local brand
+423,Cetirizine hydrochloride,Alercet,OTC,Allergy / Antihistamines,Tablets,10mg,"Allergic rhinitis, urticaria",Local brand; affordable generic
+424,Cetirizine hydrochloride,RiteMED Cetirizine,OTC,Allergy / Antihistamines,Tablets,10mg,Allergic conditions,United Lab affordable brand
+425,Cetirizine hydrochloride,RiteMED Cetirizine,OTC,Allergy / Antihistamines,Syrup,5mg/5mL,Allergic conditions,United Lab affordable brand
+426,Cetirizine hydrochloride,RiteMED Cetirizine,OTC,Allergy / Antihistamines,Drops,10mg/mL,Allergic conditions,United Lab affordable brand
+427,Loratadine,Claritin,OTC,Allergy / Antihistamines,Tablets,10mg,"Allergic rhinitis, chronic urticaria, hay fever",Bayer consumer originator; non-sedating 2nd-gen
+428,Loratadine,Claritin,OTC,Allergy / Antihistamines,Syrup,5mg/5mL,"Allergic rhinitis, chronic urticaria, hay fever",Bayer consumer originator; non-sedating 2nd-gen
+429,Loratadine,Allerta,OTC,Allergy / Antihistamines,Tablets,10mg,"Allergic rhinitis, urticaria",Local brand; widely used in PH
+430,Loratadine,Allerta,OTC,Allergy / Antihistamines,Syrup,5mg/5mL,"Allergic rhinitis, urticaria",Local brand; widely used in PH
+431,Loratadine,Histafree,OTC,Allergy / Antihistamines,Tablets,10mg,"Allergic rhinitis, urticaria",Local brand
+432,Loratadine,Histafree,OTC,Allergy / Antihistamines,Syrup,5mg/5mL,"Allergic rhinitis, urticaria",Local brand
+433,Loratadine,RiteMED Loratadine,OTC,Allergy / Antihistamines,Tablets,10mg,"Allergic rhinitis, urticaria",United Lab affordable brand
+434,Loratadine,RiteMED Loratadine,OTC,Allergy / Antihistamines,Syrup,5mg/5mL,"Allergic rhinitis, urticaria",United Lab affordable brand
+435,Fexofenadine,Allegra,OTC,Allergy / Antihistamines,Tablets,60mg,"Seasonal allergic rhinitis, chronic idiopathic urticaria",Sanofi originator; truly non-sedating; avoid fruit juices
+436,Fexofenadine,Allegra,OTC,Allergy / Antihistamines,Tablets,120mg,"Seasonal allergic rhinitis, chronic idiopathic urticaria",Sanofi originator; truly non-sedating; avoid fruit juices
+437,Fexofenadine,Allegra,OTC,Allergy / Antihistamines,Tablets,180mg,"Seasonal allergic rhinitis, chronic idiopathic urticaria",Sanofi originator; truly non-sedating; avoid fruit juices
+438,Fexofenadine,Fexigra,OTC,Allergy / Antihistamines,Tablets,120mg,"Allergic rhinitis, urticaria",Local brand in PH
+439,Fexofenadine,Fexigra,OTC,Allergy / Antihistamines,Tablets,180mg,"Allergic rhinitis, urticaria",Local brand in PH
+440,Fexofenadine,Fexofed,OTC,Allergy / Antihistamines,Tablets,120mg,"Allergic rhinitis, urticaria",Local brand
+441,Fexofenadine,Fexofed,OTC,Allergy / Antihistamines,Tablets,180mg,"Allergic rhinitis, urticaria",Local brand
+442,Diphenhydramine,Benadryl,OTC,Allergy / Antihistamines,Capsules,25mg,"Allergy, anaphylaxis adjunct, insomnia, motion sickness",J&J consumer brand; 1st-gen; highly sedating
+443,Diphenhydramine,Benadryl,OTC,Allergy / Antihistamines,Capsules,50mg,"Allergy, anaphylaxis adjunct, insomnia, motion sickness",J&J consumer brand; 1st-gen; highly sedating
+444,Diphenhydramine,Benadryl,OTC,Allergy / Antihistamines,Elixir,12.5mg/5mL,"Allergy, anaphylaxis adjunct, insomnia, motion sickness",J&J consumer brand; 1st-gen; highly sedating
+445,Diphenhydramine,Benadryl,OTC,Allergy / Antihistamines,Cream,2%,"Allergy, anaphylaxis adjunct, insomnia, motion sickness",J&J consumer brand; 1st-gen; highly sedating
+446,Diphenhydramine,Benadryl,OTC,Allergy / Antihistamines,IV/IM Solution,50mg/mL,"Allergy, anaphylaxis adjunct, insomnia, motion sickness",J&J consumer brand; 1st-gen; highly sedating
+447,Diphenhydramine,Allerdryl,OTC,Allergy / Antihistamines,Capsules,25mg,"Allergy, sleep aid",Local brand
+448,Diphenhydramine,Diphenhydramine Generics,OTC,Allergy / Antihistamines,Capsules,25mg,"Allergy, extrapyramidal reactions, anaphylaxis adjunct",Various manufacturers; IV/IM for acute allergic reactions
+449,Diphenhydramine,Diphenhydramine Generics,OTC,Allergy / Antihistamines,Capsules,50mg,"Allergy, extrapyramidal reactions, anaphylaxis adjunct",Various manufacturers; IV/IM for acute allergic reactions
+450,Diphenhydramine,Diphenhydramine Generics,OTC,Allergy / Antihistamines,IV/IM Solution,50mg/mL,"Allergy, extrapyramidal reactions, anaphylaxis adjunct",Various manufacturers; IV/IM for acute allergic reactions
+451,Omeprazole,Losec,OTC,Gastrointestinal,Capsules,20mg,"GERD, peptic ulcer disease, H. pylori triple therapy, ZES",AstraZeneca originator
+452,Omeprazole,Losec,OTC,Gastrointestinal,Capsules,40mg,"GERD, peptic ulcer disease, H. pylori triple therapy, ZES",AstraZeneca originator
+453,Omeprazole,Losec,OTC,Gastrointestinal,MUPS Tablets,20mg,"GERD, peptic ulcer disease, H. pylori triple therapy, ZES",AstraZeneca originator
+454,Omeprazole,Losec,OTC,Gastrointestinal,IV Powder,40mg/vial,"GERD, peptic ulcer disease, H. pylori triple therapy, ZES",AstraZeneca originator
+455,Omeprazole,Omezol,OTC,Gastrointestinal,Capsules,20mg,"GERD, peptic ulcer disease",Local brand; widely available
+456,Omeprazole,Omezol,OTC,Gastrointestinal,Capsules,40mg,"GERD, peptic ulcer disease",Local brand; widely available
+457,Omeprazole,Zoltum,OTC,Gastrointestinal,Capsules,20mg,"GERD, ulcer",Local brand
+458,Omeprazole,Zoltum,OTC,Gastrointestinal,Capsules,40mg,"GERD, ulcer",Local brand
+459,Omeprazole,RiteMED Omeprazole,OTC,Gastrointestinal,Capsules,20mg,"GERD, peptic ulcer",United Lab affordable brand; PNDF listed
+460,Omeprazole,RiteMED Omeprazole,OTC,Gastrointestinal,Capsules,40mg,"GERD, peptic ulcer",United Lab affordable brand; PNDF listed
+461,Esomeprazole,Nexium,Rx,Gastrointestinal,Tablets,20mg,"GERD, erosive esophagitis, H. pylori eradication",AstraZeneca originator; 'purple pill'
+462,Esomeprazole,Nexium,Rx,Gastrointestinal,Tablets,40mg,"GERD, erosive esophagitis, H. pylori eradication",AstraZeneca originator; 'purple pill'
+463,Esomeprazole,Nexium,Rx,Gastrointestinal,IV Powder,40mg/vial,"GERD, erosive esophagitis, H. pylori eradication",AstraZeneca originator; 'purple pill'
+464,Esomeprazole,Esoz,Rx,Gastrointestinal,Tablets,20mg,"GERD, erosive esophagitis",Local brand
+465,Esomeprazole,Esoz,Rx,Gastrointestinal,Tablets,40mg,"GERD, erosive esophagitis",Local brand
+466,Esomeprazole,Nexiam,Rx,Gastrointestinal,Tablets,20mg,GERD,Local generic brand
+467,Esomeprazole,Nexiam,Rx,Gastrointestinal,Tablets,40mg,GERD,Local generic brand
+468,Domperidone,Motilium,Rx,Gastrointestinal,Tablets,10mg,"Nausea, vomiting, gastroparesis, functional dyspepsia",Janssen originator; peripheral dopamine antagonist
+469,Domperidone,Motilium,Rx,Gastrointestinal,Suspension,1mg/mL,"Nausea, vomiting, gastroparesis, functional dyspepsia",Janssen originator; peripheral dopamine antagonist
+470,Domperidone,Motilium,Rx,Gastrointestinal,Suppository,10mg,"Nausea, vomiting, gastroparesis, functional dyspepsia",Janssen originator; peripheral dopamine antagonist
+471,Domperidone,Motilium,Rx,Gastrointestinal,Suppository,30mg,"Nausea, vomiting, gastroparesis, functional dyspepsia",Janssen originator; peripheral dopamine antagonist
+472,Domperidone,Motidom,Rx,Gastrointestinal,Tablets,10mg,"Nausea, vomiting, gastric motility",Local brand
+473,Domperidone,Motidom,Rx,Gastrointestinal,Suspension,1mg/mL,"Nausea, vomiting, gastric motility",Local brand
+474,Domperidone,Pramin,Rx,Gastrointestinal,Tablets,10mg,"Nausea, gastroparesis",Local brand; affordable option
+475,Ondansetron,Zofran,Rx,Gastrointestinal,Tablets,4mg,"Chemotherapy-induced N/V, post-operative N/V, hyperemesis gravidarum",GSK originator; 5-HT3 antagonist
+476,Ondansetron,Zofran,Rx,Gastrointestinal,Tablets,8mg,"Chemotherapy-induced N/V, post-operative N/V, hyperemesis gravidarum",GSK originator; 5-HT3 antagonist
+477,Ondansetron,Zofran,Rx,Gastrointestinal,Orally Disintegrating Tablets,4mg,"Chemotherapy-induced N/V, post-operative N/V, hyperemesis gravidarum",GSK originator; 5-HT3 antagonist
+478,Ondansetron,Zofran,Rx,Gastrointestinal,Orally Disintegrating Tablets,8mg,"Chemotherapy-induced N/V, post-operative N/V, hyperemesis gravidarum",GSK originator; 5-HT3 antagonist
+479,Ondansetron,Zofran,Rx,Gastrointestinal,IV/IM Solution,2mg/mL,"Chemotherapy-induced N/V, post-operative N/V, hyperemesis gravidarum",GSK originator; 5-HT3 antagonist
+480,Ondansetron,Zofran,Rx,Gastrointestinal,Syrup,4mg/5mL,"Chemotherapy-induced N/V, post-operative N/V, hyperemesis gravidarum",GSK originator; 5-HT3 antagonist
+481,Ondansetron,Onaseron,Rx,Gastrointestinal,Tablets,4mg,Chemotherapy-induced and post-op N/V,Local brand
+482,Ondansetron,Onaseron,Rx,Gastrointestinal,Tablets,8mg,Chemotherapy-induced and post-op N/V,Local brand
+483,Ondansetron,Onaseron,Rx,Gastrointestinal,IV Solution,2mg/mL,Chemotherapy-induced and post-op N/V,Local brand
+484,Ondansetron,Plazilex,Rx,Gastrointestinal,Tablets,4mg,Nausea and vomiting,Local brand
+485,Ondansetron,Plazilex,Rx,Gastrointestinal,Tablets,8mg,Nausea and vomiting,Local brand
+486,Ondansetron,Plazilex,Rx,Gastrointestinal,IV Solution,2mg/mL,Nausea and vomiting,Local brand
+487,Hyoscine butylbromide,Buscopan,OTC,Gastrointestinal,Tablets,10mg,"Abdominal cramps, IBS, dysmenorrhea, renal/biliary colic",Boehringer Ingelheim originator; most prescribed antispasmodic in PH
+488,Hyoscine butylbromide,Buscopan,OTC,Gastrointestinal,IV/IM Solution,20mg/mL (1mL amp),"Abdominal cramps, IBS, dysmenorrhea, renal/biliary colic",Boehringer Ingelheim originator; most prescribed antispasmodic in PH
+489,Hyoscine butylbromide,Buscopan,OTC,Gastrointestinal,Suppository,10mg,"Abdominal cramps, IBS, dysmenorrhea, renal/biliary colic",Boehringer Ingelheim originator; most prescribed antispasmodic in PH
+490,Hyoscine butylbromide,Scopolamine Butylbromide Generics,OTC,Gastrointestinal,Tablets,10mg,"Abdominal spasms, IBS",Various generic manufacturers in PH
+491,Hyoscine butylbromide,Scopolamine Butylbromide Generics,OTC,Gastrointestinal,IV/IM Solution,20mg/mL,"Abdominal spasms, IBS",Various generic manufacturers in PH
+492,Lactulose,Duphalac,OTC,Gastrointestinal,Oral Solution,3.35g/5mL (300mL bottle),"Constipation (1st line in pregnancy), hepatic encephalopathy",Solvay/Abbott originator; safe in pregnancy
+493,Lactulose,Duphalac,OTC,Gastrointestinal,Oral Solution,3.35g/5mL (500mL bottle),"Constipation (1st line in pregnancy), hepatic encephalopathy",Solvay/Abbott originator; safe in pregnancy
+494,Lactulose,Pirolac,OTC,Gastrointestinal,Oral Solution,3.35g/5mL,"Constipation, hepatic encephalopathy",Local brand
+495,Lactulose,Constilac,OTC,Gastrointestinal,Oral Solution,3.35g/5mL,Constipation,Local brand; affordable option
+496,Oral Rehydration Salts (ORS),Hydrite,OTC,Gastrointestinal,Sachet (dissolved in 1L water),Na 75 / K 20 / Cl 65 / Citrate 10 / Glucose 75 mmol/L (WHO low-osmolarity 245 mOsm/L),"Diarrheal dehydration, gastroenteritis, cholera",Most widely used ORS in PH; PNDF listed
+497,Oral Rehydration Salts (ORS),Diorex,OTC,Gastrointestinal,Sachet (dissolved in 1L water),WHO low-osmolarity formula (245 mOsm/L),Diarrheal dehydration in adults and children,Local brand; flavored variants available
+498,Oral Rehydration Salts (ORS),WHO-ORS Formula,OTC,Gastrointestinal,Sachet (dissolved in 1L water),Standard formula (311 mOsm/L) and low-osmolarity (245 mOsm/L),Diarrheal disease rehydration,Available through DOH Botika ng Barangay programs
+499,Sertraline,Zoloft,Rx,CNS / Psychiatry,Tablets,50mg,"Depression, OCD, panic disorder, PTSD, social anxiety, PMDD",Pfizer originator; most prescribed SSRI in PH
+500,Sertraline,Zoloft,Rx,CNS / Psychiatry,Tablets,100mg,"Depression, OCD, panic disorder, PTSD, social anxiety, PMDD",Pfizer originator; most prescribed SSRI in PH
+501,Sertraline,Zoloft,Rx,CNS / Psychiatry,Oral Solution,20mg/mL,"Depression, OCD, panic disorder, PTSD, social anxiety, PMDD",Pfizer originator; most prescribed SSRI in PH
+502,Sertraline,Serlain,Rx,CNS / Psychiatry,Tablets,50mg,"Depression, anxiety disorders",Local brand
+503,Sertraline,Serlain,Rx,CNS / Psychiatry,Tablets,100mg,"Depression, anxiety disorders",Local brand
+504,Sertraline,Lustral,Rx,CNS / Psychiatry,Tablets,50mg,"Depression, OCD, PTSD",Pfizer alternate brand name
+505,Sertraline,Lustral,Rx,CNS / Psychiatry,Tablets,100mg,"Depression, OCD, PTSD",Pfizer alternate brand name
+506,Sertraline,Pharex Sertraline,Rx,CNS / Psychiatry,Tablets,50mg,"Depression, anxiety",Pharex affordable brand
+507,Sertraline,Pharex Sertraline,Rx,CNS / Psychiatry,Tablets,100mg,"Depression, anxiety",Pharex affordable brand
+508,Fluoxetine,Prozac,Rx,CNS / Psychiatry,Capsules,10mg,"Depression, OCD, bulimia nervosa, panic disorder, PMDD",Eli Lilly originator; long half-life
+509,Fluoxetine,Prozac,Rx,CNS / Psychiatry,Capsules,20mg,"Depression, OCD, bulimia nervosa, panic disorder, PMDD",Eli Lilly originator; long half-life
+510,Fluoxetine,Prozac,Rx,CNS / Psychiatry,Capsules,40mg,"Depression, OCD, bulimia nervosa, panic disorder, PMDD",Eli Lilly originator; long half-life
+511,Fluoxetine,Prozac,Rx,CNS / Psychiatry,Oral Solution,20mg/5mL,"Depression, OCD, bulimia nervosa, panic disorder, PMDD",Eli Lilly originator; long half-life
+512,Fluoxetine,Prozac,Rx,CNS / Psychiatry,Weekly Capsules,90mg,"Depression, OCD, bulimia nervosa, panic disorder, PMDD",Eli Lilly originator; long half-life
+513,Fluoxetine,Fluctin,Rx,CNS / Psychiatry,Capsules,20mg,"Depression, OCD",Local brand
+514,Fluoxetine,Lovan,Rx,CNS / Psychiatry,Capsules,20mg,"Depression, anxiety disorders",Generic equivalent brand in PH
+515,Risperidone,Risperdal,Rx,CNS / Psychiatry,Tablets,0.5mg,"Schizophrenia, bipolar mania, autism-related irritability",Janssen originator; depot for non-adherent patients
+516,Risperidone,Risperdal,Rx,CNS / Psychiatry,Tablets,1mg,"Schizophrenia, bipolar mania, autism-related irritability",Janssen originator; depot for non-adherent patients
+517,Risperidone,Risperdal,Rx,CNS / Psychiatry,Tablets,2mg,"Schizophrenia, bipolar mania, autism-related irritability",Janssen originator; depot for non-adherent patients
+518,Risperidone,Risperdal,Rx,CNS / Psychiatry,Tablets,3mg,"Schizophrenia, bipolar mania, autism-related irritability",Janssen originator; depot for non-adherent patients
+519,Risperidone,Risperdal,Rx,CNS / Psychiatry,Tablets,4mg,"Schizophrenia, bipolar mania, autism-related irritability",Janssen originator; depot for non-adherent patients
+520,Risperidone,Risperdal,Rx,CNS / Psychiatry,Oral Solution,1mg/mL,"Schizophrenia, bipolar mania, autism-related irritability",Janssen originator; depot for non-adherent patients
+521,Risperidone,Risperdal,Rx,CNS / Psychiatry,Consta IM Depot,25mg,"Schizophrenia, bipolar mania, autism-related irritability",Janssen originator; depot for non-adherent patients
+522,Risperidone,Risperdal,Rx,CNS / Psychiatry,Consta IM Depot,37.5mg,"Schizophrenia, bipolar mania, autism-related irritability",Janssen originator; depot for non-adherent patients
+523,Risperidone,Risperdal,Rx,CNS / Psychiatry,Consta IM Depot,50mg,"Schizophrenia, bipolar mania, autism-related irritability",Janssen originator; depot for non-adherent patients
+524,Risperidone,Zofredal,Rx,CNS / Psychiatry,Tablets,1mg,"Schizophrenia, bipolar mania",Local brand in PH
+525,Risperidone,Zofredal,Rx,CNS / Psychiatry,Tablets,2mg,"Schizophrenia, bipolar mania",Local brand in PH
+526,Risperidone,Zofredal,Rx,CNS / Psychiatry,Tablets,3mg,"Schizophrenia, bipolar mania",Local brand in PH
+527,Risperidone,Zofredal,Rx,CNS / Psychiatry,Tablets,4mg,"Schizophrenia, bipolar mania",Local brand in PH
+528,Risperidone,Risperidon Generics,Rx,CNS / Psychiatry,Tablets,1mg,Schizophrenia,Various generic manufacturers; affordable option
+529,Risperidone,Risperidon Generics,Rx,CNS / Psychiatry,Tablets,2mg,Schizophrenia,Various generic manufacturers; affordable option
+530,Diazepam,Valium,Controlled,CNS / Psychiatry,Tablets,2mg,"Anxiety disorders, alcohol withdrawal, seizures, muscle relaxant",Roche originator; PDEA Schedule IV
+531,Diazepam,Valium,Controlled,CNS / Psychiatry,Tablets,5mg,"Anxiety disorders, alcohol withdrawal, seizures, muscle relaxant",Roche originator; PDEA Schedule IV
+532,Diazepam,Valium,Controlled,CNS / Psychiatry,Tablets,10mg,"Anxiety disorders, alcohol withdrawal, seizures, muscle relaxant",Roche originator; PDEA Schedule IV
+533,Diazepam,Valium,Controlled,CNS / Psychiatry,IV/IM Solution,5mg/mL (2mL amp),"Anxiety disorders, alcohol withdrawal, seizures, muscle relaxant",Roche originator; PDEA Schedule IV
+534,Diazepam,Diastat,Controlled,CNS / Psychiatry,Rectal Gel,2.5mg,Acute seizures / status epilepticus (rectal),Emergency rectal formulation; useful in pediatric seizures
+535,Diazepam,Diastat,Controlled,CNS / Psychiatry,Rectal Gel,5mg,Acute seizures / status epilepticus (rectal),Emergency rectal formulation; useful in pediatric seizures
+536,Diazepam,Diastat,Controlled,CNS / Psychiatry,Rectal Gel,10mg,Acute seizures / status epilepticus (rectal),Emergency rectal formulation; useful in pediatric seizures
+537,Diazepam,Diastat,Controlled,CNS / Psychiatry,Rectal Gel,15mg,Acute seizures / status epilepticus (rectal),Emergency rectal formulation; useful in pediatric seizures
+538,Diazepam,Diastat,Controlled,CNS / Psychiatry,Rectal Gel,20mg,Acute seizures / status epilepticus (rectal),Emergency rectal formulation; useful in pediatric seizures
+539,Diazepam,Diazepam Generics,Controlled,CNS / Psychiatry,Tablets,2mg,"Anxiety, seizures, muscle relaxant",Various generic manufacturers; PDEA-regulated
+540,Diazepam,Diazepam Generics,Controlled,CNS / Psychiatry,Tablets,5mg,"Anxiety, seizures, muscle relaxant",Various generic manufacturers; PDEA-regulated
+541,Diazepam,Diazepam Generics,Controlled,CNS / Psychiatry,Tablets,10mg,"Anxiety, seizures, muscle relaxant",Various generic manufacturers; PDEA-regulated
+542,Diazepam,Diazepam Generics,Controlled,CNS / Psychiatry,IV/IM Solution,5mg/mL,"Anxiety, seizures, muscle relaxant",Various generic manufacturers; PDEA-regulated
+543,Alprazolam,Xanax,Controlled,CNS / Psychiatry,Tablets,0.25mg,"Generalized anxiety disorder, panic disorder",Pfizer originator; PDEA Schedule IV; high dependence risk
+544,Alprazolam,Xanax,Controlled,CNS / Psychiatry,Tablets,0.5mg,"Generalized anxiety disorder, panic disorder",Pfizer originator; PDEA Schedule IV; high dependence risk
+545,Alprazolam,Xanax,Controlled,CNS / Psychiatry,Tablets,1mg,"Generalized anxiety disorder, panic disorder",Pfizer originator; PDEA Schedule IV; high dependence risk
+546,Alprazolam,Xanax,Controlled,CNS / Psychiatry,Tablets,2mg,"Generalized anxiety disorder, panic disorder",Pfizer originator; PDEA Schedule IV; high dependence risk
+547,Alprazolam,Xanax,Controlled,CNS / Psychiatry,XR Tablets,0.5mg,"Generalized anxiety disorder, panic disorder",Pfizer originator; PDEA Schedule IV; high dependence risk
+548,Alprazolam,Xanax,Controlled,CNS / Psychiatry,XR Tablets,1mg,"Generalized anxiety disorder, panic disorder",Pfizer originator; PDEA Schedule IV; high dependence risk
+549,Alprazolam,Xanax,Controlled,CNS / Psychiatry,XR Tablets,2mg,"Generalized anxiety disorder, panic disorder",Pfizer originator; PDEA Schedule IV; high dependence risk
+550,Alprazolam,Xanax,Controlled,CNS / Psychiatry,XR Tablets,3mg,"Generalized anxiety disorder, panic disorder",Pfizer originator; PDEA Schedule IV; high dependence risk
+551,Alprazolam,Alprox,Controlled,CNS / Psychiatry,Tablets,0.25mg,"Anxiety disorders, panic disorder",Local brand; PDEA controlled
+552,Alprazolam,Alprox,Controlled,CNS / Psychiatry,Tablets,0.5mg,"Anxiety disorders, panic disorder",Local brand; PDEA controlled
+553,Alprazolam,Alprox,Controlled,CNS / Psychiatry,Tablets,1mg,"Anxiety disorders, panic disorder",Local brand; PDEA controlled
+554,Alprazolam,Pharex Alprazolam,Controlled,CNS / Psychiatry,Tablets,0.25mg,Anxiety disorders,Pharex brand; PDEA Schedule IV
+555,Alprazolam,Pharex Alprazolam,Controlled,CNS / Psychiatry,Tablets,0.5mg,Anxiety disorders,Pharex brand; PDEA Schedule IV
+556,Phenytoin sodium,Dilantin,Rx,CNS / Psychiatry,Extended-Release Capsules,30mg,"Generalized tonic-clonic & complex partial seizures, status epilepticus",Pfizer originator; narrow therapeutic index; monitor levels 10–20 mcg/mL
+557,Phenytoin sodium,Dilantin,Rx,CNS / Psychiatry,Extended-Release Capsules,100mg,"Generalized tonic-clonic & complex partial seizures, status epilepticus",Pfizer originator; narrow therapeutic index; monitor levels 10–20 mcg/mL
+558,Phenytoin sodium,Dilantin,Rx,CNS / Psychiatry,Chewable Tablets (Infatabs),50mg,"Generalized tonic-clonic & complex partial seizures, status epilepticus",Pfizer originator; narrow therapeutic index; monitor levels 10–20 mcg/mL
+559,Phenytoin sodium,Dilantin,Rx,CNS / Psychiatry,IV Solution,50mg/mL,"Generalized tonic-clonic & complex partial seizures, status epilepticus",Pfizer originator; narrow therapeutic index; monitor levels 10–20 mcg/mL
+560,Phenytoin sodium,Epanutin,Rx,CNS / Psychiatry,Capsules,25mg,Seizure disorders,Pfizer alternate brand
+561,Phenytoin sodium,Epanutin,Rx,CNS / Psychiatry,Capsules,50mg,Seizure disorders,Pfizer alternate brand
+562,Phenytoin sodium,Epanutin,Rx,CNS / Psychiatry,Capsules,100mg,Seizure disorders,Pfizer alternate brand
+563,Phenytoin sodium,Epanutin,Rx,CNS / Psychiatry,IV Solution,50mg/mL,Seizure disorders,Pfizer alternate brand
+564,Phenytoin sodium,Phenytoin Generics,Rx,CNS / Psychiatry,Capsules,100mg,"Epilepsy, seizures",Various manufacturers; PNDF listed
+565,Carbamazepine,Tegretol,Rx,CNS / Psychiatry,Tablets,200mg,"Epilepsy (partial/tonic-clonic), trigeminal neuralgia, bipolar mood stabilizer",Novartis originator; CR = controlled release for smoother levels
+566,Carbamazepine,Tegretol,Rx,CNS / Psychiatry,Tablets,400mg,"Epilepsy (partial/tonic-clonic), trigeminal neuralgia, bipolar mood stabilizer",Novartis originator; CR = controlled release for smoother levels
+567,Carbamazepine,Tegretol,Rx,CNS / Psychiatry,CR Tablets,200mg,"Epilepsy (partial/tonic-clonic), trigeminal neuralgia, bipolar mood stabilizer",Novartis originator; CR = controlled release for smoother levels
+568,Carbamazepine,Tegretol,Rx,CNS / Psychiatry,CR Tablets,400mg,"Epilepsy (partial/tonic-clonic), trigeminal neuralgia, bipolar mood stabilizer",Novartis originator; CR = controlled release for smoother levels
+569,Carbamazepine,Tegretol,Rx,CNS / Psychiatry,Suspension,100mg/5mL,"Epilepsy (partial/tonic-clonic), trigeminal neuralgia, bipolar mood stabilizer",Novartis originator; CR = controlled release for smoother levels
+570,Carbamazepine,Carbazep,Rx,CNS / Psychiatry,Tablets,200mg,"Epilepsy, trigeminal neuralgia",Local brand
+571,Carbamazepine,Carbazep,Rx,CNS / Psychiatry,Tablets,400mg,"Epilepsy, trigeminal neuralgia",Local brand
+572,Carbamazepine,Epitol,Rx,CNS / Psychiatry,Tablets,200mg,"Epilepsy, mood stabilizer",Local brand; affordable generic
+573,Levodopa + Carbidopa,Sinemet,Rx,CNS / Psychiatry,Tablets,10mg/100mg,"Parkinson's disease, parkinsonism",MSD originator; immediate and controlled-release formulations
+574,Levodopa + Carbidopa,Sinemet,Rx,CNS / Psychiatry,Tablets,25mg/100mg,"Parkinson's disease, parkinsonism",MSD originator; immediate and controlled-release formulations
+575,Levodopa + Carbidopa,Sinemet,Rx,CNS / Psychiatry,Tablets,25mg/250mg,"Parkinson's disease, parkinsonism",MSD originator; immediate and controlled-release formulations
+576,Levodopa + Carbidopa,Sinemet,Rx,CNS / Psychiatry,CR Tablets,25mg/100mg,"Parkinson's disease, parkinsonism",MSD originator; immediate and controlled-release formulations
+577,Levodopa + Carbidopa,Sinemet,Rx,CNS / Psychiatry,CR Tablets,50mg/200mg,"Parkinson's disease, parkinsonism",MSD originator; immediate and controlled-release formulations
+578,Levodopa + Carbidopa,Kinson,Rx,CNS / Psychiatry,Tablets,25mg/100mg,Parkinson's disease,Alphapharm brand available in PH
+579,Levodopa + Carbidopa,Kinson,Rx,CNS / Psychiatry,Tablets,25mg/250mg,Parkinson's disease,Alphapharm brand available in PH
+580,Levodopa + Carbidopa,Carbidopa/Levodopa Generics,Rx,CNS / Psychiatry,Tablets,25mg/100mg,Parkinson's disease,Various generic manufacturers; PNDF listed
+581,Levodopa + Carbidopa,Carbidopa/Levodopa Generics,Rx,CNS / Psychiatry,Tablets,25mg/250mg,Parkinson's disease,Various generic manufacturers; PNDF listed
+582,Prednisone,Deltasone,Rx,Corticosteroids,Tablets,5mg,"Inflammation, autoimmune diseases, asthma exacerbations, organ transplant",Pfizer originator; most prescribed oral corticosteroid in PH
+583,Prednisone,Deltasone,Rx,Corticosteroids,Tablets,10mg,"Inflammation, autoimmune diseases, asthma exacerbations, organ transplant",Pfizer originator; most prescribed oral corticosteroid in PH
+584,Prednisone,Deltasone,Rx,Corticosteroids,Tablets,20mg,"Inflammation, autoimmune diseases, asthma exacerbations, organ transplant",Pfizer originator; most prescribed oral corticosteroid in PH
+585,Prednisone,Deltasone,Rx,Corticosteroids,Tablets,50mg,"Inflammation, autoimmune diseases, asthma exacerbations, organ transplant",Pfizer originator; most prescribed oral corticosteroid in PH
+586,Prednisone,Panalog,Rx,Corticosteroids,Tablets,5mg,Inflammatory conditions,Local brand
+587,Prednisone,Prednisone Generics,Rx,Corticosteroids,Tablets,5mg,"Inflammation, autoimmune conditions",Various manufacturers; PNDF listed
+588,Prednisone,Prednisone Generics,Rx,Corticosteroids,Tablets,10mg,"Inflammation, autoimmune conditions",Various manufacturers; PNDF listed
+589,Prednisone,Prednisone Generics,Rx,Corticosteroids,Tablets,20mg,"Inflammation, autoimmune conditions",Various manufacturers; PNDF listed
+590,Dexamethasone,Decadron,Rx,Corticosteroids,Tablets,0.5mg,"Cerebral edema, COVID-19 severe disease, croup, prenatal lung maturation",MSD originator; most potent commonly available corticosteroid
+591,Dexamethasone,Decadron,Rx,Corticosteroids,Tablets,4mg,"Cerebral edema, COVID-19 severe disease, croup, prenatal lung maturation",MSD originator; most potent commonly available corticosteroid
+592,Dexamethasone,Decadron,Rx,Corticosteroids,IV/IM Solution,4mg/mL (1mL amp),"Cerebral edema, COVID-19 severe disease, croup, prenatal lung maturation",MSD originator; most potent commonly available corticosteroid
+593,Dexamethasone,Decadron,Rx,Corticosteroids,IV/IM Solution,4mg/mL (2mL amp),"Cerebral edema, COVID-19 severe disease, croup, prenatal lung maturation",MSD originator; most potent commonly available corticosteroid
+594,Dexamethasone,Decadron,Rx,Corticosteroids,IV/IM Solution,4mg/mL (5mL amp),"Cerebral edema, COVID-19 severe disease, croup, prenatal lung maturation",MSD originator; most potent commonly available corticosteroid
+595,Dexamethasone,Dexamax,Rx,Corticosteroids,Tablets,0.5mg,"Severe inflammatory conditions, COVID-19",Local brand
+596,Dexamethasone,Dexamax,Rx,Corticosteroids,Tablets,4mg,"Severe inflammatory conditions, COVID-19",Local brand
+597,Dexamethasone,Dexamax,Rx,Corticosteroids,IV/IM Solution,4mg/mL,"Severe inflammatory conditions, COVID-19",Local brand
+598,Dexamethasone,Pharex Dexamethasone,Rx,Corticosteroids,Tablets,0.5mg,"Inflammation, cerebral edema",Pharex affordable brand
+599,Dexamethasone,Pharex Dexamethasone,Rx,Corticosteroids,Tablets,4mg,"Inflammation, cerebral edema",Pharex affordable brand
+600,Dexamethasone,Pharex Dexamethasone,Rx,Corticosteroids,IV/IM Solution,4mg/mL,"Inflammation, cerebral edema",Pharex affordable brand
+601,Hydrocortisone,Solu-Cortef,Rx,Corticosteroids,IV/IM Powder (Act-O-Vial),100mg,"Adrenal crisis, anaphylaxis, severe asthma, status asthmaticus",Pfizer; gold standard for acute adrenal insufficiency
+602,Hydrocortisone,Solu-Cortef,Rx,Corticosteroids,IV/IM Powder (Act-O-Vial),250mg,"Adrenal crisis, anaphylaxis, severe asthma, status asthmaticus",Pfizer; gold standard for acute adrenal insufficiency
+603,Hydrocortisone,Solu-Cortef,Rx,Corticosteroids,IV/IM Powder (Act-O-Vial),500mg,"Adrenal crisis, anaphylaxis, severe asthma, status asthmaticus",Pfizer; gold standard for acute adrenal insufficiency
+604,Hydrocortisone,Solu-Cortef,Rx,Corticosteroids,IV/IM Powder (Act-O-Vial),1000mg,"Adrenal crisis, anaphylaxis, severe asthma, status asthmaticus",Pfizer; gold standard for acute adrenal insufficiency
+605,Hydrocortisone,Cortef,Rx,Corticosteroids,Tablets,5mg,"Adrenal insufficiency replacement, inflammatory conditions",Pfizer; oral form for chronic adrenal replacement
+606,Hydrocortisone,Cortef,Rx,Corticosteroids,Tablets,10mg,"Adrenal insufficiency replacement, inflammatory conditions",Pfizer; oral form for chronic adrenal replacement
+607,Hydrocortisone,Cortef,Rx,Corticosteroids,Tablets,20mg,"Adrenal insufficiency replacement, inflammatory conditions",Pfizer; oral form for chronic adrenal replacement
+608,Hydrocortisone,Hydrocortisone Topical,Rx,Corticosteroids,Cream,0.50%,"Mild inflammatory skin conditions, eczema, contact dermatitis",Various brands; mild potency topical GCS; OTC at 1%
+609,Hydrocortisone,Hydrocortisone Topical,Rx,Corticosteroids,Cream,1%,"Mild inflammatory skin conditions, eczema, contact dermatitis",Various brands; mild potency topical GCS; OTC at 1%
+610,Hydrocortisone,Hydrocortisone Topical,Rx,Corticosteroids,Cream,2.50%,"Mild inflammatory skin conditions, eczema, contact dermatitis",Various brands; mild potency topical GCS; OTC at 1%
+611,Hydrocortisone,Hydrocortisone Topical,Rx,Corticosteroids,Ointment,1%,"Mild inflammatory skin conditions, eczema, contact dermatitis",Various brands; mild potency topical GCS; OTC at 1%
+612,Methylprednisolone,Medrol,Rx,Corticosteroids,Tablets,2mg,"Inflammatory/autoimmune diseases, asthma, allergic conditions",Pfizer originator; Dosepak widely prescribed in PH
+613,Methylprednisolone,Medrol,Rx,Corticosteroids,Tablets,4mg,"Inflammatory/autoimmune diseases, asthma, allergic conditions",Pfizer originator; Dosepak widely prescribed in PH
+614,Methylprednisolone,Medrol,Rx,Corticosteroids,Tablets,8mg,"Inflammatory/autoimmune diseases, asthma, allergic conditions",Pfizer originator; Dosepak widely prescribed in PH
+615,Methylprednisolone,Medrol,Rx,Corticosteroids,Tablets,16mg,"Inflammatory/autoimmune diseases, asthma, allergic conditions",Pfizer originator; Dosepak widely prescribed in PH
+616,Methylprednisolone,Medrol,Rx,Corticosteroids,Tablets,32mg,"Inflammatory/autoimmune diseases, asthma, allergic conditions",Pfizer originator; Dosepak widely prescribed in PH
+617,Methylprednisolone,Medrol,Rx,Corticosteroids,Dosepak (6-day taper),4mg x 21 tablets,"Inflammatory/autoimmune diseases, asthma, allergic conditions",Pfizer originator; Dosepak widely prescribed in PH
+618,Methylprednisolone,Solu-Medrol,Rx,Corticosteroids,IV/IM Powder,40mg/vial,"MS relapse, organ transplant, spinal cord injury, severe inflammatory conditions",Pfizer; IV pulse 500–1000mg for MS/autoimmune
+619,Methylprednisolone,Solu-Medrol,Rx,Corticosteroids,IV/IM Powder,125mg/vial,"MS relapse, organ transplant, spinal cord injury, severe inflammatory conditions",Pfizer; IV pulse 500–1000mg for MS/autoimmune
+620,Methylprednisolone,Solu-Medrol,Rx,Corticosteroids,IV/IM Powder,500mg/vial,"MS relapse, organ transplant, spinal cord injury, severe inflammatory conditions",Pfizer; IV pulse 500–1000mg for MS/autoimmune
+621,Methylprednisolone,Solu-Medrol,Rx,Corticosteroids,IV/IM Powder,1g/vial,"MS relapse, organ transplant, spinal cord injury, severe inflammatory conditions",Pfizer; IV pulse 500–1000mg for MS/autoimmune
+622,Methylprednisolone,Solu-Medrol,Rx,Corticosteroids,IV/IM Powder,2g/vial,"MS relapse, organ transplant, spinal cord injury, severe inflammatory conditions",Pfizer; IV pulse 500–1000mg for MS/autoimmune
+623,Methylprednisolone,Pharex Methylprednisolone,Rx,Corticosteroids,Tablets,4mg,Inflammatory and autoimmune conditions,Pharex affordable brand
+624,Methylprednisolone,Pharex Methylprednisolone,Rx,Corticosteroids,Tablets,8mg,Inflammatory and autoimmune conditions,Pharex affordable brand
+625,Methylprednisolone,Pharex Methylprednisolone,Rx,Corticosteroids,Tablets,16mg,Inflammatory and autoimmune conditions,Pharex affordable brand
+626,Albendazole,Zentel,OTC,Infectious Disease,Tablets,200mg,"Ascariasis, hookworm, pinworm, tapeworm, cystic echinococcosis, neurocysticercosis",GSK originator; used in PH MDA programs
+627,Albendazole,Zentel,OTC,Infectious Disease,Chewable Tablets,400mg,"Ascariasis, hookworm, pinworm, tapeworm, cystic echinococcosis, neurocysticercosis",GSK originator; used in PH MDA programs
+628,Albendazole,Zentel,OTC,Infectious Disease,Suspension,100mg/5mL,"Ascariasis, hookworm, pinworm, tapeworm, cystic echinococcosis, neurocysticercosis",GSK originator; used in PH MDA programs
+629,Albendazole,Eskazole,OTC,Infectious Disease,Tablets,400mg,"Tissue-invasive helminthic infections (hydatid, neurocysticercosis)",GSK brand; higher-dose course for cystic disease
+630,Albendazole,Pharex Albendazole,OTC,Infectious Disease,Tablets,400mg,"Helminthic infections, deworming",Pharex affordable brand; PNDF listed
+631,Albendazole,Pharex Albendazole,OTC,Infectious Disease,Suspension,100mg/5mL,"Helminthic infections, deworming",Pharex affordable brand; PNDF listed
+632,Mebendazole,Vermox,OTC,Infectious Disease,Tablets,100mg,"Pinworm, roundworm, hookworm, whipworm infections",Janssen originator; chew or crush tablets for best effect
+633,Mebendazole,Vermox,OTC,Infectious Disease,Tablets,500mg,"Pinworm, roundworm, hookworm, whipworm infections",Janssen originator; chew or crush tablets for best effect
+634,Mebendazole,Vermox,OTC,Infectious Disease,Suspension,100mg/5mL,"Pinworm, roundworm, hookworm, whipworm infections",Janssen originator; chew or crush tablets for best effect
+635,Mebendazole,Antiox,OTC,Infectious Disease,Tablets,100mg,"Helminthic infections, deworming",Local brand widely available in PH
+636,Mebendazole,Antiox,OTC,Infectious Disease,Tablets,500mg,"Helminthic infections, deworming",Local brand widely available in PH
+637,Mebendazole,Mebex,OTC,Infectious Disease,Tablets,100mg,Intestinal helminthic infections,Local brand; affordable option
+638,Mebendazole,Mebex,OTC,Infectious Disease,Tablets,500mg,Intestinal helminthic infections,Local brand; affordable option
+639,Mebendazole,Mebex,OTC,Infectious Disease,Suspension,100mg/5mL,Intestinal helminthic infections,Local brand; affordable option
+640,Acyclovir,Zovirax,Rx,Infectious Disease,Tablets,200mg,"Herpes simplex (genital, labialis, encephalitis), varicella-zoster, immunocompromised prophylaxis",GSK originator; most widely used antiviral in PH
+641,Acyclovir,Zovirax,Rx,Infectious Disease,Tablets,400mg,"Herpes simplex (genital, labialis, encephalitis), varicella-zoster, immunocompromised prophylaxis",GSK originator; most widely used antiviral in PH
+642,Acyclovir,Zovirax,Rx,Infectious Disease,Tablets,800mg,"Herpes simplex (genital, labialis, encephalitis), varicella-zoster, immunocompromised prophylaxis",GSK originator; most widely used antiviral in PH
+643,Acyclovir,Zovirax,Rx,Infectious Disease,Cream,5%,"Herpes simplex (genital, labialis, encephalitis), varicella-zoster, immunocompromised prophylaxis",GSK originator; most widely used antiviral in PH
+644,Acyclovir,Zovirax,Rx,Infectious Disease,IV Powder,250mg/vial,"Herpes simplex (genital, labialis, encephalitis), varicella-zoster, immunocompromised prophylaxis",GSK originator; most widely used antiviral in PH
+645,Acyclovir,Zovirax,Rx,Infectious Disease,Suspension,200mg/5mL,"Herpes simplex (genital, labialis, encephalitis), varicella-zoster, immunocompromised prophylaxis",GSK originator; most widely used antiviral in PH
+646,Acyclovir,Acyvir,Rx,Infectious Disease,Tablets,200mg,Herpes simplex and varicella-zoster infections,Local brand
+647,Acyclovir,Acyvir,Rx,Infectious Disease,Tablets,400mg,Herpes simplex and varicella-zoster infections,Local brand
+648,Acyclovir,Acyvir,Rx,Infectious Disease,Tablets,800mg,Herpes simplex and varicella-zoster infections,Local brand
+649,Acyclovir,Acyvir,Rx,Infectious Disease,Cream,5%,Herpes simplex and varicella-zoster infections,Local brand
+650,Acyclovir,Pharex Acyclovir,Rx,Infectious Disease,Tablets,200mg,"Herpes simplex, varicella-zoster",Pharex affordable brand
+651,Acyclovir,Pharex Acyclovir,Rx,Infectious Disease,Tablets,400mg,"Herpes simplex, varicella-zoster",Pharex affordable brand
+652,Acyclovir,Pharex Acyclovir,Rx,Infectious Disease,Tablets,800mg,"Herpes simplex, varicella-zoster",Pharex affordable brand
+653,Artemether + Lumefantrine,Coartem,Rx,Infectious Disease,Tablets,20mg artemether + 120mg lumefantrine,Uncomplicated P. falciparum malaria (ACT first-line),Novartis; WHO prequalified; take with fatty food; 6-dose over 3 days
+654,Artemether + Lumefantrine,Riamet,Rx,Infectious Disease,Tablets,20mg artemether + 120mg lumefantrine,Uncomplicated falciparum malaria,Novartis alternate brand name; same formulation
+655,Oseltamivir phosphate,Tamiflu,Rx,Infectious Disease,Capsules,30mg,"Influenza A and B treatment (within 48h) and prophylaxis, H5N1",Roche originator
+656,Oseltamivir phosphate,Tamiflu,Rx,Infectious Disease,Capsules,45mg,"Influenza A and B treatment (within 48h) and prophylaxis, H5N1",Roche originator
+657,Oseltamivir phosphate,Tamiflu,Rx,Infectious Disease,Capsules,75mg,"Influenza A and B treatment (within 48h) and prophylaxis, H5N1",Roche originator
+658,Oseltamivir phosphate,Tamiflu,Rx,Infectious Disease,Suspension,6mg/mL,"Influenza A and B treatment (within 48h) and prophylaxis, H5N1",Roche originator
+659,Oseltamivir phosphate,Antiflu-D,Rx,Infectious Disease,Capsules,75mg,Influenza treatment and prophylaxis,Local brand in PH
+660,Tenofovir + Lamivudine + Dolutegravir (TLD),TLD Fixed-Dose Combination,Rx,Infectious Disease,Tablets (FDC),Tenofovir 300mg + Lamivudine 300mg + Dolutegravir 50mg,HIV-1 infection — preferred first-line ART regimen per DOH/WHO 2024,ViiV Healthcare/generic; available via DOH HIV treatment hubs
+661,Ivermectin,Stromectol,Rx,Infectious Disease,Tablets,3mg,"Strongyloidiasis, onchocerciasis, lymphatic filariasis, scabies",MSD originator; take on empty stomach with water
+662,Ivermectin,Stromectol,Rx,Infectious Disease,Tablets,6mg,"Strongyloidiasis, onchocerciasis, lymphatic filariasis, scabies",MSD originator; take on empty stomach with water
+663,Ivermectin,Mectizan,Rx,Infectious Disease,Tablets,3mg,"Onchocerciasis (river blindness), lymphatic filariasis — MDA programs",MSD donation program; used in PH NTD elimination programs
+664,Ivermectin,Mectizan,Rx,Infectious Disease,Tablets,6mg,"Onchocerciasis (river blindness), lymphatic filariasis — MDA programs",MSD donation program; used in PH NTD elimination programs
+665,Ivermectin,Ivermectin Generics,Rx,Infectious Disease,Tablets,3mg,"Strongyloidiasis, scabies, NTD programs",Various generic manufacturers; COVID-19 EUA expired
+666,Ivermectin,Ivermectin Generics,Rx,Infectious Disease,Tablets,6mg,"Strongyloidiasis, scabies, NTD programs",Various generic manufacturers; COVID-19 EUA expired
+667,Ferrous sulfate,Feosol,OTC,Hematology / Vitamins,Tablets,325mg (65mg elemental iron),Iron-deficiency anemia treatment,Coated tablets to reduce GI irritation
+668,Ferrous sulfate,Feosol,OTC,Hematology / Vitamins,Drops,125mg/mL,Iron-deficiency anemia treatment,Coated tablets to reduce GI irritation
+669,Ferrous sulfate,Iberet,OTC,Hematology / Vitamins,Tablets (combo),Ferrous sulfate 525mg (105mg elemental Fe) + Vitamin C 150mg,Iron-deficiency anemia; better absorption with Vit C,Abbott brand; combination with ascorbic acid
+670,Ferrous sulfate,Ferro-Gradumet,OTC,Hematology / Vitamins,SR Tablets,525mg (105mg elemental iron),Iron-deficiency anemia; better GI tolerability,Extended-release; once-daily; reduces GI side effects
+671,Ferrous sulfate,Sangobion,OTC,Hematology / Vitamins,Capsules (combo),Ferrous gluconate 250mg (30mg elemental Fe) + B12 7.5mcg + Folic acid 1mg + Vit C 50mg,"Iron-deficiency anemia, nutritional supplementation",Merck; popular multi-ingredient formula in PH
+672,Folic acid,Folic Acid Generics,OTC,Hematology / Vitamins,Tablets,400mcg (0.4mg),"Neural tube defect prevention, megaloblastic anemia, MTX supplement",Various manufacturers; PNDF listed
+673,Folic acid,Folic Acid Generics,OTC,Hematology / Vitamins,Tablets,1mg,"Neural tube defect prevention, megaloblastic anemia, MTX supplement",Various manufacturers; PNDF listed
+674,Folic acid,Folic Acid Generics,OTC,Hematology / Vitamins,Tablets,5mg,"Neural tube defect prevention, megaloblastic anemia, MTX supplement",Various manufacturers; PNDF listed
+675,Folic acid,Folvite,OTC,Hematology / Vitamins,Tablets,1mg,"Megaloblastic anemia, folic acid deficiency",Wyeth brand
+676,Folic acid,Folart,OTC,Hematology / Vitamins,Tablets,400mcg,"Neural tube defect prevention, anemia",Local brand
+677,Folic acid,Folart,OTC,Hematology / Vitamins,Tablets,1mg,"Neural tube defect prevention, anemia",Local brand
+678,Folic acid,Ferfolate,OTC,Hematology / Vitamins,Tablets (combo),Ferrous sulfate 200mg + Folic acid 400mcg,Iron and folate supplementation in pregnancy,Various local brands; prenatal supplement
+679,Vitamin C (Ascorbic acid),Cecon,OTC,Hematology / Vitamins,Capsules,500mg,"Scurvy prevention, immune support, iron absorption enhancement",Abbott brand; most recognized Vit C brand in PH
+680,Vitamin C (Ascorbic acid),Cecon,OTC,Hematology / Vitamins,Drops,100mg/mL,"Scurvy prevention, immune support, iron absorption enhancement",Abbott brand; most recognized Vit C brand in PH
+681,Vitamin C (Ascorbic acid),Celin,OTC,Hematology / Vitamins,Tablets,100mg,"Vitamin C deficiency, immune support",GSK brand
+682,Vitamin C (Ascorbic acid),Celin,OTC,Hematology / Vitamins,Tablets,250mg,"Vitamin C deficiency, immune support",GSK brand
+683,Vitamin C (Ascorbic acid),Celin,OTC,Hematology / Vitamins,Tablets,500mg,"Vitamin C deficiency, immune support",GSK brand
+684,Vitamin C (Ascorbic acid),Celin,OTC,Hematology / Vitamins,Syrup,125mg/5mL,"Vitamin C deficiency, immune support",GSK brand
+685,Vitamin C (Ascorbic acid),RiteMED Vitamin C,OTC,Hematology / Vitamins,Tablets,500mg,"Vitamin C supplementation, antioxidant",United Lab affordable brand
+686,Vitamin C (Ascorbic acid),Multibion C,OTC,Hematology / Vitamins,Tablets (combo),Ascorbic acid 500mg + B-vitamins,Combined B-vitamin and Vit C supplement,Local combination brand; popular in PH
+687,Vitamin B complex,Neurobion,OTC,Hematology / Vitamins,Tablets,B1 100mg + B6 200mg + B12 200mcg,"Peripheral neuropathy, nerve pain, Wernicke's encephalopathy prophylaxis",Merck; most prescribed neurotropic B-vitamin in PH
+688,Vitamin B complex,Neurobion,OTC,Hematology / Vitamins,IM Injection (Neurobion 500),B1 100mg + B6 100mg + B12 1000mcg per 3mL amp,"Peripheral neuropathy, nerve pain, Wernicke's encephalopathy prophylaxis",Merck; most prescribed neurotropic B-vitamin in PH
+689,Vitamin B complex,Becozym,OTC,Hematology / Vitamins,Tablets,B1 5mg + B2 2mg + B6 2mg + B12 1mcg + Nicotinamide 20mg,"Nutritional B-vitamin deficiency, supplementation",Roche brand; comprehensive B-complex
+690,Vitamin B complex,Becozym,OTC,Hematology / Vitamins,Syrup,per 5mL equivalent,"Nutritional B-vitamin deficiency, supplementation",Roche brand; comprehensive B-complex
+691,Vitamin B complex,Revicon,OTC,Hematology / Vitamins,Capsules (combo),B-vitamins + Vitamin C 500mg + Zinc 10mg,"Nutritional supplementation, energy support",Local brand; popular OTC supplement in PH
+692,Calcium carbonate + Vitamin D3,Caltrate Plus,OTC,Hematology / Vitamins,Tablets,Calcium carbonate 1250mg (500mg elemental Ca) + Vit D3 400IU + Magnesium,"Osteoporosis prevention and treatment, calcium supplementation",Pfizer consumer; most widely used calcium supplement in PH
+693,Calcium carbonate + Vitamin D3,Calcimax,OTC,Hematology / Vitamins,Tablets,Calcium carbonate 625mg (250mg elemental Ca) + Vit D3 250IU,"Calcium supplementation, bone health",Local brand
+694,Calcium carbonate + Vitamin D3,OsteoD,OTC,Hematology / Vitamins,Tablets,Calcium 500mg + Vit D3 400IU,Osteoporosis prevention,Local brand
+695,Calcium carbonate + Vitamin D3,Calcitab-D,OTC,Hematology / Vitamins,Tablets,Calcium carbonate 600mg (240mg elemental Ca) + Vit D3 200IU,Calcium and vitamin D supplementation,Local affordable brand
+696,Tranexamic acid,Cyklokapron,Rx,Hematology / Vitamins,Tablets,500mg,"Heavy menstrual bleeding, surgical hemorrhage, trauma hemorrhage",Pfizer originator; antifibrinolytic
+697,Tranexamic acid,Cyklokapron,Rx,Hematology / Vitamins,IV Solution,100mg/mL (10mL amp),"Heavy menstrual bleeding, surgical hemorrhage, trauma hemorrhage",Pfizer originator; antifibrinolytic
+698,Tranexamic acid,Hemostan,Rx,Hematology / Vitamins,Tablets,500mg,Heavy menstrual bleeding,Local brand; widely used for HMB in PH
+699,Tranexamic acid,Tranexamic Acid Generics,Rx,Hematology / Vitamins,Tablets,250mg,"Hemorrhage control, surgical bleeding",Various manufacturers; IV form in trauma/surgical settings
+700,Tranexamic acid,Tranexamic Acid Generics,Rx,Hematology / Vitamins,Tablets,500mg,"Hemorrhage control, surgical bleeding",Various manufacturers; IV form in trauma/surgical settings
+701,Tranexamic acid,Tranexamic Acid Generics,Rx,Hematology / Vitamins,IV Solution,100mg/mL,"Hemorrhage control, surgical bleeding",Various manufacturers; IV form in trauma/surgical settings
+702,Clotrimazole,Canesten,OTC,Dermatology / Antifungals,Cream,1%,"Tinea pedis, tinea corporis, tinea cruris, vulvovaginal candidiasis",Bayer originator; most widely used topical antifungal in PH
+703,Clotrimazole,Canesten,OTC,Dermatology / Antifungals,Solution,1%,"Tinea pedis, tinea corporis, tinea cruris, vulvovaginal candidiasis",Bayer originator; most widely used topical antifungal in PH
+704,Clotrimazole,Canesten,OTC,Dermatology / Antifungals,Vaginal Tablets,100mg,"Tinea pedis, tinea corporis, tinea cruris, vulvovaginal candidiasis",Bayer originator; most widely used topical antifungal in PH
+705,Clotrimazole,Canesten,OTC,Dermatology / Antifungals,Vaginal Tablets,200mg,"Tinea pedis, tinea corporis, tinea cruris, vulvovaginal candidiasis",Bayer originator; most widely used topical antifungal in PH
+706,Clotrimazole,Canesten,OTC,Dermatology / Antifungals,Vaginal Tablets,500mg,"Tinea pedis, tinea corporis, tinea cruris, vulvovaginal candidiasis",Bayer originator; most widely used topical antifungal in PH
+707,Clotrimazole,Canesten,OTC,Dermatology / Antifungals,Vaginal Cream,2%,"Tinea pedis, tinea corporis, tinea cruris, vulvovaginal candidiasis",Bayer originator; most widely used topical antifungal in PH
+708,Clotrimazole,Clotrimazole Generics,OTC,Dermatology / Antifungals,Cream,1%,Dermatophyte and candidal skin infections,Various generic manufacturers; affordable OTC option
+709,Clotrimazole,Lotrizone,OTC,Dermatology / Antifungals,Cream (combo),Clotrimazole 1% + Betamethasone 0.05%,Inflammatory fungal skin infections (use < 2 weeks),Combination antifungal + steroid; avoid long-term use
+710,Fluconazole,Diflucan,Rx,Dermatology / Antifungals,Capsules,50mg,"VVC (150mg single dose), OPC, tinea versicolor, cryptococcal meningitis",Pfizer originator; most prescribed systemic antifungal in PH
+711,Fluconazole,Diflucan,Rx,Dermatology / Antifungals,Capsules,100mg,"VVC (150mg single dose), OPC, tinea versicolor, cryptococcal meningitis",Pfizer originator; most prescribed systemic antifungal in PH
+712,Fluconazole,Diflucan,Rx,Dermatology / Antifungals,Capsules,150mg,"VVC (150mg single dose), OPC, tinea versicolor, cryptococcal meningitis",Pfizer originator; most prescribed systemic antifungal in PH
+713,Fluconazole,Diflucan,Rx,Dermatology / Antifungals,Capsules,200mg,"VVC (150mg single dose), OPC, tinea versicolor, cryptococcal meningitis",Pfizer originator; most prescribed systemic antifungal in PH
+714,Fluconazole,Diflucan,Rx,Dermatology / Antifungals,Suspension,10mg/mL,"VVC (150mg single dose), OPC, tinea versicolor, cryptococcal meningitis",Pfizer originator; most prescribed systemic antifungal in PH
+715,Fluconazole,Diflucan,Rx,Dermatology / Antifungals,Suspension,40mg/mL,"VVC (150mg single dose), OPC, tinea versicolor, cryptococcal meningitis",Pfizer originator; most prescribed systemic antifungal in PH
+716,Fluconazole,Diflucan,Rx,Dermatology / Antifungals,IV Infusion,2mg/mL,"VVC (150mg single dose), OPC, tinea versicolor, cryptococcal meningitis",Pfizer originator; most prescribed systemic antifungal in PH
+717,Fluconazole,Fluconal,Rx,Dermatology / Antifungals,Capsules,150mg,"Vulvovaginal candidiasis, systemic candidiasis",Local brand
+718,Fluconazole,Fluconal,Rx,Dermatology / Antifungals,Capsules,200mg,"Vulvovaginal candidiasis, systemic candidiasis",Local brand
+719,Fluconazole,Fungo-150,Rx,Dermatology / Antifungals,Capsules,150mg,Vulvovaginal candidiasis (single dose),Local brand; popular in PH
+720,Fluconazole,Pharex Fluconazole,Rx,Dermatology / Antifungals,Capsules,150mg,Fungal infections,Pharex affordable brand
+721,Fluconazole,Pharex Fluconazole,Rx,Dermatology / Antifungals,Capsules,200mg,Fungal infections,Pharex affordable brand
+722,Terbinafine,Lamisil,OTC,Dermatology / Antifungals,Tablets,250mg,"Dermatophyte infections: tinea pedis, tinea corporis, onychomycosis",Novartis originator; fungicidal vs dermatophytes
+723,Terbinafine,Lamisil,OTC,Dermatology / Antifungals,Cream,1%,"Dermatophyte infections: tinea pedis, tinea corporis, onychomycosis",Novartis originator; fungicidal vs dermatophytes
+724,Terbinafine,Lamisil,OTC,Dermatology / Antifungals,Gel,1%,"Dermatophyte infections: tinea pedis, tinea corporis, onychomycosis",Novartis originator; fungicidal vs dermatophytes
+725,Terbinafine,Lamisil,OTC,Dermatology / Antifungals,Spray,1%,"Dermatophyte infections: tinea pedis, tinea corporis, onychomycosis",Novartis originator; fungicidal vs dermatophytes
+726,Terbinafine,Terbisil,OTC,Dermatology / Antifungals,Tablets,250mg,"Tinea infections, onychomycosis",Local brand
+727,Terbinafine,Terbisil,OTC,Dermatology / Antifungals,Cream,1%,"Tinea infections, onychomycosis",Local brand
+728,Terbinafine,Terbinafine Generics,OTC,Dermatology / Antifungals,Tablets,250mg,Dermatophyte and nail infections,Various generic manufacturers; affordable option in PH
+729,Terbinafine,Terbinafine Generics,OTC,Dermatology / Antifungals,Cream,1%,Dermatophyte and nail infections,Various generic manufacturers; affordable option in PH
+730,Betamethasone,Betnovate,Rx,Dermatology / Antifungals,Cream,0.1% betamethasone valerate,"Eczema, psoriasis, contact dermatitis, seborrheic dermatitis",GSK originator; most used topical corticosteroid in PH
+731,Betamethasone,Betnovate,Rx,Dermatology / Antifungals,Ointment,0.1% betamethasone valerate,"Eczema, psoriasis, contact dermatitis, seborrheic dermatitis",GSK originator; most used topical corticosteroid in PH
+732,Betamethasone,Betnovate,Rx,Dermatology / Antifungals,Lotion,0.1% betamethasone valerate,"Eczema, psoriasis, contact dermatitis, seborrheic dermatitis",GSK originator; most used topical corticosteroid in PH
+733,Betamethasone,Betnovate,Rx,Dermatology / Antifungals,Scalp Application,0.1% betamethasone valerate,"Eczema, psoriasis, contact dermatitis, seborrheic dermatitis",GSK originator; most used topical corticosteroid in PH
+734,Betamethasone,Diprosone,Rx,Dermatology / Antifungals,Cream,0.05% betamethasone dipropionate,Moderate-to-severe inflammatory skin conditions,MSD brand; dipropionate ester — potent formulation
+735,Betamethasone,Diprosone,Rx,Dermatology / Antifungals,Ointment,0.05% betamethasone dipropionate,Moderate-to-severe inflammatory skin conditions,MSD brand; dipropionate ester — potent formulation
+736,Betamethasone,Diprosone,Rx,Dermatology / Antifungals,Lotion,0.05% betamethasone dipropionate,Moderate-to-severe inflammatory skin conditions,MSD brand; dipropionate ester — potent formulation
+737,Betamethasone,Celestoderm,Rx,Dermatology / Antifungals,Cream,0.1% betamethasone valerate,Inflammatory and pruritic skin conditions,Galderma/Cetaphil brand in PH
+738,Betamethasone,Celestoderm,Rx,Dermatology / Antifungals,Ointment,0.1% betamethasone valerate,Inflammatory and pruritic skin conditions,Galderma/Cetaphil brand in PH
+739,Allopurinol,Zyloprim,Rx,Musculoskeletal,Tablets,100mg,"Chronic gout, recurrent nephrolithiasis (urate), tumor lysis syndrome prophylaxis",Aspen originator; xanthine oxidase inhibitor
+740,Allopurinol,Zyloprim,Rx,Musculoskeletal,Tablets,300mg,"Chronic gout, recurrent nephrolithiasis (urate), tumor lysis syndrome prophylaxis",Aspen originator; xanthine oxidase inhibitor
+741,Allopurinol,Allurit,Rx,Musculoskeletal,Tablets,100mg,"Chronic gout, hyperuricemia",Local brand; widely available in PH
+742,Allopurinol,Allurit,Rx,Musculoskeletal,Tablets,300mg,"Chronic gout, hyperuricemia",Local brand; widely available in PH
+743,Allopurinol,Pharex Allopurinol,Rx,Musculoskeletal,Tablets,100mg,"Gout, hyperuricemia",Pharex affordable brand; PNDF listed
+744,Allopurinol,Pharex Allopurinol,Rx,Musculoskeletal,Tablets,300mg,"Gout, hyperuricemia",Pharex affordable brand; PNDF listed
+745,Colchicine,Colcrys,Rx,Musculoskeletal,Tablets,0.6mg,"Acute gout flares, familial Mediterranean fever, pericarditis",Takeda brand; FDA-approved colchicine; narrow therapeutic index
+746,Colchicine,Colchicine Generics,Rx,Musculoskeletal,Tablets,0.5mg,Acute gout treatment and prophylaxis,Various generic manufacturers; PNDF listed
+747,Colchicine,Colchicine Generics,Rx,Musculoskeletal,Tablets,0.6mg,Acute gout treatment and prophylaxis,Various generic manufacturers; PNDF listed
+748,Celecoxib,Celebrex,Rx,Musculoskeletal,Capsules,100mg,"Osteoarthritis, rheumatoid arthritis, acute pain, ankylosing spondylitis",Pfizer originator; COX-2 selective NSAID
+749,Celecoxib,Celebrex,Rx,Musculoskeletal,Capsules,200mg,"Osteoarthritis, rheumatoid arthritis, acute pain, ankylosing spondylitis",Pfizer originator; COX-2 selective NSAID
+750,Celecoxib,Celebra,Rx,Musculoskeletal,Capsules,100mg,"Musculoskeletal pain, arthritis",Pfizer alternate brand name
+751,Celecoxib,Celebra,Rx,Musculoskeletal,Capsules,200mg,"Musculoskeletal pain, arthritis",Pfizer alternate brand name
+752,Celecoxib,Artigesic,Rx,Musculoskeletal,Capsules,100mg,"Arthritis, musculoskeletal pain",Local brand in PH
+753,Celecoxib,Artigesic,Rx,Musculoskeletal,Capsules,200mg,"Arthritis, musculoskeletal pain",Local brand in PH
+754,Diclofenac sodium,Voltaren,OTC,Musculoskeletal,Tablets,25mg,"Osteoarthritis, RA, musculoskeletal pain, dysmenorrhea, post-op pain",Novartis originator; most prescribed NSAID in PH
+755,Diclofenac sodium,Voltaren,OTC,Musculoskeletal,Tablets,50mg,"Osteoarthritis, RA, musculoskeletal pain, dysmenorrhea, post-op pain",Novartis originator; most prescribed NSAID in PH
+756,Diclofenac sodium,Voltaren,OTC,Musculoskeletal,SR Tablets,75mg,"Osteoarthritis, RA, musculoskeletal pain, dysmenorrhea, post-op pain",Novartis originator; most prescribed NSAID in PH
+757,Diclofenac sodium,Voltaren,OTC,Musculoskeletal,SR Tablets,100mg,"Osteoarthritis, RA, musculoskeletal pain, dysmenorrhea, post-op pain",Novartis originator; most prescribed NSAID in PH
+758,Diclofenac sodium,Voltaren,OTC,Musculoskeletal,Gel,1%,"Osteoarthritis, RA, musculoskeletal pain, dysmenorrhea, post-op pain",Novartis originator; most prescribed NSAID in PH
+759,Diclofenac sodium,Voltaren,OTC,Musculoskeletal,IV/IM Solution,75mg/3mL amp,"Osteoarthritis, RA, musculoskeletal pain, dysmenorrhea, post-op pain",Novartis originator; most prescribed NSAID in PH
+760,Diclofenac sodium,Voltaren,OTC,Musculoskeletal,Suppository,100mg,"Osteoarthritis, RA, musculoskeletal pain, dysmenorrhea, post-op pain",Novartis originator; most prescribed NSAID in PH
+761,Diclofenac sodium,Voltaren,OTC,Musculoskeletal,Eye Drops,0.10%,"Osteoarthritis, RA, musculoskeletal pain, dysmenorrhea, post-op pain",Novartis originator; most prescribed NSAID in PH
+762,Diclofenac sodium,Cataflam,OTC,Musculoskeletal,Tablets,25mg,"Acute pain, dysmenorrhea (potassium salt — faster onset)",Novartis; potassium salt for faster absorption
+763,Diclofenac sodium,Cataflam,OTC,Musculoskeletal,Tablets,50mg,"Acute pain, dysmenorrhea (potassium salt — faster onset)",Novartis; potassium salt for faster absorption
+764,Diclofenac sodium,Dynaflam,OTC,Musculoskeletal,Tablets,50mg,"Musculoskeletal pain, arthritis",Local brand
+765,Diclofenac sodium,Dynaflam,OTC,Musculoskeletal,IV/IM Solution,75mg/3mL,"Musculoskeletal pain, arthritis",Local brand
+766,Diclofenac sodium,Arthrotec,OTC,Musculoskeletal,Tablets (combo),Diclofenac 50mg + Misoprostol 200mcg,Arthritis in high GI-risk patients; misoprostol protects gastric mucosa,Pfizer; preferred for GI-sensitive patients on long-term NSAID
+767,Diclofenac sodium,Arthrotec,OTC,Musculoskeletal,Tablets (combo),Diclofenac 75mg + Misoprostol 200mcg,Arthritis in high GI-risk patients; misoprostol protects gastric mucosa,Pfizer; preferred for GI-sensitive patients on long-term NSAID
+768,Tamsulosin hydrochloride,Flomax,Rx,Renal / Urology,Capsules,0.4mg,"BPH symptoms (hesitancy, nocturia, incomplete emptying), ureteric stone expulsion",Boehringer Ingelheim originator; alpha-1A selective blocker
+769,Tamsulosin hydrochloride,Urimax,Rx,Renal / Urology,Capsules,0.4mg,"BPH, ureteric stone",Cipla brand; affordable alternative
+770,Tamsulosin hydrochloride,Harnal OCAS,Rx,Renal / Urology,OCAS Tablets,0.2mg,BPH — smoother drug release via oral controlled absorption system,Astellas; OCAS provides sustained absorption; less orthostatic hypotension
+771,Tamsulosin hydrochloride,Harnal OCAS,Rx,Renal / Urology,OCAS Tablets,0.4mg,BPH — smoother drug release via oral controlled absorption system,Astellas; OCAS provides sustained absorption; less orthostatic hypotension
+772,Tamsulosin hydrochloride,Tamsulosin Generics,Rx,Renal / Urology,Capsules,0.4mg,BPH symptoms,Various generic manufacturers in PH
