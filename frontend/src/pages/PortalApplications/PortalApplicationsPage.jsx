@@ -204,6 +204,10 @@ export default function PortalApplicationsPage() {
   }
 
   const handleSaveStatus = async () => {
+    if (status === 'resubmission_required' && !adminNotes.trim()) {
+      toast.error('Case maker notes are required before requesting resubmission')
+      return
+    }
     await updateSelectedApplication(status)
   }
 
@@ -248,6 +252,10 @@ export default function PortalApplicationsPage() {
   }
 
   const handleRequestResubmission = async () => {
+    if (!adminNotes.trim()) {
+      toast.error('Case maker notes are required before requesting resubmission')
+      return
+    }
     await updateSelectedApplication('resubmission_required', {
       successMessage: 'Applicant marked for resubmission',
     })

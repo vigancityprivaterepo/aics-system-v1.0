@@ -14,10 +14,19 @@ export const useAuthStore = create(
         set({ hasHydrated: value })
       },
 
-      initAuth: () => {
+      initAuth: async () => {
         const { token } = get()
         if (token) {
           api.defaults.headers.common['Authorization'] = `Bearer ${token}`
+          try {
+            const { data } = await api.get('/users/me')
+            set({ user: data })
+          } catch (err) {
+            if (err.response?.status === 401) {
+              delete api.defaults.headers.common['Authorization']
+              set({ user: null, token: null })
+            }
+          }
         } else {
           delete api.defaults.headers.common['Authorization']
         }

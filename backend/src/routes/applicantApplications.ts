@@ -738,7 +738,12 @@ router.patch('/:id/status', asyncHandler(async (req, res) => {
   if (!existing) throw new HttpError(404, 'Application not found')
 
   const body = updateStatusSchema.parse(req.body)
+  const normalizedAdminNotes = String(body.adminNotes ?? '').trim()
   let linkedCase: Prisma.CaseGetPayload<{}> | null = null
+
+  if (body.status === 'resubmission_required' && !normalizedAdminNotes) {
+    throw new HttpError(400, 'Case maker notes are required before requesting resubmission.')
+  }
 
   if (body.createCase && body.status !== 'under_review') {
     throw new HttpError(400, 'Case creation must move the application into under review.')
@@ -764,7 +769,7 @@ router.patch('/:id/status', asyncHandler(async (req, res) => {
     where: { id: existing.id },
     data: {
       status: body.status,
-      adminNotes: body.adminNotes ?? null,
+      adminNotes: normalizedAdminNotes || null,
       reviewedAt: ['under_review', 'resubmission_required', 'approved', 'disapproved', 'released'].includes(body.status) ? new Date() : existing.reviewedAt,
       ...(linkedCase ? { caseId: linkedCase.id } : {}),
     },

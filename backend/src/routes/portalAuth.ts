@@ -19,6 +19,7 @@ const BCRYPT_ROUNDS = 10
 const OTP_EXPIRY_MINUTES = 10
 const OTP_MAX_ATTEMPTS = 3
 const authCooldownMessage = 'Too many attempts. Please wait a few minutes and try again.'
+const passwordReuseMessage = 'You already used this password. Please create a new password.'
 const otpFlowIpLimiter = softRateLimit({
   scope: 'portal-auth-ip',
   windowMs: 5 * 60 * 1000,
@@ -480,6 +481,8 @@ router.post('/reset-password', otpFlowIpLimiter, otpFlowEmailLimiter('portal-aut
 
   const valid = await bcrypt.compare(token, applicant.otpHash)
   if (!valid) throw new HttpError(400, 'Invalid or expired reset link')
+  const isReusedPassword = await bcrypt.compare(newPassword, applicant.passwordHash)
+  if (isReusedPassword) throw new HttpError(400, passwordReuseMessage)
 
   const passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS)
   await prisma.applicant.update({

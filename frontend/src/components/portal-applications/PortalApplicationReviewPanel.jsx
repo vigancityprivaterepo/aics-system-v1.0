@@ -263,6 +263,9 @@ function DecisionSection({
               className="portal-input"
               placeholder="Add review remarks, deficiencies, or release notes."
             />
+            <p className="mt-1 text-xs text-slate-500">
+              Required for resubmission so the applicant can read the missing or incomplete requirements in the portal and email notice.
+            </p>
           </div>
           <button type="button" onClick={handleSaveStatus} disabled={saving} className="portal-button-green disabled:opacity-50">
             Save Review Update

@@ -18,6 +18,7 @@ const router = Router()
 const adminOnly = requireRole(['admin'])
 const ACTIVE_ROLES = new Set(['admin', 'employee', 'city_health_office'])
 const APPROVAL_LEVEL_VALUES = ['reviewer', 'recommender', 'approver', 'preparer'] as const
+const passwordReuseMessage = 'You already used this password. Please create a new password.'
 
 function parseApprovalLevels(stored: string | null | undefined): string[] {
   if (!stored || stored === 'none') return []
@@ -374,6 +375,8 @@ router.post('/:id/reset-password', adminOnly, asyncHandler(async (req, res) => {
 
   const existing = await prisma.user.findUnique({ where: { id: userId } })
   if (!existing) throw new HttpError(404, 'User not found')
+  const isReusedPassword = await bcrypt.compare(password, existing.passwordHash)
+  if (isReusedPassword) throw new HttpError(400, passwordReuseMessage)
 
   const passwordHash = await bcrypt.hash(password, 12)
   await prisma.user.update({ where: { id: userId }, data: { passwordHash } })

@@ -1485,6 +1485,18 @@ export default function ApplyPage() {
             </div>
           )}
 
+          {applicationStatus === 'resubmission_required' && (
+            <div className="rounded-md border border-orange-300 bg-orange-50 px-4 py-4">
+              <p className="text-xs font-semibold text-orange-700">Resubmission Required</p>
+              {applicationAdminNotes && (
+                <div className="mt-3 rounded-md border border-orange-200 bg-white px-4 py-3">
+                  <p className="text-xs font-medium text-slate-500">Staff Notes</p>
+                  <p className="mt-1 text-sm leading-7 text-slate-700">{applicationAdminNotes}</p>
+                </div>
+              )}
+            </div>
+          )}
+
         </>
       )}
     </div>
@@ -1701,21 +1713,6 @@ export default function ApplyPage() {
         </div>
 
         <form className="p-6" onSubmit={(event) => event.preventDefault()}>
-          {applicationStatus === 'resubmission_required' && (
-            <div className="mb-6 rounded-md border border-amber-200 bg-amber-50 px-4 py-4">
-              <p className="text-xs font-semibold text-amber-800">Resubmission Required</p>
-              <p className="mt-2 text-sm leading-7 text-slate-700">
-                The office has requested additional or corrected documents. Go to the <strong>Requirements</strong> step, upload the missing files, then submit your application again.
-              </p>
-              {applicationAdminNotes && (
-                <div className="mt-3 rounded-md border border-amber-300 bg-white px-4 py-3">
-                  <p className="text-xs font-medium text-slate-500">Staff Notes</p>
-                  <p className="mt-1 text-sm leading-7 text-slate-700">{applicationAdminNotes}</p>
-                </div>
-              )}
-            </div>
-          )}
-
           {step === 1 && renderRequestStep()}
           {step === 2 && renderHouseholdStep()}
           {step === 3 && renderRequirementsStep()}

@@ -31,7 +31,7 @@ export async function sendPortalStatusNotifications(application: ApplicationLike
   const status = application.status || 'updated'
   const notes = application.adminNotes || undefined
   const hasLinkedCase = !!(application.caseId || application.linkedCase?.id || application.case?.id)
-  const shouldSendEmailForStatus = env.portalEmailNotificationStatuses.includes(status)
+  const shouldSendEmailForStatus = status === 'resubmission_required' || env.portalEmailNotificationStatuses.includes(status)
   const jobs: Promise<unknown>[] = []
 
   if (applicant.email && shouldSendEmailForStatus) {

@@ -71,6 +71,8 @@ router.post('/login', asyncHandler(async (req, res) => {
       role: normalizeRole(String(user.role)),
       employeeId: user.employeeId,
       approvalLevel: parseApprovalLevels(user.approvalLevel),
+      position: user.position,
+      photoUrl: user.photoUrl,
     },
   })
 }))

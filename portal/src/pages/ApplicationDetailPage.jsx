@@ -241,17 +241,6 @@ export default function ApplicationDetailPage() {
             <p className="portal-kicker">Review Notes</p>
             <h2 className="mt-1 font-display text-xl font-semibold text-slate-800">Current Processing Status</h2>
             <div className="mt-6 space-y-4">
-              {isResubmission ? (
-                <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-4">
-                  <p className="text-xs font-semibold text-amber-800">Resubmission Required</p>
-                  <p className="mt-2 text-sm leading-7 text-slate-700">
-                    The office requested additional or corrected documents. Continue this application, update the missing files, then submit it again.
-                  </p>
-                  <Link to={`/apply?draft=${application.id}`} className="portal-button-primary mt-4 inline-flex text-sm">
-                    Continue Resubmission
-                  </Link>
-                </div>
-              ) : null}
               {application.status === 'released' ? (
                 <div className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-4">
                   <p className="text-xs font-semibold text-emerald-700">Release Notice</p>
@@ -286,10 +275,6 @@ export default function ApplicationDetailPage() {
                 <p className="text-xs font-medium text-slate-500">Updated by office</p>
                 <p className="mt-2 text-sm font-medium text-slate-800">{formatPortalDateTime(application.reviewedAt)}</p>
               </div>
-              <div className="portal-panel p-4">
-                <p className="text-xs font-medium text-slate-500">Admin Notes</p>
-                <p className="mt-2 text-sm leading-7 text-slate-700">{application.adminNotes || 'No review notes yet.'}</p>
-              </div>
             </div>
           </section>
 
@@ -315,6 +300,20 @@ export default function ApplicationDetailPage() {
                 <p className="text-sm text-slate-500">No documents uploaded.</p>
               )}
             </div>
+            {isResubmission ? (
+              <div className="mt-6 rounded-md border border-orange-300 bg-orange-50 px-4 py-4">
+                <p className="text-xs font-semibold text-orange-700">Resubmission Required</p>
+                {application.adminNotes ? (
+                  <div className="mt-3 rounded-md border border-orange-200 bg-white px-4 py-3">
+                    <p className="text-xs font-medium text-slate-500">Staff Notes</p>
+                    <p className="mt-1 text-sm leading-7 text-slate-700">{application.adminNotes}</p>
+                  </div>
+                ) : null}
+                <Link to={`/apply?draft=${application.id}`} className="portal-button-primary mt-4 inline-flex text-sm">
+                  Continue Resubmission
+                </Link>
+              </div>
+            ) : null}
           </section>
         </div>
       </section>

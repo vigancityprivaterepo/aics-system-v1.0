@@ -16,6 +16,7 @@ const APPROVAL_NEXT = {
 const BASE_TABS = [
   { key: 'profile', label: 'Client Profile' },
   { key: 'case-study', label: 'Case Study' },
+  { key: 'case-edit', label: 'Case Edit' },
   { key: 'reports', label: 'Reports' },
 ]
 

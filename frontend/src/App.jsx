@@ -10,6 +10,7 @@ import NewCase from './pages/Cases/NewCase'
 import CaseDetailLayout from './pages/Cases/CaseDetail/CaseDetailLayout'
 import TabClientProfile from './pages/Cases/CaseDetail/TabClientProfile'
 import TabCaseStudy from './pages/Cases/CaseDetail/TabCaseStudy'
+import TabCaseEdit from './pages/Cases/CaseDetail/TabCaseEdit'
 import TabReports from './pages/Cases/CaseDetail/TabReports'
 import ClientList from './pages/Clients/ClientList'
 import ClientForm from './pages/Clients/ClientForm'
@@ -55,6 +56,7 @@ function AppRoutes() {
               <Route index element={<Navigate to="profile" replace />} />
               <Route path="profile" element={<TabClientProfile />} />
               <Route path="case-study" element={<TabCaseStudy />} />
+              <Route path="case-edit" element={<TabCaseEdit />} />
               <Route path="reports" element={<TabReports />} />
               <Route path="report" element={<Navigate to="../reports" replace />} />
             </Route>
