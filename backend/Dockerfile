@@ -36,6 +36,8 @@ COPY --from=build /app/backend/dist ./dist
 COPY --from=build /app/backend/vendor ./vendor
 COPY templates /app/templates
 
+RUN mkdir -p /app/backend/uploads && chown -R node:node /app/backend /app/templates
+
 USER node
 EXPOSE 5001
 

@@ -41,7 +41,7 @@ services:
       TRUST_PROXY: "true"
       RATE_LIMIT_MODE: memory
     volumes:
-      - aics_uploads:/app/uploads
+      - aics_uploads:/app/backend/uploads
     ports:
       - "5001:5001"
 
