@@ -48,6 +48,18 @@ function otpExpiry(): Date {
   return d
 }
 
+async function sendOtpEmailOrThrow(email: string, firstName: string, otp: string) {
+  try {
+    await sendMail({
+      to: email,
+      subject: 'Your AICS Verification Code',
+      html: otpEmailHtml(firstName, otp),
+    })
+  } catch {
+    throw new HttpError(503, 'Unable to deliver the verification code right now. Please try again in a moment.')
+  }
+}
+
 async function syncApplicantClient(applicant: {
   id: string
   email: string
@@ -301,11 +313,7 @@ router.post('/register', asyncHandler(async (req, res) => {
       where: { id: existing.id },
       data: { otpHash, otpExpiresAt: otpExpiry(), otpAttempts: 0 },
     })
-    await sendMail({
-      to: body.email,
-      subject: 'Your AICS Verification Code',
-      html: otpEmailHtml(existing.firstName, otp),
-    })
+    await sendOtpEmailOrThrow(body.email, existing.firstName, otp)
     return res.status(200).json({ message: 'Verification code resent. Please check your email.' })
   }
 
@@ -326,13 +334,7 @@ router.post('/register', asyncHandler(async (req, res) => {
   })
 
   await syncApplicantClient(applicant)
-
-  // Send OTP via email (non-blocking)
-  sendMail({
-    to: body.email,
-    subject: 'Your AICS Verification Code',
-    html: otpEmailHtml(body.firstName, otp),
-  }).catch(console.error)
+  await sendOtpEmailOrThrow(body.email, body.firstName, otp)
 
   // Send SMS if mobile provided
   if (body.mobileNumber) {
@@ -399,11 +401,7 @@ router.post('/resend-otp', otpFlowIpLimiter, otpFlowEmailLimiter('portal-auth-re
     data: { otpHash, otpExpiresAt: otpExpiry(), otpAttempts: 0 },
   })
 
-  sendMail({
-    to: email,
-    subject: 'Your AICS Verification Code',
-    html: otpEmailHtml(applicant.firstName, otp),
-  }).catch(console.error)
+  await sendOtpEmailOrThrow(email, applicant.firstName, otp)
 
   if (applicant.mobileNumber) {
     sendSms(applicant.mobileNumber, otpSmsMessage(otp)).catch(console.error)

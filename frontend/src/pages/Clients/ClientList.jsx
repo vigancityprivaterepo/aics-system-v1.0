@@ -7,6 +7,7 @@ import { PlusIcon, SearchIcon, UsersIcon, ArrowRightIcon, ChevronLeftIcon, Chevr
 export default function ClientList() {
   const [clients, setClients] = useState([])
   const [loading, setLoading] = useState(true)
+  const [searchInput, setSearchInput] = useState('')
   const [search, setSearch] = useState('')
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
@@ -15,7 +16,17 @@ export default function ClientList() {
   const navigate = useNavigate()
 
   useEffect(() => {
+    const timer = setTimeout(() => {
+      const nextSearch = searchInput.trim()
+      setSearch(nextSearch)
+      setPage(1)
+    }, 350)
+    return () => clearTimeout(timer)
+  }, [searchInput])
+
+  useEffect(() => {
     let active = true
+    setLoading(true)
     ;(async () => {
       try {
         const params = new URLSearchParams({ page: String(page), limit: String(LIMIT) })
@@ -34,13 +45,6 @@ export default function ClientList() {
     })()
     return () => { active = false }
   }, [page, search])
-  useEffect(() => {
-    const t = setTimeout(() => {
-      setLoading(true)
-      setPage(1)
-    }, 350)
-    return () => clearTimeout(t)
-  }, [search])
 
   return (
     <div className="animate-fade-in">
@@ -62,8 +66,8 @@ export default function ClientList() {
           <input
             type="text"
             placeholder="Search by name, client number, or address..."
-            value={search}
-            onChange={(e) => { setLoading(true); setSearch(e.target.value) }}
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
             className="portal-input pl-9"
             id="client-search-list"
           />
