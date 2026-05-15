@@ -1,5 +1,6 @@
 ﻿import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useEffect } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import logo from '../assets/logo.png'
 import hero from '../assets/hero.jpg'
 import { useAuthStore } from '../store/authStore'
@@ -308,6 +309,7 @@ const faqs = [
 export default function LandingPage() {
   const [activeFaq, setActiveFaq] = useState(null)
   const navigate = useNavigate()
+  const location = useLocation()
   const logout = useAuthStore((state) => state.logout)
 
   const scrollToSection = (sectionId) => {
@@ -322,6 +324,26 @@ export default function LandingPage() {
     navigate('/login')
   }
 
+  useEffect(() => {
+    const sectionMap = {
+      '/overview': 'overview',
+      '/how-it-works': 'how-it-works',
+      '/typesofassistance': 'benefits',
+      '/faq': 'faq',
+    }
+
+    const sectionId = sectionMap[location.pathname]
+    if (!sectionId) return
+
+    const timer = window.setTimeout(() => {
+      const target = document.getElementById(sectionId)
+      if (!target) return
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 0)
+
+    return () => window.clearTimeout(timer)
+  }, [location.pathname])
+
   return (
     <div className="min-h-screen bg-white text-[#0c2340]">
 
@@ -330,7 +352,7 @@ export default function LandingPage() {
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-2 text-xs md:px-8">
           <p className="uppercase tracking-[0.2em] text-emerald-50/95">Republic of the Philippines</p>
           <div className="flex items-center gap-4 text-emerald-50/95">
-            <button type="button" onClick={() => scrollToSection('faq')} className="hidden transition-colors hover:text-[#10b981] md:block">AICS Guidelines</button>
+            <Link to="/faq" className="hidden transition-colors hover:text-[#10b981] md:block">AICS Guidelines</Link>
             <Link to="/login" onClick={handleLoginClick} className="transition-colors hover:text-[#10b981]">Applicant Login</Link>
           </div>
         </div>
@@ -373,10 +395,10 @@ export default function LandingPage() {
         <nav className="border-b-2 border-[#10b981] bg-white">
           <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-2 px-4 py-2 md:px-8 md:py-2.5">
             <div className="hidden flex-wrap items-center text-sm font-medium text-slate-600 md:flex">
-              <Link to="/" className="rounded px-3 py-2 transition-colors hover:bg-emerald-50 hover:text-[#065f46]">Overview</Link>
-              <button type="button" onClick={() => scrollToSection('how-it-works')} className="rounded px-3 py-2 transition-colors hover:bg-emerald-50 hover:text-[#065f46]">Application Process</button>
-              <button type="button" onClick={() => scrollToSection('benefits')} className="rounded px-3 py-2 transition-colors hover:bg-emerald-50 hover:text-[#065f46]">Types of Assistance</button>
-              <button type="button" onClick={() => scrollToSection('faq')} className="rounded px-3 py-2 transition-colors hover:bg-emerald-50 hover:text-[#065f46]">Frequently Asked Questions</button>
+              <Link to="/overview" className="rounded px-3 py-2 transition-colors hover:bg-emerald-50 hover:text-[#065f46]">Overview</Link>
+              <Link to="/how-it-works" className="rounded px-3 py-2 transition-colors hover:bg-emerald-50 hover:text-[#065f46]">Application Process</Link>
+              <Link to="/typesofassistance" className="rounded px-3 py-2 transition-colors hover:bg-emerald-50 hover:text-[#065f46]">Types of Assistance</Link>
+              <Link to="/faq" className="rounded px-3 py-2 transition-colors hover:bg-emerald-50 hover:text-[#065f46]">Frequently Asked Questions</Link>
             </div>
             <div className="flex flex-wrap items-center gap-2 sm:gap-3">
               <Link
@@ -427,12 +449,12 @@ export default function LandingPage() {
                   >
                     Apply for Assistance <ArrowRightIcon />
                   </Link>
-                  <a
-                    href="#how-it-works"
+                  <Link
+                    to="/how-it-works"
                     className="inline-flex items-center justify-center rounded-lg border border-white/55 bg-white/15 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm transition-all hover:bg-white/25 sm:px-6 sm:py-3"
                   >
                     View Application Process
-                  </a>
+                  </Link>
                 </div>
               </div>
             </div>

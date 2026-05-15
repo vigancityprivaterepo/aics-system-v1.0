@@ -63,6 +63,10 @@ export default function App() {
       <SessionExpiryListener />
       <Routes>
         <Route path="/" element={<LandingPage />} />
+        <Route path="/overview" element={<LandingPage />} />
+        <Route path="/how-it-works" element={<LandingPage />} />
+        <Route path="/typesofassistance" element={<LandingPage />} />
+        <Route path="/faq" element={<LandingPage />} />
         <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
         <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
         <Route path="/verify" element={<VerifyOtpPage />} />
