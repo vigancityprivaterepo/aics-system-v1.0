@@ -14,6 +14,7 @@ export default function MedicineDatabase() {
   const [totalPages, setTotalPages] = useState(1)
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(true)
+  const [searchInput, setSearchInput] = useState('')
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState('All')
   const [categories, setCategories] = useState([])
@@ -65,7 +66,16 @@ export default function MedicineDatabase() {
     return () => { active = false }
   }, [])
   useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearch(searchInput.trim())
+      setPage(1)
+    }, 350)
+    return () => clearTimeout(timer)
+  }, [searchInput])
+
+  useEffect(() => {
     let active = true
+    setLoading(true)
     ;(async () => {
       try {
         const params = new URLSearchParams()
@@ -86,13 +96,6 @@ export default function MedicineDatabase() {
     })()
     return () => { active = false }
   }, [page, search, category])
-  useEffect(() => {
-    const t = setTimeout(() => {
-      setLoading(true)
-      setPage(1)
-    }, 350)
-    return () => clearTimeout(t)
-  }, [search])
 
   const handleSave = async () => {
     try {
@@ -264,7 +267,7 @@ export default function MedicineDatabase() {
         <div className="flex flex-col gap-3 sm:flex-row">
           <div className="relative flex-1">
             <SearchIcon className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-            <input type="text" placeholder="Search generic or brand name..." value={search} onChange={e => { setLoading(true); setSearch(e.target.value) }} className="portal-input pl-9" />
+            <input type="text" placeholder="Search generic or brand name..." value={searchInput} onChange={e => setSearchInput(e.target.value)} className="portal-input pl-9" />
           </div>
           <div className="w-full sm:w-56">
             <select

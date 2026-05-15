@@ -12,6 +12,7 @@ export default function HospitalDatabase() {
   const [totalPages, setTotalPages] = useState(1)
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(true)
+  const [searchInput, setSearchInput] = useState('')
   const [search, setSearch] = useState('')
   const [filterType, setFilterType] = useState('All')
   const [types, setTypes] = useState([])
@@ -61,7 +62,16 @@ export default function HospitalDatabase() {
     return () => { active = false }
   }, [])
   useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearch(searchInput.trim())
+      setPage(1)
+    }, 350)
+    return () => clearTimeout(timer)
+  }, [searchInput])
+
+  useEffect(() => {
     let active = true
+    setLoading(true)
     ;(async () => {
       try {
         const params = new URLSearchParams()
@@ -82,13 +92,6 @@ export default function HospitalDatabase() {
     })()
     return () => { active = false }
   }, [page, search, filterType])
-  useEffect(() => {
-    const t = setTimeout(() => {
-      setLoading(true)
-      setPage(1)
-    }, 350)
-    return () => clearTimeout(t)
-  }, [search])
 
   const resetForm = () => setForm({ province: '', municipality: '', facilityName: '', facilityType: '', fullAddress: '' })
 
@@ -275,8 +278,8 @@ export default function HospitalDatabase() {
             <input
               type="text"
               placeholder="Search facility name, municipality, or address..."
-              value={search}
-              onChange={e => { setLoading(true); setSearch(e.target.value) }}
+              value={searchInput}
+              onChange={e => setSearchInput(e.target.value)}
               className="portal-input pl-9"
             />
           </div>
