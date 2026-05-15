@@ -49,6 +49,13 @@ const funeralHomeSchema = z.object({
   address: z.string().max(300).nullable().optional(),
 })
 
+function cleanOptionalText(value: string | null | undefined, maxLength: number) {
+  const normalized = value?.trim() ?? ''
+  if (!normalized) return null
+  if (['â€”', '—', '–'].includes(normalized)) return null
+  return normalized.slice(0, maxLength)
+}
+
 // POST /funeral-homes/bulk-import
 router.post('/bulk-import', adminOnly, csvUpload.single('file'), asyncHandler(async (req, res) => {
   if (!req.file) throw new HttpError(400, 'No file uploaded')
@@ -89,9 +96,9 @@ router.post('/bulk-import', adminOnly, csvUpload.single('file'), asyncHandler(as
     const r = rows[i]
     const name = r[iName]?.trim() ?? ''
     if (!name || /^\d+$/.test(name)) { skipped++; continue }
-    const ownerName = iOwnerName >= 0 ? (r[iOwnerName]?.trim() || null) : null
-    const address   = iAddress   >= 0 ? (r[iAddress]?.trim()   || null) : null
-    toInsert.push({ name: name.slice(0, 200), ownerName: ownerName ? ownerName.slice(0, 200) : null, address: address ? address.slice(0, 300) : null })
+    const ownerName = iOwnerName >= 0 ? cleanOptionalText(r[iOwnerName], 200) : null
+    const address   = iAddress   >= 0 ? cleanOptionalText(r[iAddress], 300) : null
+    toInsert.push({ name: name.slice(0, 200), ownerName, address })
   }
 
   if (toInsert.length === 0) throw new HttpError(400, 'No valid funeral home rows found in CSV')
@@ -146,7 +153,11 @@ router.get('/', asyncHandler(async (req, res) => {
     page,
     limit,
     totalPages: Math.max(1, Math.ceil(total / limit)),
-    funeralHomes: homes,
+    funeralHomes: homes.map((home) => ({
+      ...home,
+      ownerName: cleanOptionalText(home.ownerName, 200),
+      address: cleanOptionalText(home.address, 300),
+    })),
   })
 }))
 
@@ -154,7 +165,11 @@ router.get('/', asyncHandler(async (req, res) => {
 router.post('/', adminOnly, asyncHandler(async (req, res) => {
   const body = funeralHomeSchema.parse(req.body)
   const home = await prisma.funeralHome.create({
-    data: { name: body.name, ownerName: body.ownerName ?? null, address: body.address ?? null },
+    data: {
+      name: body.name,
+      ownerName: cleanOptionalText(body.ownerName, 200),
+      address: cleanOptionalText(body.address, 300),
+    },
   })
   res.status(201).json(home)
 }))
@@ -167,7 +182,11 @@ router.put('/:id', adminOnly, asyncHandler(async (req, res) => {
   if (!existing) throw new HttpError(404, 'Funeral home not found')
   const home = await prisma.funeralHome.update({
     where: { id },
-    data: { name: body.name, ownerName: body.ownerName ?? null, address: body.address ?? null },
+    data: {
+      name: body.name,
+      ownerName: cleanOptionalText(body.ownerName, 200),
+      address: cleanOptionalText(body.address, 300),
+    },
   })
   res.json(home)
 }))

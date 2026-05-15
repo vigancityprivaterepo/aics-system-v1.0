@@ -6,6 +6,12 @@ import { ChevronLeftIcon, ChevronRightIcon } from '../../components/ui/Icons'
 
 const PAGE_SIZE = 20
 
+function displayOptional(value) {
+  const normalized = String(value ?? '').trim()
+  if (!normalized || ['â€”', '—', '–'].includes(normalized)) return '-'
+  return normalized
+}
+
 export default function FuneralHomeDatabase() {
   const [homes, setHomes] = useState([])
   const [total, setTotal] = useState(0)
@@ -350,8 +356,8 @@ export default function FuneralHomeDatabase() {
                       {(page - 1) * PAGE_SIZE + idx + 1}
                     </td>
                     <td className="table-cell font-semibold text-brand-primary">{h.name}</td>
-                    <td className="table-cell text-xs text-slate-500">{h.ownerName || 'â€”'}</td>
-                    <td className="table-cell text-xs text-slate-500">{h.address || 'â€”'}</td>
+                    <td className="table-cell text-xs text-slate-500">{displayOptional(h.ownerName)}</td>
+                    <td className="table-cell text-xs text-slate-500">{displayOptional(h.address)}</td>
                     <td className="table-cell text-center">
                       <div className="flex justify-center gap-2">
                         <button onClick={() => handleEdit(h)} className="text-brand-primary hover:text-brand-dark">
