@@ -310,6 +310,12 @@ export default function LandingPage() {
   const navigate = useNavigate()
   const logout = useAuthStore((state) => state.logout)
 
+  const scrollToSection = (sectionId) => {
+    const target = document.getElementById(sectionId)
+    if (!target) return
+    target.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
   const handleLoginClick = (event) => {
     event.preventDefault()
     logout()
@@ -324,7 +330,7 @@ export default function LandingPage() {
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-2 text-xs md:px-8">
           <p className="uppercase tracking-[0.2em] text-emerald-50/95">Republic of the Philippines</p>
           <div className="flex items-center gap-4 text-emerald-50/95">
-            <a href="#faq" className="hidden transition-colors hover:text-[#10b981] md:block">AICS Guidelines</a>
+            <button type="button" onClick={() => scrollToSection('faq')} className="hidden transition-colors hover:text-[#10b981] md:block">AICS Guidelines</button>
             <Link to="/login" onClick={handleLoginClick} className="transition-colors hover:text-[#10b981]">Applicant Login</Link>
           </div>
         </div>
@@ -367,10 +373,10 @@ export default function LandingPage() {
         <nav className="border-b-2 border-[#10b981] bg-white">
           <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-2 px-4 py-2 md:px-8 md:py-2.5">
             <div className="hidden flex-wrap items-center text-sm font-medium text-slate-600 md:flex">
-              <a href="#overview" className="rounded px-3 py-2 transition-colors hover:bg-emerald-50 hover:text-[#065f46]">Overview</a>
-              <a href="#how-it-works" className="rounded px-3 py-2 transition-colors hover:bg-emerald-50 hover:text-[#065f46]">Application Process</a>
-              <a href="#benefits" className="rounded px-3 py-2 transition-colors hover:bg-emerald-50 hover:text-[#065f46]">Types of Assistance</a>
-              <a href="#faq" className="rounded px-3 py-2 transition-colors hover:bg-emerald-50 hover:text-[#065f46]">Frequently Asked Questions</a>
+              <Link to="/" className="rounded px-3 py-2 transition-colors hover:bg-emerald-50 hover:text-[#065f46]">Overview</Link>
+              <button type="button" onClick={() => scrollToSection('how-it-works')} className="rounded px-3 py-2 transition-colors hover:bg-emerald-50 hover:text-[#065f46]">Application Process</button>
+              <button type="button" onClick={() => scrollToSection('benefits')} className="rounded px-3 py-2 transition-colors hover:bg-emerald-50 hover:text-[#065f46]">Types of Assistance</button>
+              <button type="button" onClick={() => scrollToSection('faq')} className="rounded px-3 py-2 transition-colors hover:bg-emerald-50 hover:text-[#065f46]">Frequently Asked Questions</button>
             </div>
             <div className="flex flex-wrap items-center gap-2 sm:gap-3">
               <Link
