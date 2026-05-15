@@ -22,24 +22,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    environment:
-      NODE_ENV: development
-      PORT: 5001
-      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/aics_db?schema=public
-      API_BASE_URL: http://localhost:5001
-      CORS_ORIGIN: http://localhost:8080,http://localhost:8081
-      JWT_SECRET: replace-with-a-32-char-minimum-secret
-      PORTAL_JWT_SECRET: replace-with-a-different-32-char-minimum-secret
-      DOCUMENT_VERIFY_SECRET: replace-with-a-third-32-char-minimum-secret
-      SMTP_HOST: ""
-      SMTP_PORT: 587
-      SMTP_USER: ""
-      SMTP_PASS: ""
-      SMTP_FROM: AICS Vigan City <noreply@localhost>
-      SEMAPHORE_API_KEY: ""
-      SEMAPHORE_SENDER_ID: AICS
-      TRUST_PROXY: "true"
-      RATE_LIMIT_MODE: memory
+    env_file:
+      - ./backend/.env
     volumes:
       - aics_uploads:/app/backend/uploads
     ports:
