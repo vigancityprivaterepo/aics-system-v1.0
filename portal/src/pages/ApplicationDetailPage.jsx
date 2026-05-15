@@ -85,23 +85,23 @@ export default function ApplicationDetailPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <section className="portal-surface p-6">
+    <div className="flex flex-col gap-4 sm:gap-6">
+      <section className="portal-surface p-4 sm:p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div>
-            <h1 className="portal-page-title">
+          <div className="min-w-0">
+            <h1 className="portal-page-title break-words text-[clamp(1.9rem,7vw,2.9rem)] leading-tight sm:text-[clamp(2.2rem,5vw,3.6rem)]">
               {application.referenceNumber || (isDraft ? 'Draft application' : 'Pending Reference Number')}
             </h1>
-            <p className="portal-page-subtitle">
+            <p className="portal-page-subtitle max-w-2xl leading-6 sm:leading-7">
               Review your assistance request, supporting documents, and current evaluation status.
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap lg:justify-end">
             <span className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${statusClasses[application.status] || statusClasses.draft}`}>
               {formatPortalStatus(application.status)}
             </span>
             {isDraft || isResubmission ? (
-              <Link to={`/apply?draft=${application.id}`} className="portal-button-primary text-sm">
+              <Link to={`/apply?draft=${application.id}`} className="portal-button-primary w-full justify-center text-sm sm:w-auto">
                 {isDraft ? 'Continue Draft' : 'Continue Resubmission'}
               </Link>
             ) : null}
@@ -110,16 +110,16 @@ export default function ApplicationDetailPage() {
       </section>
 
       {isDraft ? (
-        <section className="portal-surface border border-slate-300 bg-slate-50 px-6 py-5">
+        <section className="portal-surface border border-slate-300 bg-slate-50 px-4 py-4 sm:px-6 sm:py-5">
           <p className="portal-kicker text-slate-700">Draft In Progress</p>
           <div className="mt-2 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div>
-              <h2 className="font-display text-xl font-bold text-brand-primary">This application has not been submitted yet</h2>
+              <h2 className="font-display text-lg font-bold leading-snug text-brand-primary sm:text-xl">This application has not been submitted yet</h2>
               <p className="mt-2 text-xs leading-6 text-slate-700">
                 Continue editing this draft, upload the required documents, and submit it when the details are complete.
               </p>
             </div>
-            <Link to={`/apply?draft=${application.id}`} className="portal-button-primary inline-flex">
+            <Link to={`/apply?draft=${application.id}`} className="portal-button-primary inline-flex w-full justify-center md:w-auto">
               Continue Draft
             </Link>
           </div>
@@ -127,7 +127,7 @@ export default function ApplicationDetailPage() {
       ) : null}
 
       <section className="grid gap-6 lg:grid-cols-[1.25fr,0.95fr]">
-        <div className="portal-surface p-6">
+        <div className="portal-surface p-4 sm:p-6">
           <p className="portal-kicker">Request Summary</p>
           <div className="mt-6 grid gap-4 sm:grid-cols-2">
             <div className="portal-panel p-4">
@@ -162,7 +162,7 @@ export default function ApplicationDetailPage() {
 
           <div className="mt-6 portal-panel p-4">
             <p className="text-xs font-medium text-slate-500">Reason for Assistance</p>
-            <p className="mt-3 text-sm leading-7 text-slate-700">{application.reason || 'No request details added yet.'}</p>
+            <p className="mt-3 break-words text-sm leading-7 text-slate-700">{application.reason || 'No request details added yet.'}</p>
           </div>
 
           {application.assistanceType === 'burial' ? (
@@ -222,7 +222,7 @@ export default function ApplicationDetailPage() {
             {application.householdMembers?.length ? (
               <div className="mt-4 divide-y divide-slate-200">
                 {application.householdMembers.map((member, index) => (
-                  <div key={`${member.name}-${index}`} className="grid gap-1 py-3 sm:grid-cols-4">
+                  <div key={`${member.name}-${index}`} className="grid gap-1 py-3 md:grid-cols-4">
                     <p className="text-sm font-medium text-brand-primary">{member.name}</p>
                     <p className="text-sm text-slate-600">{member.relationship}</p>
                     <p className="text-sm text-slate-600">{member.age ? `Age ${member.age}` : 'Age not set'}</p>
@@ -237,7 +237,7 @@ export default function ApplicationDetailPage() {
         </div>
 
         <div className="flex flex-col gap-6">
-          <section className="portal-surface p-6">
+          <section className="portal-surface p-4 sm:p-6">
             <p className="portal-kicker">Review Notes</p>
             <h2 className="mt-1 font-display text-xl font-semibold text-slate-800">Current Processing Status</h2>
             <div className="mt-6 space-y-4">
@@ -247,7 +247,7 @@ export default function ApplicationDetailPage() {
                   <p className="mt-2 text-sm leading-7 text-slate-700">
                     Your assistance request has been released by the office. You can also review this update in portal notifications.
                   </p>
-                  <Link to="/notifications" className="portal-button-primary mt-4 inline-flex text-sm">
+                  <Link to="/notifications" className="portal-button-primary mt-4 inline-flex w-full justify-center text-sm sm:w-auto">
                     View Notifications
                   </Link>
                 </div>
@@ -258,7 +258,7 @@ export default function ApplicationDetailPage() {
                   <p className="mt-2 text-sm leading-7 text-slate-700">
                     Your guarantee letter is available in the portal. Download the PDF copy here anytime.
                   </p>
-                  <button onClick={handleGuaranteeLetterDownload} className="portal-button-primary mt-4 inline-flex text-sm">
+                  <button onClick={handleGuaranteeLetterDownload} className="portal-button-primary mt-4 inline-flex w-full justify-center text-sm sm:w-auto">
                     Download Guarantee Letter PDF
                   </button>
                 </div>
@@ -278,7 +278,7 @@ export default function ApplicationDetailPage() {
             </div>
           </section>
 
-          <section className="portal-surface p-6">
+          <section className="portal-surface p-4 sm:p-6">
             <p className="portal-kicker">Supporting Documents</p>
             <h2 className="mt-1 font-display text-xl font-semibold text-slate-800">Uploaded Files</h2>
             <p className="mt-2 text-sm leading-7 text-slate-600">
@@ -288,7 +288,7 @@ export default function ApplicationDetailPage() {
               {application.documents?.length ? application.documents.map((document) => (
                 <div
                   key={document.id}
-                  className="flex items-center justify-between rounded-md border border-slate-200 px-4 py-3 text-sm"
+                  className="flex flex-col gap-2 rounded-md border border-slate-200 px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div className="min-w-0">
                     <p className="font-medium text-slate-800">{document.documentType}</p>
@@ -309,7 +309,7 @@ export default function ApplicationDetailPage() {
                     <p className="mt-1 text-sm leading-7 text-slate-700">{application.adminNotes}</p>
                   </div>
                 ) : null}
-                <Link to={`/apply?draft=${application.id}`} className="portal-button-primary mt-4 inline-flex text-sm">
+                <Link to={`/apply?draft=${application.id}`} className="portal-button-primary mt-4 inline-flex w-full justify-center text-sm sm:w-auto">
                   Continue Resubmission
                 </Link>
               </div>

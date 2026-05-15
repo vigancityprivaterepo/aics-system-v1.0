@@ -174,7 +174,7 @@ export default function PortalLayout() {
     <Link
       to="/notifications"
       onClick={handleNavClick}
-      className="relative inline-flex h-12 w-12 items-center justify-center rounded-md border border-white/20 bg-white/10 text-white transition-colors hover:bg-white/20"
+      className="relative inline-flex h-11 w-11 items-center justify-center rounded-md border border-white/20 bg-white/10 text-white transition-colors hover:bg-white/20 sm:h-12 sm:w-12"
       aria-label="View notifications"
     >
       <BellIcon className="h-5 w-5" />
@@ -190,16 +190,16 @@ export default function PortalLayout() {
     <div className="min-h-screen bg-slate-100">
       <header className="sticky top-0 z-40 border-b border-slate-300 bg-white shadow-sm">
         <div className="bg-gradient-to-r from-[#064e3b] via-[#065f46] to-[#047857] text-white">
-          <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 md:px-8">
-            <Link to="/dashboard" className="flex min-w-0 items-center gap-3">
-              <img src={logo} alt="Vigan City Seal" className="h-10 w-10 shrink-0 object-contain" />
+          <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 px-3 py-3 sm:gap-4 sm:px-4 sm:py-4 md:px-8">
+            <Link to="/dashboard" className="flex min-w-0 flex-1 items-center gap-2.5 sm:gap-3">
+              <img src={logo} alt="Vigan City Seal" className="h-9 w-9 shrink-0 object-contain sm:h-10 sm:w-10" />
               <div className="min-w-0">
-                <p className="truncate text-xs font-medium text-emerald-100/80">Vigan AICS Applicant Portal</p>
-                <p className="truncate font-display text-lg font-bold text-white">City Government of Vigan</p>
+                <p className="truncate text-[11px] font-medium leading-tight text-emerald-100/80 sm:text-xs">Vigan AICS Applicant Portal</p>
+                <p className="truncate font-display text-[clamp(1.1rem,4.8vw,1.5rem)] font-bold leading-tight text-white">City Government of Vigan</p>
               </div>
             </Link>
 
-            <div className="flex items-center gap-3">
+            <div className="flex shrink-0 items-center gap-2 sm:gap-3">
               {bellButton}
               <div className="hidden text-right lg:block">
                 <p className="text-sm font-medium text-white">{applicant?.firstName} {applicant?.lastName}</p>
@@ -214,7 +214,7 @@ export default function PortalLayout() {
               <button
                 type="button"
                 onClick={() => setMobileMenuOpen((open) => !open)}
-                className="inline-flex h-12 w-12 items-center justify-center rounded-md border border-white/20 bg-white/10 text-white transition-colors hover:bg-white/20 lg:hidden"
+                className="inline-flex h-11 w-11 items-center justify-center rounded-md border border-white/20 bg-white/10 text-white transition-colors hover:bg-white/20 sm:h-12 sm:w-12 lg:hidden"
                 aria-expanded={mobileMenuOpen}
                 aria-label="Toggle navigation menu"
               >
@@ -286,7 +286,7 @@ export default function PortalLayout() {
         ) : null}
       </header>
 
-      <main className="mx-auto w-full max-w-7xl p-4 md:p-8">
+      <main className="mx-auto w-full max-w-7xl p-3 sm:p-4 md:p-8">
         <Outlet />
       </main>
     </div>
