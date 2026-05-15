@@ -194,8 +194,8 @@ export default function PortalLayout() {
             <Link to="/dashboard" className="flex min-w-0 flex-1 items-center gap-2.5 sm:gap-3">
               <img src={logo} alt="Vigan City Seal" className="h-9 w-9 shrink-0 object-contain sm:h-10 sm:w-10" />
               <div className="min-w-0">
-                <p className="truncate text-[11px] font-medium leading-tight text-emerald-100/80 sm:text-xs">Vigan AICS Applicant Portal</p>
-                <p className="truncate font-display text-[clamp(1.1rem,4.8vw,1.5rem)] font-bold leading-tight text-white">City Government of Vigan</p>
+                <p className="truncate text-[10px] font-medium leading-tight text-emerald-100/80 sm:text-xs">Vigan AICS Applicant Portal</p>
+                <p className="truncate font-display text-[0.9rem] font-bold leading-tight text-white xs:text-[1rem] sm:text-[clamp(1.1rem,4.8vw,1.5rem)]">City Government of Vigan</p>
               </div>
             </Link>
 
@@ -286,7 +286,7 @@ export default function PortalLayout() {
         ) : null}
       </header>
 
-      <main className="mx-auto w-full max-w-7xl p-3 sm:p-4 md:p-8">
+      <main className="mx-auto w-full max-w-7xl p-2 sm:p-4 md:p-8">
         <Outlet />
       </main>
     </div>

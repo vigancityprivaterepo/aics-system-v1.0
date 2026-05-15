@@ -85,14 +85,14 @@ export default function ApplicationDetailPage() {
   }
 
   return (
-    <div className="flex flex-col gap-4 sm:gap-6">
-      <section className="portal-surface p-4 sm:p-6">
+    <div className="flex flex-col gap-3 sm:gap-6">
+      <section className="portal-surface overflow-hidden p-3 sm:p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0">
-            <h1 className="portal-page-title break-words text-[clamp(1.9rem,7vw,2.9rem)] leading-tight sm:text-[clamp(2.2rem,5vw,3.6rem)]">
+            <h1 className="portal-page-title break-words text-[clamp(1.45rem,6vw,2.2rem)] leading-tight sm:text-[clamp(2.2rem,5vw,3.6rem)]">
               {application.referenceNumber || (isDraft ? 'Draft application' : 'Pending Reference Number')}
             </h1>
-            <p className="portal-page-subtitle max-w-2xl leading-6 sm:leading-7">
+            <p className="portal-page-subtitle mt-2 max-w-2xl text-[13px] leading-6 sm:leading-7">
               Review your assistance request, supporting documents, and current evaluation status.
             </p>
           </div>
@@ -110,7 +110,7 @@ export default function ApplicationDetailPage() {
       </section>
 
       {isDraft ? (
-        <section className="portal-surface border border-slate-300 bg-slate-50 px-4 py-4 sm:px-6 sm:py-5">
+        <section className="portal-surface overflow-hidden border border-slate-300 bg-slate-50 px-3 py-4 sm:px-6 sm:py-5">
           <p className="portal-kicker text-slate-700">Draft In Progress</p>
           <div className="mt-2 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div>
@@ -127,32 +127,32 @@ export default function ApplicationDetailPage() {
       ) : null}
 
       <section className="grid gap-6 lg:grid-cols-[1.25fr,0.95fr]">
-        <div className="portal-surface p-4 sm:p-6">
+        <div className="portal-surface overflow-hidden p-3 sm:p-6">
           <p className="portal-kicker">Request Summary</p>
-          <div className="mt-6 grid gap-4 sm:grid-cols-2">
-            <div className="portal-panel p-4">
+          <div className="mt-4 grid gap-3 sm:mt-6 sm:gap-4 sm:grid-cols-2">
+            <div className="portal-panel p-3 sm:p-4">
               <p className="text-xs font-medium text-slate-500">Assistance Type</p>
               <p className="mt-2 text-sm font-medium capitalize text-slate-800">{application.assistanceType}</p>
             </div>
             {application.assistanceType === 'burial' && (
-              <div className="portal-panel p-4">
+              <div className="portal-panel p-3 sm:p-4">
                 <p className="text-xs font-medium text-slate-500">Name of the Deceased</p>
                 <p className="mt-2 text-sm font-medium text-slate-800">{application.metadata?.deceasedName || 'Not provided'}</p>
               </div>
             )}
             {application.assistanceType === 'medical' && (
-              <div className="portal-panel p-4 sm:col-span-2">
+              <div className="portal-panel p-3 sm:col-span-2 sm:p-4">
                 <p className="text-xs font-medium text-slate-500">Requested Medical Assistance</p>
                 <p className="mt-2 text-sm font-medium text-slate-800">
                   {application.metadata?.medicalRequestedAssistance || application.metadata?.medicalType || 'Not provided'}
                 </p>
               </div>
             )}
-            <div className="portal-panel p-4">
+            <div className="portal-panel p-3 sm:p-4">
               <p className="text-xs font-medium text-slate-500">Contact Number</p>
               <p className="mt-2 text-sm font-medium text-slate-800">{application.contactNumber || 'Not provided'}</p>
             </div>
-            <div className="portal-panel p-4">
+            <div className="portal-panel p-3 sm:p-4">
               <p className="text-xs font-medium text-slate-500">{isDraft ? 'Last updated' : 'Submitted'}</p>
               <p className="mt-2 text-sm font-medium text-slate-800">
                 {formatPortalDateTime(isDraft ? application.updatedAt : application.submittedAt)}
@@ -160,13 +160,13 @@ export default function ApplicationDetailPage() {
             </div>
           </div>
 
-          <div className="mt-6 portal-panel p-4">
+          <div className="mt-4 portal-panel p-3 sm:mt-6 sm:p-4">
             <p className="text-xs font-medium text-slate-500">Reason for Assistance</p>
             <p className="mt-3 break-words text-sm leading-7 text-slate-700">{application.reason || 'No request details added yet.'}</p>
           </div>
 
           {application.assistanceType === 'burial' ? (
-            <div className="mt-6 portal-panel p-4">
+            <div className="mt-4 portal-panel p-3 sm:mt-6 sm:p-4">
               <p className="text-xs font-medium text-slate-500">Burial Details</p>
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
                 {application.metadata?.funeralHomeName ? (
@@ -217,7 +217,7 @@ export default function ApplicationDetailPage() {
             </div>
           ) : null}
 
-          <div className="mt-6 portal-panel p-4">
+          <div className="mt-4 portal-panel p-3 sm:mt-6 sm:p-4">
             <p className="text-xs font-medium text-slate-500">Household Members</p>
             {application.householdMembers?.length ? (
               <div className="mt-4 divide-y divide-slate-200">
@@ -237,7 +237,7 @@ export default function ApplicationDetailPage() {
         </div>
 
         <div className="flex flex-col gap-6">
-          <section className="portal-surface p-4 sm:p-6">
+          <section className="portal-surface overflow-hidden p-3 sm:p-6">
             <p className="portal-kicker">Review Notes</p>
             <h2 className="mt-1 font-display text-xl font-semibold text-slate-800">Current Processing Status</h2>
             <div className="mt-6 space-y-4">
@@ -271,28 +271,28 @@ export default function ApplicationDetailPage() {
                   </p>
                 </div>
               ) : null}
-              <div className="portal-panel p-4">
+              <div className="portal-panel p-3 sm:p-4">
                 <p className="text-xs font-medium text-slate-500">Updated by office</p>
                 <p className="mt-2 text-sm font-medium text-slate-800">{formatPortalDateTime(application.reviewedAt)}</p>
               </div>
             </div>
           </section>
 
-          <section className="portal-surface p-4 sm:p-6">
+          <section className="portal-surface overflow-hidden p-3 sm:p-6">
             <p className="portal-kicker">Supporting Documents</p>
             <h2 className="mt-1 font-display text-xl font-semibold text-slate-800">Uploaded Files</h2>
             <p className="mt-2 text-sm leading-7 text-slate-600">
               Uploaded documents can only be opened by authorized admin and employee accounts during review.
             </p>
-            <div className="mt-6 space-y-3">
+            <div className="mt-4 space-y-3 sm:mt-6">
               {application.documents?.length ? application.documents.map((document) => (
                 <div
                   key={document.id}
-                  className="flex flex-col gap-2 rounded-md border border-slate-200 px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between"
+                  className="flex flex-col gap-2 rounded-md border border-slate-200 px-3 py-3 text-sm sm:flex-row sm:items-center sm:justify-between sm:px-4"
                 >
                   <div className="min-w-0">
                     <p className="font-medium text-slate-800">{document.documentType}</p>
-                    <p className="mt-1 truncate text-xs text-slate-500">{document.originalName}</p>
+                    <p className="mt-1 break-all text-xs text-slate-500 sm:truncate">{document.originalName}</p>
                   </div>
                   <span className="text-xs font-medium text-slate-500">Restricted</span>
                 </div>
