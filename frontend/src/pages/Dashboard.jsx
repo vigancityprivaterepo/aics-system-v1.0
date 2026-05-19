@@ -184,6 +184,7 @@ export default function Dashboard() {
   const [recentCases, setRecentCases] = useState([])
   const [loading, setLoading] = useState(true)
   const [trendPeriod, setTrendPeriod] = useState('month')
+  const [trendType, setTrendType] = useState('all')
 
   useEffect(() => {
     Promise.all([
@@ -211,8 +212,12 @@ export default function Dashboard() {
   const typeCounts = useMemo(() => normalizeTypeCounts(stats?.byType), [stats])
   const monthlyTrend = useMemo(() => normalizeMonthlyData(charts?.monthly), [charts])
   const activeChartTypes = useMemo(
-    () => DASHBOARD_TYPE_ORDER.filter((type) => monthlyTrend.some((row) => Number(row[type] ?? 0) > 0)),
-    [monthlyTrend]
+    () => {
+      const availableTypes = DASHBOARD_TYPE_ORDER.filter((type) => monthlyTrend.some((row) => Number(row[type] ?? 0) > 0))
+      if (trendType === 'all') return availableTypes
+      return availableTypes.includes(trendType) ? [trendType] : []
+    },
+    [monthlyTrend, trendType]
   )
   const pendingReviewCount =
     (stats?.byStatus?.for_review ?? 0) +
@@ -298,6 +303,21 @@ export default function Dashboard() {
               <p className="text-xs text-slate-400 mt-0.5">{PERIOD_KICKER[trendPeriod]}</p>
             </div>
             <div className="flex flex-col items-end gap-2">
+              <select
+                value={trendType}
+                onChange={(event) => setTrendType(event.target.value)}
+                className="min-w-[150px] rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 outline-none transition focus:border-brand-primary"
+              >
+                <option value="all">All Types</option>
+                {DASHBOARD_TYPE_ORDER.map((type) => {
+                  const meta = getTypeMeta(type)
+                  return (
+                    <option key={type} value={type}>
+                      {meta.label}
+                    </option>
+                  )
+                })}
+              </select>
               <div className="flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 p-0.5">
                 {PERIOD_OPTIONS.map((opt) => (
                   <button
