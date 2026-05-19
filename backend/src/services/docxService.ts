@@ -4,6 +4,7 @@ import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import PizZip from 'pizzip'
 import Docxtemplater from 'docxtemplater'
+import { richTextToPlainText } from '../utils/richText.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const require = createRequire(import.meta.url)
@@ -141,7 +142,7 @@ function readSignatureImage(tagValue: unknown): Buffer {
 
 function fmt(value: unknown): string {
   if (value == null) return '-'
-  const normalized = String(value).trim()
+  const normalized = richTextToPlainText(value).trim()
   return normalized.length > 0 ? normalized : '-'
 }
 
@@ -227,7 +228,7 @@ function buildRenderData(caseData: any): Record<string, any> {
   const amount = normalizeCurrency(caseData.amount ?? 0)
   const textOrNull = (value: unknown): string | null => {
     if (value == null) return null
-    const normalized = String(value).trim()
+    const normalized = richTextToPlainText(value).trim()
     return normalized.length > 0 ? normalized : null
   }
   const resolvedClientSex =

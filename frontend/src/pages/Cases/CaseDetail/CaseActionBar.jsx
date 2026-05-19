@@ -16,6 +16,7 @@ export default function CaseActionBar({
   onApprovalStage,
 }) {
   const { status } = caseData
+  const blockerCount = caseData.blockers?.length || 0
 
   if (status === 'released') return null
 
@@ -50,9 +51,9 @@ export default function CaseActionBar({
       {status === 'encoding' && (
         <>
           <p className="text-sm text-slate-600">
-            {caseData.assistanceType === 'plain'
-              ? 'After saving the plain AICS details, submit this case for review.'
-              : 'After saving case study details, submit this case for review.'}
+            {caseData.readyForReview
+              ? 'Case is ready for review. Submit it when you are done checking the encoded details.'
+              : `${blockerCount} blocker${blockerCount === 1 ? '' : 's'} must be resolved before review, unless you submit with an override reason.`}
           </p>
           <div className="flex gap-2">
             <button
@@ -67,7 +68,7 @@ export default function CaseActionBar({
               disabled={actionLoading}
               className="portal-button-primary text-sm"
             >
-              {actionLoading ? 'Submitting...' : 'Submit for Review'}
+              {actionLoading ? 'Submitting...' : caseData.readyForReview ? 'Submit for Review' : 'Submit with Override'}
               <ArrowRightIcon className="h-4 w-4" />
             </button>
           </div>

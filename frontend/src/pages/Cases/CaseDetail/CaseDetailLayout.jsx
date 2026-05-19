@@ -38,6 +38,17 @@ const TYPE_BADGE_CLASS = {
   burial: 'badge-slate',
 }
 
+const QUEUE_LABELS = {
+  needs_intake: 'Needs Intake',
+  needs_encoding: 'Needs Encoding',
+  ready_for_review: 'Ready for Review',
+  waiting_for_recommender: 'Waiting for Recommender',
+  waiting_for_approver: 'Waiting for Approver',
+  ready_for_release: 'Ready for Release',
+  blocked_incomplete: 'Blocked / Incomplete',
+  released: 'Released',
+}
+
 function statusLabel(status) {
   return (status || '').replace(/_/g, ' ')
 }
@@ -118,6 +129,17 @@ export default function CaseDetailLayout() {
   }
 
   const handleSubmitForReview = async () => {
+    if (!caseData) return
+    if (!caseData.readyForReview) {
+      const blockerSummary = (caseData.blockers || []).map((blocker) => `- ${blocker}`).join('\n')
+      const overrideReason = window.prompt(
+        `This case is not ready for review.\n\n${blockerSummary}\n\nEnter an override reason to continue:`,
+      )
+      if (!overrideReason?.trim()) return
+      await transitionStatus('for_review', overrideReason.trim())
+      return
+    }
+
     const confirmed = window.confirm(
       'Before submitting for review, please double-check all case study details, amounts, and attached information.\n\nProceed to submit this case for review?',
     )
@@ -215,6 +237,50 @@ export default function CaseDetailLayout() {
             { key: 'released', label: 'Released' },
           ]}
         />
+      </div>
+
+      <div className="card mb-4 border-slate-300 bg-white">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Workflow Guidance</p>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center rounded border border-slate-900 px-2.5 py-0.5 text-xs font-medium text-slate-900">
+                {QUEUE_LABELS[caseData.queue] || caseData.queue}
+              </span>
+              {caseData.overdue ? <span className="inline-flex items-center rounded border border-slate-700 px-2.5 py-0.5 text-xs font-medium text-slate-700">Overdue</span> : null}
+              {caseData.readyForReview ? <span className="inline-flex items-center rounded border border-slate-700 px-2.5 py-0.5 text-xs font-medium text-slate-700">Ready for Review</span> : null}
+            </div>
+            <p className="mt-3 text-sm text-slate-900">{caseData.nextAction}</p>
+            {caseData.dueAt ? (
+              <p className="mt-1 text-xs text-slate-600">Due by {new Date(caseData.dueAt).toLocaleString()}</p>
+            ) : null}
+          </div>
+          {!!caseData.blockers?.length && (
+            <div className="min-w-0 lg:max-w-xl">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Current Blockers</p>
+              <ul className="mt-2 space-y-1 text-sm text-slate-800">
+                {caseData.blockers.map((blocker) => (
+                  <li key={blocker}>• {blocker}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+        {!!caseData.portalApplicationDocuments?.length && (
+          <div className="mt-4 border-t border-slate-200 pt-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Portal Submitted Documents</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {caseData.portalApplicationDocuments.map((document) => (
+                <span key={document.id} className="inline-flex items-center rounded border border-slate-300 px-2.5 py-0.5 text-xs font-medium text-slate-800">
+                  {document.documentType}
+                </span>
+              ))}
+            </div>
+            <p className="mt-2 text-xs text-slate-500">
+              These were uploaded in the portal before the staff case was created.
+            </p>
+          </div>
+        )}
       </div>
 
       <CaseActionBar

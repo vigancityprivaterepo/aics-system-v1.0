@@ -1,0 +1,140 @@
+import { useEffect, useMemo, useRef } from 'react'
+
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+function plainTextToHtml(value) {
+  const normalized = String(value ?? '').replace(/\r\n/g, '\n').trim()
+  if (!normalized) return ''
+
+  return normalized
+    .split(/\n{2,}/)
+    .map((paragraph) => `<p>${escapeHtml(paragraph).replace(/\n/g, '<br>')}</p>`)
+    .join('')
+}
+
+function sanitizeNode(node, documentRef) {
+  if (node.nodeType === Node.TEXT_NODE) {
+    return documentRef.createTextNode(node.textContent ?? '')
+  }
+
+  if (node.nodeType !== Node.ELEMENT_NODE) {
+    return null
+  }
+
+  const tagName = node.tagName.toLowerCase()
+  const inlineTags = new Set(['b', 'strong', 'i', 'em', 'u', 'br'])
+  const blockTags = new Set(['p', 'div', 'ul', 'ol', 'li'])
+
+  if (!inlineTags.has(tagName) && !blockTags.has(tagName)) {
+    const fragment = documentRef.createDocumentFragment()
+    for (const child of node.childNodes) {
+      const sanitizedChild = sanitizeNode(child, documentRef)
+      if (sanitizedChild) fragment.appendChild(sanitizedChild)
+    }
+    return fragment
+  }
+
+  const element = documentRef.createElement(tagName)
+  if (blockTags.has(tagName)) {
+    const textAlign = node.style?.textAlign
+    if (['left', 'center', 'right', 'justify'].includes(textAlign)) {
+      element.style.textAlign = textAlign
+    }
+  }
+
+  for (const child of node.childNodes) {
+    const sanitizedChild = sanitizeNode(child, documentRef)
+    if (sanitizedChild) element.appendChild(sanitizedChild)
+  }
+
+  return element
+}
+
+function normalizeEditorHtml(value) {
+  const raw = String(value ?? '').trim()
+  if (!raw) return ''
+
+  const looksLikeHtml = /<\/?[a-z][\s\S]*>/i.test(raw)
+  const sourceHtml = looksLikeHtml ? raw : plainTextToHtml(raw)
+  const parser = new DOMParser()
+  const parsed = parser.parseFromString(`<div>${sourceHtml}</div>`, 'text/html')
+  const wrapper = parsed.body.firstElementChild
+  if (!wrapper) return ''
+
+  const cleanDocument = document.implementation.createHTMLDocument('')
+  const fragment = cleanDocument.createDocumentFragment()
+  for (const child of wrapper.childNodes) {
+    const sanitizedChild = sanitizeNode(child, cleanDocument)
+    if (sanitizedChild) fragment.appendChild(sanitizedChild)
+  }
+
+  const container = cleanDocument.createElement('div')
+  container.appendChild(fragment)
+  return container.innerHTML
+}
+
+export default function RichTextEditor({
+  value,
+  onChange,
+  readOnly = false,
+  minHeightClass = 'min-h-[9rem]',
+  placeholder = '',
+}) {
+  const editorRef = useRef(null)
+  const normalizedValue = useMemo(() => normalizeEditorHtml(value), [value])
+
+  useEffect(() => {
+    const editor = editorRef.current
+    if (!editor) return
+    if (editor.innerHTML !== normalizedValue) {
+      editor.innerHTML = normalizedValue
+    }
+  }, [normalizedValue])
+
+  const syncValue = () => {
+    const editor = editorRef.current
+    if (!editor) return
+    const normalizedHtml = normalizeEditorHtml(editor.innerHTML)
+    if (editor.innerHTML !== normalizedHtml) {
+      editor.innerHTML = normalizedHtml
+    }
+    onChange(normalizedHtml)
+  }
+
+  const handleKeyDown = (event) => {
+    if (event.key === 'Tab') {
+      event.preventDefault()
+      document.execCommand('insertHTML', false, '&nbsp;&nbsp;&nbsp;&nbsp;')
+      syncValue()
+    }
+  }
+
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white">
+      <div className="relative">
+        {!readOnly && !normalizedValue && placeholder && (
+          <div className="pointer-events-none absolute left-4 top-3 text-sm text-slate-400">
+            {placeholder}
+          </div>
+        )}
+        <div
+          ref={editorRef}
+          contentEditable={!readOnly}
+          suppressContentEditableWarning
+          onInput={syncValue}
+          onBlur={syncValue}
+          onKeyDown={handleKeyDown}
+          className={`portal-input rounded-none border-0 bg-transparent px-4 py-3 focus:ring-0 ${minHeightClass}`}
+          style={{ whiteSpace: 'pre-wrap' }}
+        />
+      </div>
+    </div>
+  )
+}

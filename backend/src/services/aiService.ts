@@ -1,5 +1,6 @@
 import { env } from '../config/env.js'
 import { HttpError } from '../utils/httpError.js'
+import { richTextToPlainText } from '../utils/richText.js'
 
 type FindingsPayload = {
   assistanceType: string
@@ -62,7 +63,7 @@ function buildPrompt(payload: FindingsPayload): string {
     'Use 2 to 4 sentences.',
     '',
     `Assistance Type: ${payload.assistanceType}`,
-    `Presenting Problem: ${String(payload.presentingProblem ?? '').trim() || 'Not provided'}`,
+    `Presenting Problem: ${richTextToPlainText(payload.presentingProblem) || 'Not provided'}`,
     '',
     `Client Profile: ${JSON.stringify(clientProfile)}`,
     `Family Composition: ${JSON.stringify(sanitizedFamily)}`,

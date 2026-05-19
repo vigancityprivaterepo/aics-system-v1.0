@@ -18,6 +18,7 @@ import {
 } from '../services/approvalService.js'
 import { sendPortalStatusNotifications } from '../services/portalStatusNotifications.js'
 import { auditLog } from '../utils/auditLog.js'
+import { assessCaseWorkflow } from '../services/caseWorkflowService.js'
 
 export async function updateStatus(req: Request, res: Response) {
   const caseId = paramId(req.params.id)
@@ -53,6 +54,15 @@ export async function updateStatus(req: Request, res: Response) {
 
   if (!isReject && !(isForward || isAllowedBackward)) {
     throw new HttpError(400, 'Invalid status transition')
+  }
+
+  if (currentStatus === 'encoding' && nextStatus === 'for_review') {
+    const settings = await getApprovalSettings()
+    const assigneesByStage = await resolveApprovalAssignees(settings)
+    const workflow = assessCaseWorkflow(caseData, assigneesByStage)
+    if (!workflow.readyForReview && !normalizedNotes) {
+      throw new HttpError(400, `Case is not ready for review. Resolve blockers first or provide an override reason. Blockers: ${workflow.blockers.join('; ')}`)
+    }
   }
 
   assertTransitionPermission(currentStatus, nextStatus as CaseStatus, req.user, normalizedNotes ?? undefined)

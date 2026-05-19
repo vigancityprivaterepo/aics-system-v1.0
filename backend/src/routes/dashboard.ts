@@ -3,6 +3,9 @@ import { AssistanceType, CaseStatus, Prisma } from '@prisma/client'
 import dayjs from 'dayjs'
 import { asyncHandler } from '../utils/asyncHandler.js'
 import { prisma } from '../utils/prisma.js'
+import { getApprovalSettings } from '../queries/caseQueries.js'
+import { resolveApprovalAssignees } from '../services/approvalService.js'
+import { assessCaseWorkflow } from '../services/caseWorkflowService.js'
 
 const router = Router()
 const DASHBOARD_TYPES = [
@@ -28,6 +31,8 @@ router.get('/stats', asyncHandler(async (_req, res) => {
     byType,
     byStatus,
     pendingRequirements,
+    workflowCases,
+    settings,
   ] = await Promise.all([
     prisma.case.count({ where: { createdAt: { gte: todayStart } } }),
     prisma.case.count({ where: { createdAt: { gte: weekStart } } }),
@@ -36,7 +41,30 @@ router.get('/stats', asyncHandler(async (_req, res) => {
     prisma.case.groupBy({ by: ['assistanceType'], _count: { _all: true } }),
     prisma.case.groupBy({ by: ['status'], _count: { _all: true } }),
     prisma.case.count({ where: { status: 'intake' } }),
+    prisma.case.findMany({
+      include: {
+        client: true,
+        requirements: true,
+        medicines: true,
+        burialDetails: true,
+        hospitalDetails: true,
+        medicalDetails: true,
+        eyeglassDetails: true,
+        plainDetails: true,
+        applicantApplication: {
+          select: {
+            id: true,
+          },
+        },
+        statusLogs: {
+          orderBy: { changedAt: 'desc' },
+          take: 1,
+        },
+      },
+    }),
+    getApprovalSettings(),
   ])
+  const assigneesByStage = await resolveApprovalAssignees(settings)
 
   const byTypeMap = Object.fromEntries(DASHBOARD_TYPES.map((type) => [type, 0])) as Record<string, number>
   for (const row of byType) {
@@ -58,6 +86,29 @@ router.get('/stats', asyncHandler(async (_req, res) => {
     byStatusMap[normalizedStatus] = (byStatusMap[normalizedStatus] ?? 0) + row._count._all
   }
 
+  const workflowQueues: Record<string, number> = {
+    needs_intake: 0,
+    needs_encoding: 0,
+    ready_for_review: 0,
+    waiting_for_recommender: 0,
+    waiting_for_approver: 0,
+    ready_for_release: 0,
+    blocked_incomplete: 0,
+  }
+  let blockedCases = 0
+  let overdueCases = 0
+  let readyForReviewCases = 0
+
+  for (const row of workflowCases) {
+    const workflow = assessCaseWorkflow(row, assigneesByStage)
+    if (workflow.queue !== 'released') {
+      workflowQueues[workflow.queue] = (workflowQueues[workflow.queue] ?? 0) + 1
+    }
+    if (workflow.isBlocked) blockedCases += 1
+    if (workflow.overdue) overdueCases += 1
+    if (workflow.readyForReview && workflow.queue === 'ready_for_review') readyForReviewCases += 1
+  }
+
   res.json({
     todayCases,
     weekCases,
@@ -66,6 +117,10 @@ router.get('/stats', asyncHandler(async (_req, res) => {
     byType: byTypeMap,
     byStatus: byStatusMap,
     pendingRequirements,
+    workflowQueues,
+    blockedCases,
+    overdueCases,
+    readyForReviewCases,
   })
 }))
 

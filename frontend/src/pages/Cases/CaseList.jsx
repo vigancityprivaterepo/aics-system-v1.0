@@ -1,35 +1,40 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import api from '../../lib/api'
-import { useAuthStore } from '../../store/authStore'
 import { formatDate } from '../../lib/utils'
 import StatusBadge from '../../components/ui/StatusBadge'
 import { PlusIcon, SearchIcon, FolderIcon, EditIcon, TrashIcon, ChevronLeftIcon, ChevronRightIcon, QrCodeIcon } from '../../components/ui/Icons'
 
-const STATUS_OPTIONS = ['intake', 'encoding', 'for_review', 'recommending_approval', 'for_approval', 'approved', 'released', 'rejected']
 const TYPE_LABEL = { medicine: 'Medicine', burial: 'Burial', hospital: 'Hospital', medical: 'Medical', eyeglass: 'Eyeglass', plain: 'Plain AICS' }
+const QUEUE_LABEL = {
+  needs_intake: 'Needs Intake',
+  needs_encoding: 'Needs Encoding',
+  ready_for_review: 'Ready for Review',
+  waiting_for_recommender: 'Waiting for Recommender',
+  waiting_for_approver: 'Waiting for Approver',
+  ready_for_release: 'Ready for Release',
+  blocked_incomplete: 'Blocked / Incomplete',
+}
 
 export default function CaseList() {
   const [searchParams] = useSearchParams()
   const typeParam = searchParams.get('type') ?? ''
+  const queueParam = searchParams.get('queue') ?? ''
+  const blockedParam = searchParams.get('blocked') === 'true'
+  const overdueParam = searchParams.get('overdue') === 'true'
+  const ownerParam = searchParams.get('owner') ?? ''
   const navigate = useNavigate()
-  const { user } = useAuthStore()
-
-  const approvalStatusDefault = useMemo(() => {
-    const levels = user?.approvalLevel ?? []
-    if (levels.includes('reviewer'))    return 'for_review'
-    if (levels.includes('recommender')) return 'recommending_approval'
-    if (levels.includes('approver'))    return 'for_approval'
-    return ''
-  }, [user])
 
   const [cases, setCases] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [filterTypeInput, setFilterTypeInput] = useState(typeParam)
-  const [filterStatus, setFilterStatus] = useState(approvalStatusDefault)
+  const [filterQueue, setFilterQueue] = useState(queueParam)
+  const [filterBlocked, setFilterBlocked] = useState(blockedParam)
+  const [filterOverdue, setFilterOverdue] = useState(overdueParam)
+  const [filterOwner, setFilterOwner] = useState(ownerParam)
   const [page, setPage] = useState(1)
   const [total, setTotal] = useState(0)
   const [deletingId, setDeletingId] = useState(null)
@@ -41,11 +46,17 @@ export default function CaseList() {
     try {
       const nextSearch = overrides.search ?? search
       const nextType = overrides.filterType ?? filterType
-      const nextStatus = overrides.filterStatus ?? filterStatus
+      const nextQueue = overrides.filterQueue ?? filterQueue
+      const nextBlocked = overrides.filterBlocked ?? filterBlocked
+      const nextOverdue = overrides.filterOverdue ?? filterOverdue
+      const nextOwner = overrides.filterOwner ?? filterOwner
       const params = new URLSearchParams({ page: String(targetPage), limit: String(LIMIT) })
       if (nextSearch) params.append('search', nextSearch)
       if (nextType) params.append('type', nextType)
-      if (nextStatus) params.append('status', nextStatus)
+      if (nextQueue) params.append('queue', nextQueue)
+      if (nextBlocked) params.append('blocked', 'true')
+      if (nextOverdue) params.append('overdue', 'true')
+      if (nextOwner) params.append('owner', nextOwner)
       const res = await api.get(`/cases?${params}`)
       setCases(res.data.cases || [])
       setTotal(res.data.total || 0)
@@ -65,7 +76,10 @@ export default function CaseList() {
         const params = new URLSearchParams({ page: String(page), limit: String(LIMIT) })
         if (debouncedSearch) params.append('search', debouncedSearch)
         if (filterType) params.append('type', filterType)
-        if (filterStatus) params.append('status', filterStatus)
+        if (filterQueue) params.append('queue', filterQueue)
+        if (filterBlocked) params.append('blocked', 'true')
+        if (filterOverdue) params.append('overdue', 'true')
+        if (filterOwner) params.append('owner', filterOwner)
         const res = await api.get(`/cases?${params}`)
         if (!active) return
         setCases(res.data.cases || [])
@@ -80,7 +94,7 @@ export default function CaseList() {
       }
     })()
     return () => { active = false }
-  }, [page, filterType, filterStatus, debouncedSearch])
+  }, [page, filterType, filterQueue, filterBlocked, filterOverdue, filterOwner, debouncedSearch])
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -130,7 +144,8 @@ export default function CaseList() {
       </div>
 
       {/* Filters */}
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row bg-white border border-slate-200 rounded-lg px-4 py-3">
+      <div className="mb-4 flex flex-col gap-3 bg-white border border-slate-200 rounded-lg px-4 py-3">
+          <div className="flex flex-col gap-3 sm:flex-row">
           <div className="relative flex-1">
             <SearchIcon className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <input
@@ -158,12 +173,27 @@ export default function CaseList() {
               <option value="plain">Plain AICS</option>
             </select>
           )}
-          <select value={filterStatus} onChange={(e) => { setLoading(true); setFilterStatus(e.target.value); setPage(1) }} className="portal-input w-44" id="filter-status">
-            <option value="">All Statuses</option>
-            {STATUS_OPTIONS.map(s => (
-              <option key={s} value={s}>{s.replace('_', ' ')}</option>
+          <select value={filterQueue} onChange={(e) => { setLoading(true); setFilterQueue(e.target.value); setPage(1) }} className="portal-input w-52" id="filter-queue">
+            <option value="">All Queues</option>
+            {Object.entries(QUEUE_LABEL).map(([value, label]) => (
+              <option key={value} value={value}>{label}</option>
             ))}
           </select>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="inline-flex items-center gap-2 text-sm text-slate-600">
+              <input type="checkbox" checked={filterBlocked} onChange={(e) => { setLoading(true); setFilterBlocked(e.target.checked); setPage(1) }} />
+              Blocked only
+            </label>
+            <label className="inline-flex items-center gap-2 text-sm text-slate-600">
+              <input type="checkbox" checked={filterOverdue} onChange={(e) => { setLoading(true); setFilterOverdue(e.target.checked); setPage(1) }} />
+              Overdue only
+            </label>
+            <select value={filterOwner} onChange={(e) => { setLoading(true); setFilterOwner(e.target.value); setPage(1) }} className="portal-input w-40" id="filter-owner">
+              <option value="">All Owners</option>
+              <option value="me">My Work</option>
+            </select>
+          </div>
       </div>
 
       {/* Table */}
@@ -186,6 +216,7 @@ export default function CaseList() {
                 <th className="table-header text-left">Client</th>
                 <th className="table-header text-left">Type</th>
                 <th className="table-header text-left">Status</th>
+                <th className="table-header text-left">Workflow</th>
                 <th className="table-header text-left">Social Worker</th>
                 <th className="table-header text-left">Date</th>
                 <th className="table-header text-left">Actions</th>
@@ -218,6 +249,18 @@ export default function CaseList() {
                     </span>
                   </td>
                   <td className="table-cell"><StatusBadge status={c.status} /></td>
+                  <td className="table-cell">
+                    <div className="space-y-1">
+                      <span className={`badge ${c.isBlocked ? 'badge-red' : c.overdue ? 'badge-amber' : 'badge-slate'}`}>
+                        {QUEUE_LABEL[c.queue] || c.queue}
+                      </span>
+                      <p className="text-[11px] text-slate-500">{c.nextAction}</p>
+                      <div className="flex flex-wrap items-center gap-2 text-[10px]">
+                        {c.isBlocked ? <span className="text-red-600 font-medium">{c.blockers?.length || 0} blocker(s)</span> : null}
+                        {c.overdue ? <span className="text-amber-600 font-medium">Overdue</span> : null}
+                      </div>
+                    </div>
+                  </td>
                   <td className="table-cell text-slate-500 text-xs">{c.socialWorkerName || '—'}</td>
                   <td className="table-cell text-slate-400 text-xs">{formatDate(c.dateOfAssessment)}</td>
                   <td className="table-cell">

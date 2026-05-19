@@ -1,6 +1,7 @@
 import type { ApprovalStage } from '@prisma/client'
 import { APPROVAL_STAGE_ORDER, APPROVAL_STAGE_META, type ApprovalAssigneeByStage } from '../types/caseTypes.js'
 import { approvalActorTitle } from '../services/approvalService.js'
+import { assessCaseWorkflow } from '../services/caseWorkflowService.js'
 import { currencyFromDb } from '../utils/currency.js'
 
 function portalContextFromAuditFlags(auditFlags: unknown): Record<string, unknown> | null {
@@ -84,6 +85,7 @@ export function serializeCase(caseRow: any, assigneesByStage?: ApprovalAssigneeB
   const reviewedAssignee = stageAssignees.for_review
   const recommendingAssignee = stageAssignees.recommending_approval
   const approvedAssignee = stageAssignees.for_approval
+  const workflow = assessCaseWorkflow(caseRow, stageAssignees)
 
   const approvalSignatureFallbacks = {
     for_review:
@@ -145,6 +147,8 @@ export function serializeCase(caseRow: any, assigneesByStage?: ApprovalAssigneeB
     beneficiaryAddress,
     proxyName,
     proxyRelationship,
+    ...workflow,
+    workflow,
     client: {
       id: caseRow.client.id,
       caseNumber: caseRow.client.caseNumber,
@@ -262,6 +266,13 @@ export function serializeCase(caseRow: any, assigneesByStage?: ApprovalAssigneeB
       conformeRelationship: medicineConformeRelationship,
     },
     portalApplicationContext: portalContextFromAuditFlags(caseRow.auditFlags),
+    portalApplicationDocuments: (caseRow.applicantApplication?.documents ?? []).map((document: any) => ({
+      id: document.id,
+      documentType: document.documentType,
+      originalName: document.originalName,
+      fileUrl: document.fileUrl,
+      uploadedAt: document.uploadedAt ?? null,
+    })),
     approvals: {
       for_review: reviewedStage,
       recommending_approval: recommendingStage,

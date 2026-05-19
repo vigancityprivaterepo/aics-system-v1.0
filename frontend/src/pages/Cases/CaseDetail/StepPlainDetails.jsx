@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { Controller, useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
 import api from '../../../lib/api'
 import { FileTextIcon, PlusIcon, TrashIcon } from '../../../components/ui/Icons'
+import RichTextEditor from '../../../components/RichTextEditor'
 import { formatCurrency } from '../../../lib/utils'
 
 const defaultMember = { name: '', age: '', relationship: '', civilStatus: '', occupation: '', monthlyIncome: '' }
@@ -13,7 +14,7 @@ export default function StepPlainDetails({ caseData, onUpdate, readOnly = false 
   const [saving, setSaving] = useState(false)
   const [family, setFamily] = useState(caseData.familyComposition || [])
 
-  const { register, handleSubmit, watch } = useForm({
+  const { control, register, handleSubmit, watch } = useForm({
     defaultValues: {
       dateOfAssessment: caseData.dateOfAssessment || new Date().toISOString().slice(0, 10),
       presentingProblem: caseData.presentingProblem || '',
@@ -154,20 +155,34 @@ export default function StepPlainDetails({ caseData, onUpdate, readOnly = false 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="sm:col-span-2">
             <label className="portal-label">Presenting Problem</label>
-            <textarea
-              {...register('presentingProblem')}
-              className="portal-input"
-              rows={3}
-              placeholder="State the client's concern or reason for seeking Plain AICS assistance."
+            <Controller
+              name="presentingProblem"
+              control={control}
+              render={({ field }) => (
+                <RichTextEditor
+                  value={field.value}
+                  onChange={field.onChange}
+                  readOnly={readOnly}
+                  minHeightClass="min-h-[7rem]"
+                  placeholder="State the client's concern or reason for seeking Plain AICS assistance."
+                />
+              )}
             />
           </div>
           <div className="sm:col-span-2">
             <label className="portal-label">Findings</label>
-            <textarea
-              {...register('findings')}
-              className="portal-input"
-              rows={4}
-              placeholder="Enter the findings that should be bridged directly to the template."
+            <Controller
+              name="findings"
+              control={control}
+              render={({ field }) => (
+                <RichTextEditor
+                  value={field.value}
+                  onChange={field.onChange}
+                  readOnly={readOnly}
+                  minHeightClass="min-h-[10rem]"
+                  placeholder="Enter the findings that should be bridged directly to the template."
+                />
+              )}
             />
           </div>
           <div>

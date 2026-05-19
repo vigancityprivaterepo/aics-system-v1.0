@@ -19,9 +19,23 @@ export async function findCaseWithDetails(id: string) {
               sex: true,
             },
           },
+          documents: {
+            orderBy: { uploadedAt: 'asc' },
+            select: {
+              id: true,
+              documentType: true,
+              originalName: true,
+              fileUrl: true,
+              uploadedAt: true,
+            },
+          },
         },
       },
       socialWorker: { select: { id: true, eSignatureUrl: true, signatureParam: true, position: true } },
+      statusLogs: {
+        orderBy: { changedAt: 'desc' },
+        take: 1,
+      },
       approvals: {
         orderBy: { actedAt: 'asc' },
         include: { actedByUser: { select: { signatureParam: true } } },

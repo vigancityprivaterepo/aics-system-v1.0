@@ -13,6 +13,7 @@ import { sendSms } from '../services/sms.js'
 import { auditLog } from '../utils/auditLog.js'
 import { buildPersonMatchInput, duplicateConflict, findClientDuplicateMatches, mergeClientRecords, recordClientDedupEvent } from '../services/clientDedupService.js'
 import { backendRoot } from '../utils/paths.js'
+import { buildPortalRequirementRows } from '../utils/requirements.js'
 
 const router = Router()
 
@@ -422,6 +423,16 @@ async function createCaseFromAcceptedApplication(
     await tx.applicantApplication.update({
       where: { id: application.id },
       data: { caseId: createdCase.id },
+    })
+
+    await tx.caseRequirement.createMany({
+      data: buildPortalRequirementRows(application.assistanceType, application.documents ?? []).map((row) => ({
+        caseId: createdCase.id,
+        requirementName: row.requirementName,
+        isSubmitted: row.isSubmitted,
+        submittedAt: row.submittedAt,
+      })),
+      skipDuplicates: true,
     })
 
     await auditLog(tx, {

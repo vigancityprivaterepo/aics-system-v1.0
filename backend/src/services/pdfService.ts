@@ -1,4 +1,5 @@
 import PDFDocument from 'pdfkit'
+import { richTextToPlainText } from '../utils/richText.js'
 
 type CaseReportPayload = {
   caseNumber: string
@@ -80,6 +81,11 @@ function renderDocumentAuthenticationBlock(doc: PDFKit.PDFDocument, payload: {
 
 export async function generateCaseReportPdf(payload: CaseReportPayload): Promise<Buffer> {
   const doc = new PDFDocument({ size: 'A4', margin: 50 })
+  const presentingProblem = richTextToPlainText(payload.presentingProblem) || '-'
+  const backgroundOfProblem = richTextToPlainText(payload.backgroundOfProblem) || '-'
+  const assessment = richTextToPlainText(payload.assessment) || '-'
+  const recommendation = richTextToPlainText(payload.recommendation) || '-'
+  const remarks = richTextToPlainText(payload.remarks) || '-'
   doc.fontSize(16).text('DSWD - AICS Case Study Report', { align: 'center' })
   doc.moveDown()
 
@@ -92,23 +98,23 @@ export async function generateCaseReportPdf(payload: CaseReportPayload): Promise
   doc.moveDown()
 
   doc.fontSize(12).text('Presenting Problem', { underline: true })
-  doc.fontSize(10).text(payload.presentingProblem ?? '-')
+  doc.fontSize(10).text(presentingProblem)
   doc.moveDown()
 
   doc.fontSize(12).text('Background of the Problem', { underline: true })
-  doc.fontSize(10).text(payload.backgroundOfProblem ?? '-')
+  doc.fontSize(10).text(backgroundOfProblem)
   doc.moveDown()
 
   doc.fontSize(12).text('Assessment', { underline: true })
-  doc.fontSize(10).text(payload.assessment ?? '-')
+  doc.fontSize(10).text(assessment)
   doc.moveDown()
 
   doc.fontSize(12).text('Recommendation', { underline: true })
-  doc.fontSize(10).text(payload.recommendation ?? '-')
+  doc.fontSize(10).text(recommendation)
   doc.moveDown()
 
   doc.fontSize(12).text('Remarks', { underline: true })
-  doc.fontSize(10).text(payload.remarks ?? '-')
+  doc.fontSize(10).text(remarks)
   doc.moveDown()
 
   doc.fontSize(11).text(`Amount: PHP ${(payload.amount ?? 0).toFixed(2)}`)

@@ -8,6 +8,7 @@ import { generateCaseCaseNumber } from '../utils/caseNumber.js'
 import { findCaseWithDetails, getApprovalSettings } from '../queries/caseQueries.js'
 import { serializeCase, portalContextFromAuditFlags, normalizeWorkflowStatus } from '../serializers/caseSerializer.js'
 import { resolveApprovalAssignees } from '../services/approvalService.js'
+import { assessCaseWorkflow } from '../services/caseWorkflowService.js'
 import { assertCaseReadable, assertEditableCase, ensureRequirementRows, paramId } from '../services/caseService.js'
 import { APPROVAL_STAGE_META, APPROVAL_STAGE_ORDER } from '../types/caseTypes.js'
 import { generateClaudeFindingsDraft } from '../services/aiService.js'
@@ -21,6 +22,10 @@ export async function listCases(req: Request, res: Response) {
   const type = req.query.type ? String(req.query.type) : undefined
   const status = req.query.status ? String(req.query.status) : undefined
   const search = req.query.search ? String(req.query.search).trim() : undefined
+  const queue = req.query.queue ? String(req.query.queue).trim() : undefined
+  const owner = req.query.owner ? String(req.query.owner).trim() : undefined
+  const blocked = req.query.blocked === 'true'
+  const overdue = req.query.overdue === 'true'
   const limit = Math.min(Number(req.query.limit ?? 15), 100)
   const page = Math.max(Number(req.query.page ?? 1), 1)
 
@@ -46,22 +51,37 @@ export async function listCases(req: Request, res: Response) {
       : {}),
   }
 
-  const [total, cases] = await Promise.all([
-    prisma.case.count({ where }),
+  const [settings, cases] = await Promise.all([
+    getApprovalSettings(),
     prisma.case.findMany({
       where,
-      include: { client: true },
+      include: {
+        client: true,
+        requirements: true,
+        medicines: true,
+        burialDetails: true,
+        hospitalDetails: true,
+        medicalDetails: true,
+        eyeglassDetails: true,
+        plainDetails: true,
+        applicantApplication: {
+          select: {
+            id: true,
+          },
+        },
+        statusLogs: {
+          orderBy: { changedAt: 'desc' },
+          take: 1,
+        },
+      },
       orderBy: { createdAt: 'desc' },
-      skip: (page - 1) * limit,
-      take: limit,
     }),
   ])
+  const assigneesByStage = await resolveApprovalAssignees(settings)
 
-  res.json({
-    total,
-    page,
-    limit,
-    cases: cases.map((c) => ({
+  const hydratedCases = cases.map((c) => {
+    const workflow = assessCaseWorkflow(c, assigneesByStage)
+    return {
       id: c.id,
       caseNumber: (c as any).caseNumber ?? null,
       client: {
@@ -70,13 +90,33 @@ export async function listCases(req: Request, res: Response) {
         firstName: c.client.firstName,
         lastName: c.client.lastName,
       },
+      clientName: `${c.client.lastName}, ${c.client.firstName}`,
       assistanceType: c.assistanceType,
       status: normalizeWorkflowStatus(c.status),
       socialWorkerName: c.socialWorkerName,
       dateOfAssessment: c.dateOfAssessment?.toISOString().slice(0, 10) ?? null,
       amount: currencyFromDb(c.amount),
       createdAt: c.createdAt,
-    })),
+      ...workflow,
+      workflow,
+    }
+  }).filter((c) => {
+    if (queue && c.queue !== queue) return false
+    if (blocked && !c.isBlocked) return false
+    if (overdue && !c.overdue) return false
+    if (owner === 'me' && c.ownerUserId !== req.user!.id) return false
+    if (owner && owner !== 'me' && c.ownerUserId !== owner) return false
+    return true
+  })
+
+  const total = hydratedCases.length
+  const pagedCases = hydratedCases.slice((page - 1) * limit, page * limit)
+
+  res.json({
+    total,
+    page,
+    limit,
+    cases: pagedCases,
   })
 }
 

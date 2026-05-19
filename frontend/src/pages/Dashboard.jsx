@@ -178,6 +178,15 @@ const PERIOD_KICKER = {
   year: 'Yearly Trend',
 }
 
+const QUEUE_META = {
+  needs_intake: { label: 'Needs Intake', query: 'queue=needs_intake', color: 'text-slate-700 bg-slate-50' },
+  needs_encoding: { label: 'Needs Encoding', query: 'queue=needs_encoding', color: 'text-blue-700 bg-blue-50' },
+  ready_for_review: { label: 'Ready for Review', query: 'queue=ready_for_review', color: 'text-amber-700 bg-amber-50' },
+  waiting_for_recommender: { label: 'Waiting for Recommender', query: 'queue=waiting_for_recommender', color: 'text-indigo-700 bg-indigo-50' },
+  waiting_for_approver: { label: 'Waiting for Approver', query: 'queue=waiting_for_approver', color: 'text-violet-700 bg-violet-50' },
+  ready_for_release: { label: 'Ready for Release', query: 'queue=ready_for_release', color: 'text-emerald-700 bg-emerald-50' },
+}
+
 export default function Dashboard() {
   const [stats, setStats] = useState(null)
   const [charts, setCharts] = useState(null)
@@ -224,6 +233,11 @@ export default function Dashboard() {
     (stats?.byStatus?.recommending_approval ?? 0) +
     (stats?.byStatus?.for_approval ?? 0) +
     (stats?.byStatus?.encoding ?? 0)
+  const queueCards = Object.entries(QUEUE_META).map(([key, meta]) => ({
+    key,
+    ...meta,
+    count: Number(stats?.workflowQueues?.[key] ?? 0),
+  }))
 
   const statCards = [
     { label: "Today's Cases", value: stats?.todayCases ?? '—', sub: 'Walk-ins today', Icon: FolderIcon, color: 'text-brand-primary' },
@@ -292,6 +306,26 @@ export default function Dashboard() {
               <p className={`text-[11px] ${s.alert ? 'text-red-500 font-medium' : 'text-slate-400'}`}>{s.sub}</p>
             </div>
           </div>
+        ))}
+      </div>
+
+      <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {queueCards.map((queue) => (
+          <Link
+            key={queue.key}
+            to={`/cases?${queue.query}`}
+            className="card-sm flex items-center justify-between gap-3 transition-shadow hover:shadow-md"
+          >
+            <div>
+              <p className="text-xs font-medium text-slate-500">Operational Queue</p>
+              <p className="mt-1 text-sm font-semibold text-slate-800">{queue.label}</p>
+              <p className="mt-1 text-[11px] text-slate-400">Open filtered case list</p>
+            </div>
+            <div className={`rounded-xl px-3 py-2 text-right ${queue.color}`}>
+              <p className="text-2xl font-display font-bold">{queue.count}</p>
+              <p className="text-[10px] font-medium uppercase tracking-wide">cases</p>
+            </div>
+          </Link>
         ))}
       </div>
 
