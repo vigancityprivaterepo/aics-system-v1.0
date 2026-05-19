@@ -48,6 +48,34 @@ function otpExpiry(): Date {
   return d
 }
 
+function normalizeBaseUrl(value: string) {
+  return value.trim().replace(/\/+$/, '')
+}
+
+function resolvePortalBaseUrl(req: any) {
+  const explicitPortalUrl = String(process.env.PORTAL_URL ?? '').trim()
+  if (explicitPortalUrl) return normalizeBaseUrl(explicitPortalUrl)
+
+  const requestOrigin = String(req.get?.('origin') ?? '').trim()
+  if (requestOrigin) return normalizeBaseUrl(requestOrigin)
+
+  const corsOrigins = env.corsOrigin
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean)
+
+  const portalOrigin = corsOrigins.find((origin) => {
+    try {
+      const parsed = new URL(origin)
+      return parsed.port !== '8080'
+    } catch {
+      return false
+    }
+  }) ?? corsOrigins[0]
+
+  return normalizeBaseUrl(portalOrigin || 'http://localhost:5174')
+}
+
 async function sendOtpEmailOrThrow(email: string, firstName: string, otp: string) {
   try {
     await sendMail({
@@ -452,7 +480,7 @@ router.post('/forgot-password', otpFlowIpLimiter, otpFlowEmailLimiter('portal-au
     data: { otpHash: tokenHash, otpExpiresAt: new Date(Date.now() + 30 * 60 * 1000), otpAttempts: 0 },
   })
 
-  const portalUrl = process.env.PORTAL_URL ?? 'http://localhost:5174'
+  const portalUrl = resolvePortalBaseUrl(req)
   const resetLink = `${portalUrl}/reset-password?email=${encodeURIComponent(email)}&token=${rawToken}`
 
   sendMail({

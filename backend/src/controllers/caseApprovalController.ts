@@ -3,7 +3,7 @@ import { ApplicantApplicationStatus, ApprovalAction, type CaseStatus } from '@pr
 import { prisma } from '../utils/prisma.js'
 import { HttpError } from '../utils/httpError.js'
 import { APPROVAL_STAGE_META } from '../types/caseTypes.js'
-import { getApprovalSettings } from '../queries/caseQueries.js'
+import { findCaseWithDetails, getApprovalSettings } from '../queries/caseQueries.js'
 import { updateStatusSchema } from '../schemas/caseSchemas.js'
 import { paramId, assertCaseReadable, normalizeWorkflowStatus, caseStatusToStep } from '../services/caseService.js'
 import {
@@ -25,16 +25,7 @@ export async function updateStatus(req: Request, res: Response) {
   const { status: nextStatus, notes } = updateStatusSchema.parse(req.body)
   const normalizedNotes = normalizeApprovalNotes(notes)
 
-  const caseData = await prisma.case.findUnique({
-    where: { id: caseId },
-    include: {
-      requirements: true,
-      burialDetails: true,
-      hospitalDetails: true,
-      medicalDetails: true,
-      eyeglassDetails: true,
-    },
-  })
+  const caseData = await findCaseWithDetails(caseId)
   if (!caseData) throw new HttpError(404, 'Case not found')
   assertCaseReadable(caseData, req.user, 'Case status')
 
