@@ -82,6 +82,7 @@ export default function PortalApplicationsToolbar({
             <select value={statusFilter} onChange={(event) => onStatusFilterChange(event.target.value)} className="portal-input">
               <option value="">All statuses</option>
               <option value="submitted">Submitted</option>
+              <option value="under_review">Under Review</option>
               <option value="resubmission_required">Resubmission required</option>
               <option value="approved">Approved</option>
               <option value="disapproved">Disapproved</option>

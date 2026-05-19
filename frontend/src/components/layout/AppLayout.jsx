@@ -8,7 +8,7 @@ import {
   ChartIcon, UsersIcon, PillIcon, CogIcon,
   LogoutIcon, MenuIcon, DocumentIcon, FileTextIcon,
   CrossIcon, HospitalIcon, GlassesIcon, HeadstonIcon,
-  ClipboardIcon, QrCodeIcon,
+  ClipboardIcon, QrCodeIcon, DatabaseIcon, ChevronDownIcon,
 } from '../ui/Icons'
 import MyProfileModal from '../shared/MyProfileModal'
 
@@ -147,6 +147,91 @@ function CasesGroup({ onNavigate, pendingByType = {} }) {
   )
 }
 
+function DatabaseGroup({ onNavigate }) {
+  const location = useLocation()
+  const isDatabaseRoute = ['/medicines', '/hospitals', '/funeral-homes'].includes(location.pathname)
+  const [open, setOpen] = useState(isDatabaseRoute)
+
+  useEffect(() => {
+    if (isDatabaseRoute) {
+      setOpen(true)
+    }
+  }, [isDatabaseRoute])
+
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        aria-expanded={open}
+        aria-controls="database-submenu"
+        className={`flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors outline-none
+          focus-visible:ring-2 focus-visible:ring-emerald-400 border-l-2 ${
+          isDatabaseRoute
+            ? 'bg-white/10 text-white border-white'
+            : 'text-white/60 hover:bg-white/8 hover:text-white/90 border-transparent'
+        }`}
+      >
+        <DatabaseIcon className="h-4 w-4 shrink-0" />
+        <span>Database</span>
+        <ChevronDownIcon className={`ml-auto h-4 w-4 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+
+      {open && (
+        <div id="database-submenu" role="group" aria-label="Database modules" className="mt-1 space-y-0.5 overflow-hidden">
+          <div className="space-y-0.5">
+            <NavLink
+              to="/medicines"
+              onClick={onNavigate}
+              className={({ isActive }) =>
+                `flex items-center gap-3 rounded-md py-2 pr-3 pl-8 text-sm font-medium transition-colors outline-none
+                focus-visible:ring-2 focus-visible:ring-emerald-400 border-l-2 ${
+                  isActive
+                    ? 'bg-white/10 text-white border-white'
+                    : 'text-white/60 hover:bg-white/8 hover:text-white/90 border-transparent'
+                }`
+              }
+            >
+              <PillIcon className="h-4 w-4 shrink-0" />
+              <span>Medicines</span>
+            </NavLink>
+            <NavLink
+              to="/hospitals"
+              onClick={onNavigate}
+              className={({ isActive }) =>
+                `flex items-center gap-3 rounded-md py-2 pr-3 pl-8 text-sm font-medium transition-colors outline-none
+                focus-visible:ring-2 focus-visible:ring-emerald-400 border-l-2 ${
+                  isActive
+                    ? 'bg-white/10 text-white border-white'
+                    : 'text-white/60 hover:bg-white/8 hover:text-white/90 border-transparent'
+                }`
+              }
+            >
+              <HospitalIcon className="h-4 w-4 shrink-0" />
+              <span>Hospitals</span>
+            </NavLink>
+            <NavLink
+              to="/funeral-homes"
+              onClick={onNavigate}
+              className={({ isActive }) =>
+                `flex items-center gap-3 rounded-md py-2 pr-3 pl-8 text-sm font-medium transition-colors outline-none
+                focus-visible:ring-2 focus-visible:ring-emerald-400 border-l-2 ${
+                  isActive
+                    ? 'bg-white/10 text-white border-white'
+                    : 'text-white/60 hover:bg-white/8 hover:text-white/90 border-transparent'
+                }`
+              }
+            >
+              <HeadstonIcon className="h-4 w-4 shrink-0" />
+              <span>Funeral Homes</span>
+            </NavLink>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Sidebar content ───────────────────────────────────────────────────────────
 function SidebarNav({ closeSidebar, isAdmin, isCityHealthOffice, pendingByType, portalSubmittedCount }) {
   if (isCityHealthOffice) {
@@ -158,8 +243,7 @@ function SidebarNav({ closeSidebar, isAdmin, isCityHealthOffice, pendingByType, 
       >
         <SectionLabel>Health Office</SectionLabel>
         <div className="space-y-0.5">
-          <NavItem to="/medicines" Icon={PillIcon} label="Medicines" onClick={closeSidebar} />
-          <NavItem to="/hospitals" Icon={HospitalIcon} label="Hospitals" onClick={closeSidebar} />
+          <DatabaseGroup onNavigate={closeSidebar} />
         </div>
       </nav>
     )
@@ -190,9 +274,7 @@ function SidebarNav({ closeSidebar, isAdmin, isCityHealthOffice, pendingByType, 
       <SectionLabel>Data</SectionLabel>
       <div className="space-y-0.5">
         <NavItem to="/clients"  Icon={UsersIcon}    label="Client Profile" onClick={closeSidebar} />
-        <NavItem to="/medicines" Icon={PillIcon}     label="Medicines"      onClick={closeSidebar} />
-        <NavItem to="/hospitals"     Icon={HospitalIcon}  label="Hospitals"      onClick={closeSidebar} />
-        <NavItem to="/funeral-homes" Icon={HeadstonIcon}  label="Funeral Homes"  onClick={closeSidebar} />
+        <DatabaseGroup onNavigate={closeSidebar} />
         <NavItem to="/reports"       Icon={DocumentIcon}  label="Reports"        onClick={closeSidebar} />
         {isAdmin && (
           <NavItem to="/settings" Icon={CogIcon} label="Settings" onClick={closeSidebar} />
