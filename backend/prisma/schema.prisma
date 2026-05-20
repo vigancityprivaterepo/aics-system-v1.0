@@ -426,6 +426,24 @@ model Applicant {
   @@map("applicants")
 }
 
+model IdempotencyKey {
+  id             String   @id @default(uuid()) @db.Uuid
+  scope          String   @db.VarChar(120)
+  key            String   @db.VarChar(255)
+  requestHash    String   @map("request_hash") @db.Char(64)
+  status         String   @default("in_progress") @db.VarChar(20)
+  responseStatus Int?     @map("response_status")
+  responseBody   Json?    @map("response_body")
+  completedAt    DateTime? @map("completed_at") @db.Timestamptz(6)
+  expiresAt      DateTime @map("expires_at") @db.Timestamptz(6)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([scope, key])
+  @@index([status, expiresAt])
+  @@map("idempotency_keys")
+}
+
 enum ApplicantApplicationStatus {
   draft
   submitted

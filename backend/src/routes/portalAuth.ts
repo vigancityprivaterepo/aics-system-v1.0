@@ -12,6 +12,7 @@ import { sendSms, otpSmsMessage } from '../services/sms.js'
 import { env } from '../config/env.js'
 import { generateClientCaseNumber } from '../utils/caseNumber.js'
 import { buildPersonMatchInput, findClientDuplicateMatches, recordClientDedupEvent } from '../services/clientDedupService.js'
+import { respondIdempotentJson } from '../utils/idempotency.js'
 
 const router = Router()
 
@@ -331,111 +332,150 @@ const updateProfileSchema = z.object({
 router.post('/register', asyncHandler(async (req, res) => {
   const body = registerSchema.parse(req.body)
 
-  const existing = await prisma.applicant.findUnique({ where: { email: body.email } })
-  if (existing) {
-    if (existing.isVerified) throw new HttpError(409, 'Unable to create account with the provided details. Please sign in or use password recovery if you already registered.')
-    // Resend OTP for unverified account
-    const otp = generateOtp()
-    const otpHash = await bcrypt.hash(otp, BCRYPT_ROUNDS)
-    await prisma.applicant.update({
-      where: { id: existing.id },
-      data: { otpHash, otpExpiresAt: otpExpiry(), otpAttempts: 0 },
-    })
-    await sendOtpEmailOrThrow(body.email, existing.firstName, otp)
-    return res.status(200).json({ message: 'Verification code resent. Please check your email.' })
-  }
+  return respondIdempotentJson({
+    req,
+    res,
+    scope: 'portal-auth-register',
+    body,
+    execute: async () => {
+      const existing = await prisma.applicant.findUnique({ where: { email: body.email } })
+      if (existing) {
+        if (existing.isVerified) throw new HttpError(409, 'Unable to create account with the provided details. Please sign in or use password recovery if you already registered.')
 
-  const passwordHash = await bcrypt.hash(body.password, BCRYPT_ROUNDS)
-  const otp = generateOtp()
-  const otpHash = await bcrypt.hash(otp, BCRYPT_ROUNDS)
+        const otp = generateOtp()
+        const otpHash = await bcrypt.hash(otp, BCRYPT_ROUNDS)
+        await prisma.applicant.update({
+          where: { id: existing.id },
+          data: { otpHash, otpExpiresAt: otpExpiry(), otpAttempts: 0 },
+        })
+        await sendOtpEmailOrThrow(body.email, existing.firstName, otp)
 
-  const applicant = await prisma.applicant.create({
-    data: {
-      email: body.email,
-      passwordHash,
-      firstName: body.firstName,
-      lastName: body.lastName,
-      mobileNumber: body.mobileNumber ?? null,
-      otpHash,
-      otpExpiresAt: otpExpiry(),
+        return {
+          status: 200,
+          body: { message: 'Verification code resent. Please check your email.' },
+        }
+      }
+
+      const passwordHash = await bcrypt.hash(body.password, BCRYPT_ROUNDS)
+      const otp = generateOtp()
+      const otpHash = await bcrypt.hash(otp, BCRYPT_ROUNDS)
+
+      const applicant = await prisma.applicant.create({
+        data: {
+          email: body.email,
+          passwordHash,
+          firstName: body.firstName,
+          lastName: body.lastName,
+          mobileNumber: body.mobileNumber ?? null,
+          otpHash,
+          otpExpiresAt: otpExpiry(),
+        },
+      })
+
+      await syncApplicantClient(applicant)
+      await sendOtpEmailOrThrow(body.email, body.firstName, otp)
+
+      if (body.mobileNumber) {
+        sendSms(body.mobileNumber, otpSmsMessage(otp)).catch(console.error)
+      }
+
+      return {
+        status: 201,
+        body: { message: 'Registration successful. Check your email for the verification code.' },
+      }
     },
   })
-
-  await syncApplicantClient(applicant)
-  await sendOtpEmailOrThrow(body.email, body.firstName, otp)
-
-  // Send SMS if mobile provided
-  if (body.mobileNumber) {
-    sendSms(body.mobileNumber, otpSmsMessage(otp)).catch(console.error)
-  }
-
-  res.status(201).json({ message: 'Registration successful. Check your email for the verification code.' })
 }))
 
 // ── POST /verify-otp ───────────────────────────────────────────────────────
 
 router.post('/verify-otp', otpFlowIpLimiter, otpFlowEmailLimiter('portal-auth-verify-otp-email', 6), asyncHandler(async (req, res) => {
-  const { email, otp } = verifyOtpSchema.parse(req.body)
+  const body = verifyOtpSchema.parse(req.body)
 
-  const applicant = await prisma.applicant.findUnique({ where: { email } })
-  if (!applicant || applicant.isVerified) throw new HttpError(400, 'Invalid or expired verification code.')
+  return respondIdempotentJson({
+    req,
+    res,
+    scope: 'portal-auth-verify-otp',
+    body,
+    execute: async () => {
+      const applicant = await prisma.applicant.findUnique({ where: { email: body.email } })
+      if (!applicant || applicant.isVerified) throw new HttpError(400, 'Invalid or expired verification code.')
 
-  if (!applicant.otpHash || !applicant.otpExpiresAt) {
-    throw new HttpError(400, 'Invalid or expired verification code.')
-  }
-  if (new Date() > applicant.otpExpiresAt) {
-    throw new HttpError(400, 'Invalid or expired verification code.')
-  }
-  if (applicant.otpAttempts >= OTP_MAX_ATTEMPTS) {
-    throw new HttpError(429, 'Too many attempts. Please request a new verification code.')
-  }
+      if (!applicant.otpHash || !applicant.otpExpiresAt) {
+        throw new HttpError(400, 'Invalid or expired verification code.')
+      }
+      if (new Date() > applicant.otpExpiresAt) {
+        throw new HttpError(400, 'Invalid or expired verification code.')
+      }
+      if (applicant.otpAttempts >= OTP_MAX_ATTEMPTS) {
+        throw new HttpError(429, 'Too many attempts. Please request a new verification code.')
+      }
 
-  const valid = await bcrypt.compare(otp, applicant.otpHash)
-  if (!valid) {
-    await prisma.applicant.update({
-      where: { id: applicant.id },
-      data: { otpAttempts: { increment: 1 } },
-    })
-    throw new HttpError(400, 'Invalid or expired verification code.')
-  }
+      const valid = await bcrypt.compare(body.otp, applicant.otpHash)
+      if (!valid) {
+        await prisma.applicant.update({
+          where: { id: applicant.id },
+          data: { otpAttempts: { increment: 1 } },
+        })
+        throw new HttpError(400, 'Invalid or expired verification code.')
+      }
 
-  const verified = await prisma.applicant.update({
-    where: { id: applicant.id },
-    data: { isVerified: true, otpHash: null, otpExpiresAt: null, otpAttempts: 0 },
+      const verified = await prisma.applicant.update({
+        where: { id: applicant.id },
+        data: { isVerified: true, otpHash: null, otpExpiresAt: null, otpAttempts: 0 },
+      })
+
+      await syncApplicantClient(verified)
+      const portalApplicant = await loadPortalApplicant(verified.id)
+      if (!portalApplicant) throw new HttpError(404, 'Account not found')
+
+      const token = signPortalToken(verified)
+      return {
+        status: 200,
+        body: { token, applicant: serializeApplicant(portalApplicant) },
+      }
+    },
   })
-
-  await syncApplicantClient(verified)
-  const portalApplicant = await loadPortalApplicant(verified.id)
-  if (!portalApplicant) throw new HttpError(404, 'Account not found')
-
-  const token = signPortalToken(verified)
-  res.json({ token, applicant: serializeApplicant(portalApplicant) })
 }))
 
 // ── POST /resend-otp ───────────────────────────────────────────────────────
 
 router.post('/resend-otp', otpFlowIpLimiter, otpFlowEmailLimiter('portal-auth-resend-otp-email', 4), asyncHandler(async (req, res) => {
-  const { email } = forgotPasswordSchema.parse(req.body)
+  const body = forgotPasswordSchema.parse(req.body)
 
-  const applicant = await prisma.applicant.findUnique({ where: { email } })
-  if (!applicant || applicant.isVerified) {
-    return res.json({ message: 'If the account still needs verification, a new code will be sent.' })
-  }
+  return respondIdempotentJson({
+    req,
+    res,
+    scope: 'portal-auth-resend-otp',
+    body,
+    execute: async () => {
+      const applicant = await prisma.applicant.findUnique({ where: { email: body.email } })
+      if (!applicant || applicant.isVerified) {
+        return {
+          status: 200,
+          body: { message: 'If the account still needs verification, a new code will be sent.' },
+        }
+      }
 
-  const otp = generateOtp()
-  const otpHash = await bcrypt.hash(otp, BCRYPT_ROUNDS)
-  await prisma.applicant.update({
-    where: { id: applicant.id },
-    data: { otpHash, otpExpiresAt: otpExpiry(), otpAttempts: 0 },
+      const otp = generateOtp()
+      const otpHash = await bcrypt.hash(otp, BCRYPT_ROUNDS)
+      await prisma.applicant.update({
+        where: { id: applicant.id },
+        data: { otpHash, otpExpiresAt: otpExpiry(), otpAttempts: 0 },
+      })
+
+      await sendOtpEmailOrThrow(body.email, applicant.firstName, otp)
+
+      if (applicant.mobileNumber) {
+        sendSms(applicant.mobileNumber, otpSmsMessage(otp)).catch(console.error)
+      }
+
+      return {
+        status: 200,
+        body: { message: 'If the account still needs verification, a new code will be sent.' },
+      }
+    },
   })
-
-  await sendOtpEmailOrThrow(email, applicant.firstName, otp)
-
-  if (applicant.mobileNumber) {
-    sendSms(applicant.mobileNumber, otpSmsMessage(otp)).catch(console.error)
-  }
-
-  res.json({ message: 'If the account still needs verification, a new code will be sent.' })
 }))
 
 // ── POST /login ────────────────────────────────────────────────────────────
@@ -464,59 +504,83 @@ router.post('/login', asyncHandler(async (req, res) => {
 // ── POST /forgot-password ──────────────────────────────────────────────────
 
 router.post('/forgot-password', otpFlowIpLimiter, otpFlowEmailLimiter('portal-auth-forgot-password-email', 4), asyncHandler(async (req, res) => {
-  const { email } = forgotPasswordSchema.parse(req.body)
+  const body = forgotPasswordSchema.parse(req.body)
 
-  const applicant = await prisma.applicant.findUnique({ where: { email } })
-  // Always respond 200 to prevent email enumeration
-  if (!applicant) {
-    return res.json({ message: 'If that email is registered, a reset link has been sent.' })
-  }
+  return respondIdempotentJson({
+    req,
+    res,
+    scope: 'portal-auth-forgot-password',
+    body,
+    execute: async () => {
+      const applicant = await prisma.applicant.findUnique({ where: { email: body.email } })
+      if (!applicant) {
+        return {
+          status: 200,
+          body: { message: 'If that email is registered, a reset link has been sent.' },
+        }
+      }
 
-  const rawToken = crypto.randomBytes(32).toString('hex')
-  const tokenHash = await bcrypt.hash(rawToken, BCRYPT_ROUNDS)
+      const rawToken = crypto.randomBytes(32).toString('hex')
+      const tokenHash = await bcrypt.hash(rawToken, BCRYPT_ROUNDS)
 
-  await prisma.applicant.update({
-    where: { id: applicant.id },
-    data: { otpHash: tokenHash, otpExpiresAt: new Date(Date.now() + 30 * 60 * 1000), otpAttempts: 0 },
+      await prisma.applicant.update({
+        where: { id: applicant.id },
+        data: { otpHash: tokenHash, otpExpiresAt: new Date(Date.now() + 30 * 60 * 1000), otpAttempts: 0 },
+      })
+
+      const portalUrl = resolvePortalBaseUrl(req)
+      const resetLink = `${portalUrl}/reset-password?email=${encodeURIComponent(body.email)}&token=${rawToken}`
+
+      sendMail({
+        to: body.email,
+        subject: 'AICS Password Reset',
+        html: passwordResetEmailHtml(applicant.firstName, resetLink),
+      }).catch(console.error)
+
+      return {
+        status: 200,
+        body: { message: 'If that email is registered, a reset link has been sent.' },
+      }
+    },
   })
-
-  const portalUrl = resolvePortalBaseUrl(req)
-  const resetLink = `${portalUrl}/reset-password?email=${encodeURIComponent(email)}&token=${rawToken}`
-
-  sendMail({
-    to: email,
-    subject: 'AICS Password Reset',
-    html: passwordResetEmailHtml(applicant.firstName, resetLink),
-  }).catch(console.error)
-
-  res.json({ message: 'If that email is registered, a reset link has been sent.' })
 }))
 
 // ── POST /reset-password ───────────────────────────────────────────────────
 
 router.post('/reset-password', otpFlowIpLimiter, otpFlowEmailLimiter('portal-auth-reset-password-email', 6), asyncHandler(async (req, res) => {
-  const { email, token, newPassword } = resetPasswordSchema.parse(req.body)
+  const body = resetPasswordSchema.parse(req.body)
 
-  const applicant = await prisma.applicant.findUnique({ where: { email } })
-  if (!applicant?.otpHash || !applicant.otpExpiresAt) {
-    throw new HttpError(400, 'Invalid or expired reset link')
-  }
-  if (new Date() > applicant.otpExpiresAt) {
-    throw new HttpError(400, 'Invalid or expired reset link')
-  }
+  return respondIdempotentJson({
+    req,
+    res,
+    scope: 'portal-auth-reset-password',
+    body,
+    execute: async () => {
+      const applicant = await prisma.applicant.findUnique({ where: { email: body.email } })
+      if (!applicant?.otpHash || !applicant.otpExpiresAt) {
+        throw new HttpError(400, 'Invalid or expired reset link')
+      }
+      if (new Date() > applicant.otpExpiresAt) {
+        throw new HttpError(400, 'Invalid or expired reset link')
+      }
 
-  const valid = await bcrypt.compare(token, applicant.otpHash)
-  if (!valid) throw new HttpError(400, 'Invalid or expired reset link')
-  const isReusedPassword = await bcrypt.compare(newPassword, applicant.passwordHash)
-  if (isReusedPassword) throw new HttpError(400, passwordReuseMessage)
+      const valid = await bcrypt.compare(body.token, applicant.otpHash)
+      if (!valid) throw new HttpError(400, 'Invalid or expired reset link')
+      const isReusedPassword = await bcrypt.compare(body.newPassword, applicant.passwordHash)
+      if (isReusedPassword) throw new HttpError(400, passwordReuseMessage)
 
-  const passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS)
-  await prisma.applicant.update({
-    where: { id: applicant.id },
-    data: { passwordHash, otpHash: null, otpExpiresAt: null, otpAttempts: 0 },
+      const passwordHash = await bcrypt.hash(body.newPassword, BCRYPT_ROUNDS)
+      await prisma.applicant.update({
+        where: { id: applicant.id },
+        data: { passwordHash, otpHash: null, otpExpiresAt: null, otpAttempts: 0 },
+      })
+
+      return {
+        status: 200,
+        body: { message: 'Password reset successfully. You can now log in.' },
+      }
+    },
   })
-
-  res.json({ message: 'Password reset successfully. You can now log in.' })
 }))
 
 // ── GET /me ────────────────────────────────────────────────────────────────
