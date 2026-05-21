@@ -48,8 +48,14 @@ export default function StepEyeglassDetails({ caseData, onUpdate }) {
         </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {/* Sub-section: Clinic & Optometrist Info */}
+          <div className="sm:col-span-2 mt-2 mb-1 flex items-center gap-2 border-b border-slate-150 pb-2">
+            <span className="text-base">👓</span>
+            <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Clinic &amp; Optometrist Info</p>
+          </div>
+
           <div>
-            <label className="portal-label">Doctor / Optometrist Name</label>
+            <label className="portal-label">Doctor / Optometrist Name *</label>
             <input type="text" {...register('doctorName')} className="portal-input" placeholder="Full name of the optometrist or doctor" />
           </div>
           <div>
@@ -60,8 +66,15 @@ export default function StepEyeglassDetails({ caseData, onUpdate }) {
             <label className="portal-label">Clinic / Optical Shop Address</label>
             <input type="text" {...register('clinicAddress')} className="portal-input" placeholder="City / Municipality, Province" />
           </div>
+
+          {/* Sub-section: Financial Assistance */}
+          <div className="sm:col-span-2 mt-4 mb-1 flex items-center gap-2 border-b border-slate-150 pb-2">
+            <span className="text-base">💵</span>
+            <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Financial Assistance</p>
+          </div>
+
           <div>
-            <label className="portal-label">Amount (PHP)</label>
+            <label className="portal-label">Amount (PHP) *</label>
             <input type="number" min="0" step="any" {...register('amount')} className="portal-input" placeholder="0.00" />
           </div>
         </div>

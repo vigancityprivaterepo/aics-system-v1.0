@@ -86,8 +86,14 @@ export default function StepPlainDetails({ caseData, onUpdate, readOnly = false 
       <form onSubmit={handleSubmit(onSave)}>
       <fieldset disabled={readOnly} className="space-y-4">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {/* Sub-section: Assessment Details */}
+          <div className="sm:col-span-2 mt-2 mb-1 flex items-center gap-2 border-b border-slate-150 pb-2">
+            <span className="text-base">📅</span>
+            <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Assessment Details</p>
+          </div>
+
           <div className="sm:col-span-2">
-            <label className="portal-label">Date of Assessment</label>
+            <label className="portal-label">Date of Assessment *</label>
             <input
               type="date"
               {...register('dateOfAssessment')}
@@ -96,9 +102,12 @@ export default function StepPlainDetails({ caseData, onUpdate, readOnly = false 
           </div>
         </div>
 
-        {/* Family Composition */}
-        <div>
-          <label className="portal-label">Family Composition</label>
+        {/* Sub-section: Family Composition */}
+        <div className="mt-4">
+          <div className="flex items-center gap-2 border-b border-slate-150 pb-2 mb-3">
+            <span className="text-base">👨‍👩‍👧‍👦</span>
+            <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Family Composition</p>
+          </div>
           <div className="overflow-x-auto rounded-lg border border-slate-200 mt-1">
             <table className="w-full text-xs">
               <thead>
@@ -152,9 +161,15 @@ export default function StepPlainDetails({ caseData, onUpdate, readOnly = false 
           </button>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 mt-4">
+          {/* Sub-section: Findings & Narrative */}
+          <div className="sm:col-span-2 mt-2 mb-1 flex items-center gap-2 border-b border-slate-150 pb-2">
+            <span className="text-base">📝</span>
+            <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Findings &amp; Narrative</p>
+          </div>
+
           <div className="sm:col-span-2">
-            <label className="portal-label">Presenting Problem</label>
+            <label className="portal-label">Presenting Problem *</label>
             <Controller
               name="presentingProblem"
               control={control}
@@ -170,7 +185,7 @@ export default function StepPlainDetails({ caseData, onUpdate, readOnly = false 
             />
           </div>
           <div className="sm:col-span-2">
-            <label className="portal-label">Findings</label>
+            <label className="portal-label">Findings *</label>
             <Controller
               name="findings"
               control={control}
@@ -185,8 +200,15 @@ export default function StepPlainDetails({ caseData, onUpdate, readOnly = false 
               )}
             />
           </div>
+
+          {/* Sub-section: Financial Assistance */}
+          <div className="sm:col-span-2 mt-4 mb-1 flex items-center gap-2 border-b border-slate-150 pb-2">
+            <span className="text-base">💵</span>
+            <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Financial Assistance</p>
+          </div>
+
           <div>
-            <label className="portal-label">Amount (PHP)</label>
+            <label className="portal-label">Amount (PHP) *</label>
             <input
               type="number"
               min="0"

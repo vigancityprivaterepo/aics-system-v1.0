@@ -726,12 +726,12 @@ export default function ApplyPage() {
   }
 
   const ASSISTANCE_CARDS = [
-    { value: 'medicine',  emoji: '💊', label: 'Medicine',        desc: 'Prescription medicine provision' },
-    { value: 'medical',   emoji: '✚',  label: 'Medical',         desc: 'Medical consultation support' },
-    { value: 'hospital',  emoji: '🏥', label: 'Hospital',        desc: 'Hospital bill financial assistance' },
-    { value: 'burial',    emoji: '🪦', label: 'Burial',          desc: 'Funeral and burial cost coverage' },
-    { value: 'eyeglass',  emoji: '👓', label: 'Eyeglass',        desc: 'Optical assistance for eyewear' },
-    { value: 'plain',     emoji: '📄', label: 'Plain AICS',      desc: 'General financial assistance' },
+    { value: 'medicine',  img: '/drugs-removebg-preview.png', label: 'Medicine',        desc: 'Prescription medicine provision' },
+    { value: 'medical',   img: '/medical-removebg-preview.png',  label: 'Medical',         desc: 'Medical consultation support' },
+    { value: 'hospital',  img: '/hospital-removebg-preview.png', label: 'Hospital',        desc: 'Hospital bill financial assistance' },
+    { value: 'burial',    img: '/burial-removebg-preview.png',   label: 'Burial',          desc: 'Funeral and burial cost coverage' },
+    { value: 'eyeglass',  img: '/eyeglasses-removebg-preview.png', label: 'Eyeglass',      desc: 'Optical assistance for eyewear' },
+    { value: 'plain',     img: '/plain-removebg-preview.png',    label: 'Plain AICS',      desc: 'General financial assistance' },
   ]
 
   const handleSelectType = (nextType) => {
@@ -782,7 +782,11 @@ export default function ApplyPage() {
                     : 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm'
                 }`}
               >
-                <span className="text-2xl leading-none">{card.emoji}</span>
+                {card.img ? (
+                  <img src={card.img} alt={card.label} className="h-8 w-auto object-contain" />
+                ) : (
+                  <span className="text-2xl leading-none">{card.emoji}</span>
+                )}
                 <div>
                   <p className={`text-sm font-bold ${isSelected ? 'text-[#065f46]' : 'text-slate-800'}`}>{card.label}</p>
                   <p className="mt-0.5 text-xs leading-snug text-slate-500">{card.desc}</p>
@@ -1668,63 +1672,68 @@ export default function ApplyPage() {
       <section className="portal-surface overflow-hidden">
         {/* Sticky Progress Bar */}
         <div className="sticky top-0 z-10 border-b border-slate-200 bg-white px-6 py-4 shadow-sm">
-          <div className="flex items-center gap-2">
-            {steps.map((item, idx) => {
-              const isActive = step === item.id
-              const isDone = step > item.id
-              return (
-                <div key={item.id} className="flex flex-1 items-center">
-                  <button
-                    type="button"
-                    onClick={() => { if (item.id < step) setStep(item.id) }}
-                    className={`flex items-center gap-2 rounded-lg px-3 py-2 text-left transition-all ${
-                      isActive ? 'bg-[#065f46] text-white' :
-                      isDone ? 'cursor-pointer bg-emerald-100 text-emerald-800 hover:bg-emerald-200' :
-                      'bg-slate-100 text-slate-400'
-                    }`}
-                  >
-                    <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-                      isActive ? 'bg-white text-[#065f46]' :
-                      isDone ? 'bg-emerald-600 text-white' :
-                      'bg-slate-300 text-slate-500'
-                    }`}>
-                      {isDone ? '✓' : item.id}
-                    </span>
-                    <span className="hidden text-xs font-semibold sm:block">{item.title}</span>
-                  </button>
-                  {idx < steps.length - 1 && (
-                    <div className={`mx-1 h-1 flex-1 rounded-full transition-all ${
-                      step > item.id ? 'bg-emerald-500' : 'bg-slate-200'
-                    }`} />
-                  )}
-                </div>
-              )
-            })}
-          </div>
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <p className="text-sm font-bold text-slate-800">{steps[step - 1].title}</p>
-              <p className="text-xs text-slate-500">{steps[step - 1].description}</p>
+          <div className="flex items-center justify-between gap-2 sm:gap-4">
+            <div className="flex flex-1 items-center gap-1.5 sm:gap-2 min-w-0">
+              {steps.map((item, idx) => {
+                const isActive = step === item.id
+                const isDone = step > item.id
+                return (
+                  <div key={item.id} className="flex flex-1 items-center min-w-0">
+                    <button
+                      type="button"
+                      onClick={() => { if (item.id < step) setStep(item.id) }}
+                      className={`flex items-center gap-1 sm:gap-2 rounded-lg px-2 py-1.5 sm:px-3 sm:py-2 text-left transition-all min-w-0 ${
+                        isActive ? 'bg-[#065f46] text-white' :
+                        isDone ? 'cursor-pointer bg-emerald-100 text-emerald-800 hover:bg-emerald-200' :
+                        'bg-slate-100 text-slate-400'
+                      }`}
+                    >
+                      <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                        isActive ? 'bg-white text-[#065f46]' :
+                        isDone ? 'bg-emerald-600 text-white' :
+                        'bg-slate-300 text-slate-500'
+                      }`}>
+                        {isDone ? '✓' : item.id}
+                      </span>
+                      <span className="hidden text-xs font-semibold sm:block truncate">{item.title}</span>
+                    </button>
+                    {idx < steps.length - 1 && (
+                      <div className={`mx-0.5 h-1 flex-1 rounded-full transition-all sm:mx-1 ${
+                        step > item.id ? 'bg-emerald-500' : 'bg-slate-200'
+                      }`} />
+                    )}
+                  </div>
+                )
+               })}
             </div>
-            <div className="flex items-center gap-3">
-              <div className="flex flex-col items-end">
-                <p className="text-xs text-slate-400">
-                  Step {step} of {steps.length} · {documents.length} doc{documents.length !== 1 ? 's' : ''} uploaded
-                </p>
-                {savedDraft && (
-                  <span className="flex items-center gap-1 text-[11px] font-semibold text-emerald-600">
-                    ✓ Draft saved
-                  </span>
-                )}
-              </div>
+            <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+              {savedDraft && (
+                <span className="flex items-center gap-0.5 text-[10px] font-bold text-emerald-600 sm:gap-1 sm:text-[11px]">
+                  ✓ <span className="hidden sm:inline">Draft saved</span>
+                  <span className="inline sm:hidden">Saved</span>
+                </span>
+              )}
               <button
                 type="button"
                 onClick={() => saveApplication({ validationMode: 'draft' })}
                 disabled={saving}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 hover:border-slate-400 disabled:opacity-50 shadow-sm"
+                className="inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 hover:border-slate-400 disabled:opacity-50 shadow-sm sm:gap-1.5 sm:px-3"
               >
-                💾 Save Draft
+                <span>💾</span>
+                <span className="hidden sm:inline">Save Draft</span>
+                <span className="inline sm:hidden">Save</span>
               </button>
+            </div>
+          </div>
+          <div className="mt-3 flex items-center justify-between gap-4">
+            <div>
+              <p className="text-sm font-bold text-slate-800">{steps[step - 1].title}</p>
+              <p className="text-xs text-slate-500">{steps[step - 1].description}</p>
+            </div>
+            <div className="flex shrink-0 items-center">
+              <p className="text-xs text-slate-400">
+                Step {step} of {steps.length} · {documents.length} doc{documents.length !== 1 ? 's' : ''} uploaded
+              </p>
             </div>
           </div>
         </div>

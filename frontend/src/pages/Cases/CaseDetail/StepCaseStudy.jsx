@@ -188,13 +188,18 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false }) 
 
       <form onSubmit={handleSubmit(onSave)}>
         <fieldset disabled={readOnly} className="space-y-5">
+          {/* Sub-section: Social Worker & Assessment Info */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div className="sm:col-span-3 mt-2 mb-1 flex items-center gap-2 border-b border-slate-150 pb-2">
+              <span className="text-base">📅</span>
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Social Worker &amp; Assessment Info</p>
+            </div>
             <div>
-              <label className="portal-label">Date of Assessment</label>
+              <label className="portal-label">Date of Assessment *</label>
               <input type="date" {...register('dateOfAssessment')} className="portal-input" />
             </div>
             <div className="sm:col-span-2">
-              <label className="portal-label">Employee Name</label>
+              <label className="portal-label">Employee Name *</label>
               <input
                 type="text"
                 {...register('socialWorkerName')}
@@ -204,8 +209,12 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false }) 
             </div>
           </div>
 
+          {/* Sub-section: Family Composition */}
           <div>
-            <label className="portal-label">Family Composition</label>
+            <div className="flex items-center gap-2 border-b border-slate-150 pb-2 mb-3">
+              <span className="text-base">👨‍👩‍👧‍👦</span>
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Family Composition</p>
+            </div>
             <div className="mt-1 overflow-x-auto rounded-lg border border-slate-200">
               <table className="w-full text-xs">
                 <thead>
@@ -354,9 +363,15 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false }) 
               </div>
             )}
 
+            {/* Sub-section: Findings & Narrative */}
+            <div className="mt-2 mb-1 flex items-center gap-2 border-b border-slate-150 pb-2">
+              <span className="text-base">📝</span>
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Findings &amp; Narrative</p>
+            </div>
+
             <div>
               <div className="mb-1 flex items-center justify-between gap-3">
-                <label className="portal-label">Presenting Problem</label>
+                <label className="portal-label">Presenting Problem *</label>
                 {!readOnly && (
                   <button
                     type="button"
@@ -384,7 +399,7 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false }) 
             </div>
 
             <div>
-              <label className="portal-label">Findings / Narrative</label>
+              <label className="portal-label">Findings / Narrative *</label>
               <Controller
                 name="findings"
                 control={control}
@@ -414,9 +429,14 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false }) 
             </div>
           ) : (
             <div className="border-t border-slate-200 pt-5">
+              {/* Sub-section: Financial Assistance */}
+              <div className="mt-2 mb-3 flex items-center gap-2 border-b border-slate-150 pb-2">
+                <span className="text-base">💵</span>
+                <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Financial Assistance</p>
+              </div>
               <div className="grid grid-cols-1 gap-4 sm:max-w-sm">
                 <div>
-                  <label className="portal-label">{amountLabelForType(caseData.assistanceType)}</label>
+                  <label className="portal-label">{amountLabelForType(caseData.assistanceType)} *</label>
                   <input
                     type="number"
                     min="0"
