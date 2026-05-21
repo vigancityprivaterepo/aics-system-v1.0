@@ -460,9 +460,9 @@ export default function ApplyPage() {
         : {}),
       ...(form.assistanceType === 'medical'
         ? {
-            medicalRequestedAssistance: form.medicalRequestedAssistance.trim() || null,
-            medicalType: form.medicalRequestedAssistance.trim() || null,
-            operationType: form.medicalRequestedAssistance.trim() || null,
+            medicalRequestedAssistance: form.medicalRequestedAssistance.trim() || 'Medical Assistance',
+            medicalType: form.medicalRequestedAssistance.trim() || 'Medical Assistance',
+            operationType: form.medicalRequestedAssistance.trim() || 'Medical Assistance',
           }
         : {}),
       ...(form.assistanceType === 'burial'
@@ -528,6 +528,7 @@ export default function ApplyPage() {
       setStep(1)
       return false
     }
+
     if (form.assistanceType === 'medicine' && form.medicineItemIds.length === 0) {
       toast.error('At least one medicine selection is required for medicine assistance')
       setStep(1)
@@ -996,23 +997,19 @@ export default function ApplyPage() {
 
 
 
+
+
       {form.assistanceType === 'medical' && (
-        <div className="space-y-3 portal-panel p-4">
-          <div>
-            <p className="text-xs font-medium text-slate-500">Requested Medical Assistance</p>
-            <p className="mt-1 text-xs text-slate-400">This will be mapped to the medical guarantee letter so the request does not render as a dash.</p>
-          </div>
-          <div>
-            <label className="portal-label">Medical Assistance Requested *</label>
-            <input
-              type="text"
-              value={form.medicalRequestedAssistance}
-              onChange={(event) => updateField('medicalRequestedAssistance', event.target.value)}
-              className="portal-input"
-              placeholder="e.g. consultation fee, laboratory fees, CT scan, operation supplies"
-              required
-            />
-          </div>
+        <div>
+          <label className="portal-label">Medical Assistance Requested *</label>
+          <input
+            type="text"
+            value={form.medicalRequestedAssistance}
+            onChange={(event) => updateField('medicalRequestedAssistance', event.target.value)}
+            className="portal-input"
+            placeholder="e.g. consultation fee, laboratory fees, CT scan, operation supplies"
+            required
+          />
         </div>
       )}
 
@@ -1189,60 +1186,54 @@ export default function ApplyPage() {
       )}
 
       {['hospital', 'medical'].includes(form.assistanceType) && (
-        <div className="space-y-3 portal-panel p-4">
+        <div className="grid gap-3 md:grid-cols-2">
           <div>
-            <p className="text-xs font-medium text-slate-500">Representative / Conforme</p>
-            <p className="mt-1 text-xs text-slate-400">Optional - fill this in if someone else is applying on behalf of the patient.</p>
+            <label className="portal-label">Conforme Name (Optional)</label>
+            <input
+              type="text"
+              value={form.conformeName}
+              onChange={(event) => updateField('conformeName', event.target.value)}
+              className="portal-input"
+              placeholder="Full name of representative"
+            />
           </div>
-          <div className="grid gap-3 md:grid-cols-2">
-            <div>
-              <label className="portal-label">Conforme Name</label>
-              <input
-                type="text"
-                value={form.conformeName}
-                onChange={(event) => updateField('conformeName', event.target.value)}
-                className="portal-input"
-                placeholder="Full name of representative"
-              />
-            </div>
-            <div>
-              <label className="portal-label">Relationship to Patient</label>
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => setShowPatientRelationshipOptions((current) => !current)}
-                  onBlur={() => setTimeout(() => setShowPatientRelationshipOptions(false), 150)}
-                  className="portal-input flex items-center justify-between text-left"
-                  aria-haspopup="listbox"
-                  aria-expanded={showPatientRelationshipOptions}
-                >
-                  <span className={form.conformeRelationship ? 'text-slate-800' : 'text-slate-400'}>
-                    {form.conformeRelationship || 'Select relationship'}
-                  </span>
-                  <span className="text-slate-500">▼</span>
-                </button>
-                {showPatientRelationshipOptions && (
-                  <div className="absolute z-20 mt-1 max-h-72 w-full overflow-y-auto rounded-md border border-slate-200 bg-white shadow-lg">
-                    {relationshipOptions.map((option) => (
-                      <button
-                        key={option.value || 'placeholder'}
-                        type="button"
-                        onMouseDown={() => {
-                          updateField('conformeRelationship', option.value)
-                          setShowPatientRelationshipOptions(false)
-                        }}
-                        className={`block w-full px-4 py-3 text-left text-sm hover:bg-emerald-50 ${
-                          option.value === form.conformeRelationship ? 'bg-emerald-50 font-medium text-brand-primary' : 'text-slate-700'
-                        }`}
-                        role="option"
-                        aria-selected={option.value === form.conformeRelationship}
-                      >
-                        {option.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
+          <div>
+            <label className="portal-label">Relationship to Patient (Optional)</label>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setShowPatientRelationshipOptions((current) => !current)}
+                onBlur={() => setTimeout(() => setShowPatientRelationshipOptions(false), 150)}
+                className="portal-input flex items-center justify-between text-left"
+                aria-haspopup="listbox"
+                aria-expanded={showPatientRelationshipOptions}
+              >
+                <span className={form.conformeRelationship ? 'text-slate-800' : 'text-slate-400'}>
+                  {form.conformeRelationship || 'Select relationship'}
+                </span>
+                <span className="text-slate-500">▼</span>
+              </button>
+              {showPatientRelationshipOptions && (
+                <div className="absolute z-20 mt-1 max-h-72 w-full overflow-y-auto rounded-md border border-slate-200 bg-white shadow-lg">
+                  {relationshipOptions.map((option) => (
+                    <button
+                      key={option.value || 'placeholder'}
+                      type="button"
+                      onMouseDown={() => {
+                        updateField('conformeRelationship', option.value)
+                        setShowPatientRelationshipOptions(false)
+                      }}
+                      className={`block w-full px-4 py-3 text-left text-sm hover:bg-emerald-50 ${
+                        option.value === form.conformeRelationship ? 'bg-emerald-50 font-medium text-brand-primary' : 'text-slate-700'
+                      }`}
+                      role="option"
+                      aria-selected={option.value === form.conformeRelationship}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -1555,7 +1546,7 @@ export default function ApplyPage() {
             {form.assistanceType === 'medical' && (
               <div className="md:col-span-2">
                 <p className="text-xs text-slate-500">Requested Medical Assistance</p>
-                <p className="mt-1 text-sm font-semibold text-brand-primary">{form.medicalRequestedAssistance || 'Not provided'}</p>
+                <p className="mt-1 text-sm font-semibold text-brand-primary">{(form.medicalRequestedAssistance || '').trim() || 'Medical Assistance'}</p>
               </div>
             )}
             {form.assistanceType === 'medicine' && (
