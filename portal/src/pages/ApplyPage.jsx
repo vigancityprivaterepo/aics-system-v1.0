@@ -1701,14 +1701,31 @@ export default function ApplyPage() {
               )
             })}
           </div>
-          <div className="mt-3 flex items-center justify-between">
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-4">
             <div>
               <p className="text-sm font-bold text-slate-800">{steps[step - 1].title}</p>
               <p className="text-xs text-slate-500">{steps[step - 1].description}</p>
             </div>
-            <p className="text-xs text-slate-400">
-              Step {step} of {steps.length} · {documents.length} doc{documents.length !== 1 ? 's' : ''} uploaded
-            </p>
+            <div className="flex items-center gap-3">
+              <div className="flex flex-col items-end">
+                <p className="text-xs text-slate-400">
+                  Step {step} of {steps.length} · {documents.length} doc{documents.length !== 1 ? 's' : ''} uploaded
+                </p>
+                {savedDraft && (
+                  <span className="flex items-center gap-1 text-[11px] font-semibold text-emerald-600">
+                    ✓ Draft saved
+                  </span>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => saveApplication({ validationMode: 'draft' })}
+                disabled={saving}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 hover:border-slate-400 disabled:opacity-50 shadow-sm"
+              >
+                💾 Save Draft
+              </button>
+            </div>
           </div>
         </div>
 
@@ -1718,8 +1735,9 @@ export default function ApplyPage() {
           {step === 3 && renderRequirementsStep()}
           {step === 4 && renderReviewStep()}
 
-          <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t-2 border-slate-100 pt-6">
-            <div className="flex gap-3">
+          <div className="mt-8 border-t-2 border-slate-100 pt-6">
+            {/* Navigation: Previous | Next (perfectly equal halves) */}
+            <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
                 onClick={() => {
@@ -1730,11 +1748,11 @@ export default function ApplyPage() {
                   setStep((current) => Math.max(1, current - 1))
                 }}
                 disabled={step === 1}
-                className="portal-button-secondary disabled:opacity-40"
+                className="flex w-full items-center justify-center rounded-lg border-2 border-slate-300 bg-white py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 ← Previous
               </button>
-              {step < steps.length && (
+              {step < steps.length ? (
                 <button
                   type="button"
                   onClick={async () => {
@@ -1757,30 +1775,18 @@ export default function ApplyPage() {
                     setStep((current) => Math.min(steps.length, current + 1))
                   }}
                   disabled={saving}
-                  className="portal-button-primary disabled:opacity-50"
+                  className="flex w-full items-center justify-center rounded-lg bg-[#065f46] py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#064e3b] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {saving ? 'Saving...' : 'Next →'}
                 </button>
-              )}
-            </div>
-
-            <div className="flex flex-wrap items-center gap-3">
-              {savedDraft && (
-                <span className="flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 animate-pulse">
-                  ✓ Draft saved
-                </span>
-              )}
-              <button
-                type="button"
-                onClick={() => saveApplication({ validationMode: 'draft' })}
-                disabled={saving}
-                className="portal-button-secondary disabled:opacity-50"
-              >
-                {saving ? 'Saving...' : '💾 Save Draft'}
-              </button>
-              {step === steps.length && (
-                <button type="button" onClick={handleSubmitApplication} disabled={saving} className="portal-button-primary disabled:opacity-50 px-8">
-                  ✅ Submit Application
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleSubmitApplication}
+                  disabled={saving}
+                  className="flex w-full items-center justify-center rounded-lg bg-[#065f46] py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#064e3b] disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {saving ? 'Submitting...' : '✅ Submit'}
                 </button>
               )}
             </div>

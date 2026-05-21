@@ -111,14 +111,31 @@ export default function StepBurialDetails({ caseData, onUpdate }) {
           </p>
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {/* Sub-section: Deceased Information */}
+          <div className="sm:col-span-2 mt-2 mb-1 flex items-center gap-2 border-b border-slate-150 pb-2">
+            <span className="text-base">📋</span>
+            <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Deceased Information</p>
+          </div>
+
           <div className="sm:col-span-2">
-            <label className="portal-label">Name of Deceased</label>
+            <label className="portal-label">Name of Deceased *</label>
             <input type="text" {...register('deceasedName', { required: true })} className="portal-input" placeholder="Full name of the deceased" />
           </div>
           <div>
             <label className="portal-label">Date of Death</label>
             <input type="date" {...register('dateOfDeath')} className="portal-input" />
           </div>
+          <div className="sm:col-span-2">
+            <label className="portal-label">Cause of Death</label>
+            <input type="text" {...register('causeOfDeath')} className="portal-input" placeholder="Cause of death as on death certificate" />
+          </div>
+
+          {/* Sub-section: Funeral Home Arrangement */}
+          <div className="sm:col-span-2 mt-4 mb-1 flex items-center gap-2 border-b border-slate-150 pb-2">
+            <span className="text-base">⚰️</span>
+            <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Funeral Home Arrangement</p>
+          </div>
+
           <div>
             <label className="portal-label">Funeral Home / Service Provider</label>
             <input type="text" {...register('funeralHome')} className="portal-input" placeholder="Funeral home name" />
@@ -162,13 +179,16 @@ export default function StepBurialDetails({ caseData, onUpdate }) {
             <input type="text" {...register('funeralOwnerAddress')} className="portal-input" placeholder="City / Municipality, Province" />
           </div>
           <div className="sm:col-span-2">
-            <label className="portal-label">Cause of Death</label>
-            <input type="text" {...register('causeOfDeath')} className="portal-input" placeholder="Cause of death as on death certificate" />
-          </div>
-          <div className="sm:col-span-2">
             <label className="portal-label">Type of Bill</label>
             <input type="text" {...register('typeOfBill')} className="portal-input" placeholder="e.g. funeral bill, embalming fee" />
           </div>
+
+          {/* Sub-section: Interment & Representative */}
+          <div className="sm:col-span-2 mt-4 mb-1 flex items-center gap-2 border-b border-slate-150 pb-2">
+            <span className="text-base">👤</span>
+            <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Interment &amp; Representative</p>
+          </div>
+
           <div className="sm:col-span-2">
             <label className="portal-label">Place of Interment</label>
             <select
@@ -201,6 +221,13 @@ export default function StepBurialDetails({ caseData, onUpdate }) {
             <label className="portal-label">Relationship to Deceased</label>
             <input type="text" {...register('conformeRelationship')} className="portal-input" placeholder="e.g. Daughter, Son, Spouse" />
           </div>
+
+          {/* Sub-section: Financial Assistance */}
+          <div className="sm:col-span-2 mt-4 mb-1 flex items-center gap-2 border-b border-slate-150 pb-2">
+            <span className="text-base">💵</span>
+            <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Financial Assistance</p>
+          </div>
+
           <div>
             <label className="portal-label">Guarantee Letter Amount (PHP)</label>
             <input type="number" min="0" step="any" {...register('amount')} className="portal-input" placeholder="0.00" />

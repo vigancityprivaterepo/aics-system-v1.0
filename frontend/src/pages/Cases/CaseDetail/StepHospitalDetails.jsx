@@ -75,12 +75,33 @@ export default function StepHospitalDetails({ caseData, onUpdate }) {
         </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {/* Sub-section: Patient & Admission Info */}
+          <div className="sm:col-span-2 mt-2 mb-1 flex items-center gap-2 border-b border-slate-150 pb-2">
+            <span className="text-base">👤</span>
+            <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Patient &amp; Admission Info</p>
+          </div>
+
           <div className="sm:col-span-2">
-            <label className="portal-label">Patient Name</label>
+            <label className="portal-label">Patient Name *</label>
             <input type="text" {...register('patientName')} className="portal-input" placeholder="Full name of the patient" />
           </div>
           <div>
-            <label className="portal-label">Hospital / Facility Name</label>
+            <label className="portal-label">Admission Date</label>
+            <input type="date" {...register('admissionDate')} className="portal-input" />
+          </div>
+          <div className="sm:col-span-2">
+            <label className="portal-label">Diagnosis</label>
+            <input type="text" {...register('diagnosis')} className="portal-input" placeholder="Diagnosis as indicated in medical records" />
+          </div>
+
+          {/* Sub-section: Hospital & Physician Details */}
+          <div className="sm:col-span-2 mt-4 mb-1 flex items-center gap-2 border-b border-slate-150 pb-2">
+            <span className="text-base">🏥</span>
+            <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Hospital &amp; Physician Details</p>
+          </div>
+
+          <div>
+            <label className="portal-label">Hospital / Facility Name *</label>
             <input type="text" {...register('hospitalName')} className="portal-input" placeholder="Name of the hospital" />
           </div>
           <div>
@@ -95,18 +116,17 @@ export default function StepHospitalDetails({ caseData, onUpdate }) {
             <label className="portal-label">Doctor Position / Title</label>
             <input type="text" {...register('mdPosition')} className="portal-input" placeholder="e.g. MD, OB-GYNE, Surgeon" />
           </div>
-          <div>
-            <label className="portal-label">Admission Date</label>
-            <input type="date" {...register('admissionDate')} className="portal-input" />
-          </div>
-          <div>
+          <div className="sm:col-span-2">
             <label className="portal-label">Type of Bill</label>
             <input type="text" {...register('typeOfBill')} className="portal-input" placeholder="e.g. hospital bill, room charges" />
           </div>
-          <div className="sm:col-span-2">
-            <label className="portal-label">Diagnosis</label>
-            <input type="text" {...register('diagnosis')} className="portal-input" placeholder="Diagnosis as indicated in medical records" />
+
+          {/* Sub-section: Representative & Conforme */}
+          <div className="sm:col-span-2 mt-4 mb-1 flex items-center gap-2 border-b border-slate-150 pb-2">
+            <span className="text-base">👥</span>
+            <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Representative &amp; Conforme</p>
           </div>
+
           <div>
             <label className="portal-label">Conforme Name</label>
             <input type="text" {...register('conformeName')} className="portal-input" placeholder="Full name of representative / next of kin" />
@@ -115,8 +135,15 @@ export default function StepHospitalDetails({ caseData, onUpdate }) {
             <label className="portal-label">Relationship to Patient</label>
             <input type="text" {...register('conformeRelationship')} className="portal-input" placeholder="e.g. Mother, Spouse, Self" />
           </div>
+
+          {/* Sub-section: Financial Assistance */}
+          <div className="sm:col-span-2 mt-4 mb-1 flex items-center gap-2 border-b border-slate-150 pb-2">
+            <span className="text-base">💵</span>
+            <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Financial Assistance</p>
+          </div>
+
           <div>
-            <label className="portal-label">Guarantee Letter Amount (PHP)</label>
+            <label className="portal-label">Guarantee Letter Amount (PHP) *</label>
             <input type="number" min="0" step="any" {...register('amount')} className="portal-input" placeholder="0.00" />
             {isOverCap && (
               <p className="mt-1 text-xs text-amber-600">
