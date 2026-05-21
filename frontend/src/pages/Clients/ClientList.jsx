@@ -48,11 +48,12 @@ export default function ClientList() {
 
   return (
     <div className="animate-fade-in">
-      <div className="mb-6 flex items-center justify-between">
+      {/* Page header */}
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-5">
         <div>
           <p className="portal-kicker">Registry</p>
-          <h1 className="portal-page-title">Client Profiles</h1>
-          <p className="portal-page-subtitle">{total} clients registered</p>
+          <h1 className="mt-1 font-display text-2xl font-bold text-slate-900">Client Profiles</h1>
+          <p className="portal-page-subtitle">{total} clients registered in the system</p>
         </div>
         <Link to="/clients/new" className="portal-button-green" id="btn-new-client">
           <PlusIcon className="h-4 w-4" />
@@ -60,7 +61,7 @@ export default function ClientList() {
         </Link>
       </div>
 
-      <div className="card mb-4">
+      <div className="card mb-4 p-3">
         <div className="relative">
           <SearchIcon className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
           <input
@@ -75,6 +76,10 @@ export default function ClientList() {
       </div>
 
       <div className="card p-0 overflow-hidden">
+        <div className="border-b border-slate-100 bg-slate-50/60 px-5 py-3 flex items-center justify-between">
+          <p className="text-sm font-semibold text-slate-700">Client Registry</p>
+          <p className="text-xs text-slate-400">{total} record{total !== 1 ? 's' : ''}</p>
+        </div>
         {loading ? (
           <div className="flex justify-center py-16">
             <div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-green border-t-transparent" />

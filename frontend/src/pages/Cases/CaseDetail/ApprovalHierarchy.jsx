@@ -1,3 +1,4 @@
+import { formatDate } from '../../../lib/utils'
 import { CheckIcon, ClockIcon, XIcon } from '../../../components/ui/Icons'
 
 export default function ApprovalHierarchy({ reviewFlow }) {
@@ -22,6 +23,7 @@ export default function ApprovalHierarchy({ reviewFlow }) {
           const lineClass  = isDone ? 'bg-emerald-300' : 'bg-slate-200'
           const badgeClass = isDone ? 'badge-green' : isRejected ? 'badge-red' : isCurrent ? 'badge-amber' : 'badge-slate'
           const badgeLabel = isDone ? 'Approved'    : isRejected ? 'Rejected'  : isCurrent ? 'Current'     : 'Pending'
+          const actionDateLabel = isRejected ? 'Rejected on' : 'Approved on'
 
           return (
             <div key={row.stage} className={`relative flex items-start gap-4 ${!isLast ? 'pb-7' : ''}`}>
@@ -36,15 +38,16 @@ export default function ApprovalHierarchy({ reviewFlow }) {
               <div className="flex flex-1 items-start justify-between gap-2 min-w-0">
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-slate-800 leading-tight">{row.label}</p>
-                  <p className="text-xs text-slate-500 mt-0.5 truncate">
-                    {row.assignee?.name || 'No assignee configured'}
-                  </p>
+                  <p className="text-xs text-slate-500 mt-0.5">{row.assignee?.name || 'No assignee configured'}</p>
+                  <p className="text-xs text-slate-400 mt-1">{row.title}</p>
+                  {row.approval?.actedAt && (
+                    <p className="text-xs text-slate-500 mt-1">
+                      {actionDateLabel}: {formatDate(row.approval.actedAt)}
+                    </p>
+                  )}
                 </div>
                 <div className="text-right shrink-0">
                   <span className={`badge ${badgeClass}`}>{badgeLabel}</span>
-                  {row.approval?.actedAt && (
-                    <p className="text-xs text-slate-400 mt-1">{row.approval.actedAt}</p>
-                  )}
                 </div>
               </div>
             </div>

@@ -176,6 +176,7 @@ export default function ApplyPage() {
   const [showFuneralResults, setShowFuneralResults] = useState(false)
   const [loading, setLoading] = useState(Boolean(draftId))
   const [saving, setSaving] = useState(false)
+  const [savedDraft, setSavedDraft] = useState(false)
   const [uploadingKey, setUploadingKey] = useState(null)
   const [applicationStatus, setApplicationStatus] = useState(null)
   const [applicationAdminNotes, setApplicationAdminNotes] = useState(null)
@@ -625,7 +626,11 @@ export default function ApplyPage() {
       const application = res.data.application
       setApplicationId(application.id)
       setDocuments(application.documents || [])
-      if (!silent) toast.success('Application saved')
+      if (!silent) {
+        toast.success('Application saved')
+        setSavedDraft(true)
+        setTimeout(() => setSavedDraft(false), 3000)
+      }
       return application
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to save application')
@@ -720,61 +725,79 @@ export default function ApplyPage() {
     }
   }
 
+  const ASSISTANCE_CARDS = [
+    { value: 'medicine',  emoji: '💊', label: 'Medicine',        desc: 'Prescription medicine provision' },
+    { value: 'medical',   emoji: '✚',  label: 'Medical',         desc: 'Medical consultation support' },
+    { value: 'hospital',  emoji: '🏥', label: 'Hospital',        desc: 'Hospital bill financial assistance' },
+    { value: 'burial',    emoji: '🪦', label: 'Burial',          desc: 'Funeral and burial cost coverage' },
+    { value: 'eyeglass',  emoji: '👓', label: 'Eyeglass',        desc: 'Optical assistance for eyewear' },
+    { value: 'plain',     emoji: '📄', label: 'Plain AICS',      desc: 'General financial assistance' },
+  ]
+
+  const handleSelectType = (nextType) => {
+    setDocSubStep(0)
+    setForm((current) => ({
+      ...current,
+      assistanceType: nextType,
+      hospitalFacilityId: nextType === 'medical' || nextType === 'hospital' ? current.hospitalFacilityId : '',
+      medicineItemIds: nextType === 'medicine' ? current.medicineItemIds : [],
+      funeralHomeId: nextType === 'burial' ? current.funeralHomeId : '',
+      deceasedName: nextType === 'burial' ? current.deceasedName : '',
+      deceasedAddress: nextType === 'burial' ? current.deceasedAddress : '',
+      deceasedAge: nextType === 'burial' ? current.deceasedAge : '',
+      deceasedOccupation: nextType === 'burial' ? current.deceasedOccupation : '',
+      deceasedCivilStatus: nextType === 'burial' ? current.deceasedCivilStatus : '',
+      deceasedSex: nextType === 'burial' ? current.deceasedSex : '',
+      typeOfBill: '',
+      intermentDate: nextType === 'burial' ? current.intermentDate : '',
+      intermentPlace: nextType === 'burial' ? current.intermentPlace : '',
+      conformeName: current.conformeName,
+      conformeRelationship: current.conformeRelationship,
+      doctorName: (nextType === 'hospital' || nextType === 'medical' || nextType === 'eyeglass') ? current.doctorName : '',
+      doctorPosition: (nextType === 'hospital' || nextType === 'medical') ? current.doctorPosition : '',
+      clinicName: nextType === 'eyeglass' ? current.clinicName : '',
+      clinicAddress: nextType === 'eyeglass' ? current.clinicAddress : '',
+      medicalRequestedAssistance: nextType === 'medical' ? current.medicalRequestedAssistance : '',
+    }))
+    if (nextType !== 'medical' && nextType !== 'hospital') { setHospitalSearch(''); setShowHospitalResults(false) }
+    if (nextType !== 'medicine') { setMedicineSearch(''); setShowMedicineResults(false) }
+    if (nextType !== 'burial') { setFuneralSearch(''); setShowFuneralResults(false) }
+  }
+
   const renderRequestStep = () => (
-    <div className="space-y-5">
-      <div className="grid gap-5 md:grid-cols-2">
-        <div>
-          <label className="portal-label">Assistance Type *</label>
-          <select
-            value={form.assistanceType}
-            onChange={(event) => {
-              const nextType = event.target.value
-              setDocSubStep(0)
-              setForm((current) => ({
-                ...current,
-                assistanceType: nextType,
-                hospitalFacilityId: nextType === 'medical' || nextType === 'hospital' ? current.hospitalFacilityId : '',
-                medicineItemIds: nextType === 'medicine' ? current.medicineItemIds : [],
-                funeralHomeId: nextType === 'burial' ? current.funeralHomeId : '',
-                deceasedName: nextType === 'burial' ? current.deceasedName : '',
-                deceasedAddress: nextType === 'burial' ? current.deceasedAddress : '',
-                deceasedAge: nextType === 'burial' ? current.deceasedAge : '',
-                deceasedOccupation: nextType === 'burial' ? current.deceasedOccupation : '',
-                deceasedCivilStatus: nextType === 'burial' ? current.deceasedCivilStatus : '',
-                deceasedSex: nextType === 'burial' ? current.deceasedSex : '',
-                typeOfBill: nextType === 'burial' ? current.typeOfBill : '',
-                intermentDate: nextType === 'burial' ? current.intermentDate : '',
-                intermentPlace: nextType === 'burial' ? current.intermentPlace : '',
-                conformeName: current.conformeName,
-                conformeRelationship: current.conformeRelationship,
-                doctorName: (nextType === 'hospital' || nextType === 'medical' || nextType === 'eyeglass') ? current.doctorName : '',
-                doctorPosition: (nextType === 'hospital' || nextType === 'medical') ? current.doctorPosition : '',
-                clinicName: nextType === 'eyeglass' ? current.clinicName : '',
-                clinicAddress: nextType === 'eyeglass' ? current.clinicAddress : '',
-                medicalRequestedAssistance: nextType === 'medical' ? current.medicalRequestedAssistance : '',
-              }))
-              if (nextType !== 'medical' && nextType !== 'hospital') {
-                setHospitalSearch('')
-                setShowHospitalResults(false)
-              }
-              if (nextType !== 'medicine') {
-                setMedicineSearch('')
-                setShowMedicineResults(false)
-              }
-              if (nextType !== 'burial') {
-                setFuneralSearch('')
-                setShowFuneralResults(false)
-              }
-            }}
-            className="portal-input"
-            required
-          >
-            {assistanceOptions.map((option) => (
-              <option key={option.value} value={option.value}>{option.label}</option>
-            ))}
-          </select>
+    <div className="space-y-6">
+      <div>
+        <label className="portal-label">Select Assistance Type *</label>
+        <div className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-3">
+          {ASSISTANCE_CARDS.map((card) => {
+            const isSelected = form.assistanceType === card.value
+            return (
+              <button
+                key={card.value}
+                type="button"
+                onClick={() => handleSelectType(card.value)}
+                className={`flex flex-col items-start gap-2 rounded-xl border-2 p-4 text-left transition-all duration-150 ${
+                  isSelected
+                    ? 'border-[#065f46] bg-emerald-50 shadow-sm'
+                    : 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm'
+                }`}
+              >
+                <span className="text-2xl leading-none">{card.emoji}</span>
+                <div>
+                  <p className={`text-sm font-bold ${isSelected ? 'text-[#065f46]' : 'text-slate-800'}`}>{card.label}</p>
+                  <p className="mt-0.5 text-xs leading-snug text-slate-500">{card.desc}</p>
+                </div>
+                {isSelected && (
+                  <span className="ml-auto self-start rounded-full bg-[#065f46] px-2 py-0.5 text-[10px] font-bold text-white">Selected</span>
+                )}
+              </button>
+            )
+          })}
         </div>
-        <div>
+      </div>
+
+      <div className="grid gap-5 md:grid-cols-2">
+        <div className="md:col-span-2">
           <label className="portal-label">Contact Number *</label>
           <input
             type="text"
@@ -788,228 +811,186 @@ export default function ApplyPage() {
       </div>
 
       {form.assistanceType === 'burial' && (
-        <div className="space-y-4 portal-panel p-4">
+        <div className="space-y-6 portal-panel p-5">
+
+          {/* Sub-section 1: Deceased Information */}
           <div>
-            <label className="portal-label">Name of the Deceased *</label>
-            <input
-              type="text"
-              value={form.deceasedName}
-              onChange={(event) => updateField('deceasedName', event.target.value)}
-              className="portal-input"
-              placeholder="Enter the full name of the deceased"
-              required
-            />
-            <p className="mt-2 text-xs text-slate-500">
-              These burial details will auto-populate in the office case record once your application is approved.
-            </p>
-          </div>
-
-          <div className="relative">
-            <label className="portal-label">Funeral Home *</label>
-            <input
-              type="text"
-              value={funeralSearch}
-              onChange={(event) => {
-                const value = event.target.value
-                setFuneralSearch(value)
-                updateField('funeralHomeId', '')
-                setShowFuneralResults(true)
-              }}
-              onFocus={() => setShowFuneralResults(true)}
-              onBlur={() => setTimeout(() => setShowFuneralResults(false), 150)}
-              className="portal-input"
-              placeholder="Search funeral home"
-            />
-            {showFuneralResults && funeralSearch.trim() && (
-              <div className="absolute z-20 mt-1 max-h-60 w-full overflow-y-auto rounded-md border border-slate-200 bg-white shadow-lg">
-                {funeralResults.length ? funeralResults.map((home) => (
-                  <button
-                    key={home.id}
-                    type="button"
-                    onMouseDown={() => {
-                      updateField('funeralHomeId', home.id)
-                      setFuneralSearch(formatFuneralOption(home))
-                      setShowFuneralResults(false)
-                    }}
-                    className="block w-full border-b border-slate-100 px-4 py-3 text-left last:border-b-0 hover:bg-emerald-50"
-                  >
-                    <p className="text-sm font-semibold text-brand-primary">{home.name}</p>
-                    {home.ownerName && <p className="mt-0.5 text-xs text-slate-600">Owner: {home.ownerName}</p>}
-                    {home.address && <p className="mt-0.5 text-xs text-slate-500">{home.address}</p>}
-                  </button>
-                )) : (
-                  <div className="px-4 py-3 text-sm text-slate-500">No matching funeral home found.</div>
-                )}
+            <div className="mb-3 flex items-center gap-2 border-b-2 border-slate-100 pb-2">
+              <span className="text-lg">📋</span>
+              <p className="text-sm font-bold uppercase tracking-wide text-slate-700">Deceased Information</p>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="portal-label">Name of the Deceased *</label>
+                <input
+                  type="text"
+                  value={form.deceasedName}
+                  onChange={(event) => updateField('deceasedName', event.target.value)}
+                  className="portal-input"
+                  placeholder="Enter the full name of the deceased"
+                  required
+                />
+                <p className="mt-2 text-xs text-slate-500">
+                  These burial details will auto-populate in the office case record once your application is approved.
+                </p>
               </div>
-            )}
-            {selectedFuneralHome?.address && (
-              <p className="mt-2 text-xs text-slate-500">{selectedFuneralHome.address}</p>
-            )}
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label className="portal-label">Deceased Address (Barangay) *</label>
+                  <select value={form.deceasedAddress} onChange={(event) => updateField('deceasedAddress', event.target.value)} className="portal-input" required>
+                    <option value="">Select barangay</option>
+                    {deceasedAddressOptions.map((option) => <option key={option} value={option}>{option}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="portal-label">Age *</label>
+                  <input type="number" min="0" value={form.deceasedAge} onChange={(event) => updateField('deceasedAge', event.target.value)} className="portal-input" placeholder="Age" />
+                </div>
+                <div>
+                  <label className="portal-label">Civil Status *</label>
+                  <select value={form.deceasedCivilStatus} onChange={(event) => updateField('deceasedCivilStatus', event.target.value)} className="portal-input" required>
+                    <option value="">Select civil status</option>
+                    {civilStatusOptions.filter(Boolean).map((option) => <option key={option}>{option}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="portal-label">Sex *</label>
+                  <select value={form.deceasedSex} onChange={(event) => updateField('deceasedSex', event.target.value)} className="portal-input" required>
+                    <option value="">Select sex</option>
+                    {sexOptions.filter(Boolean).map((option) => <option key={option}>{option}</option>)}
+                  </select>
+                </div>
+                <div className="md:col-span-2">
+                  <label className="portal-label">Occupation *</label>
+                  <input type="text" value={form.deceasedOccupation} onChange={(event) => updateField('deceasedOccupation', event.target.value)} className="portal-input" placeholder="Occupation" />
+                </div>
+              </div>
+            </div>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="md:col-span-2">
-              <label className="portal-label">Deceased Address *</label>
-              <select
-                value={form.deceasedAddress}
-                onChange={(event) => updateField('deceasedAddress', event.target.value)}
-                className="portal-input"
-                required
-              >
-                <option value="">Select barangay</option>
-                {deceasedAddressOptions.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
+          {/* Sub-section 2: Burial Arrangement */}
+          <div>
+            <div className="mb-3 flex items-center gap-2 border-b-2 border-slate-100 pb-2">
+              <span className="text-lg">⚰️</span>
+              <p className="text-sm font-bold uppercase tracking-wide text-slate-700">Burial Arrangement</p>
             </div>
-            <div>
-              <label className="portal-label">Age *</label>
-              <input
-                type="number"
-                min="0"
-                value={form.deceasedAge}
-                onChange={(event) => updateField('deceasedAge', event.target.value)}
-                className="portal-input"
-                placeholder="Age"
-              />
-            </div>
-            <div>
-              <label className="portal-label">Occupation *</label>
-              <input
-                type="text"
-                value={form.deceasedOccupation}
-                onChange={(event) => updateField('deceasedOccupation', event.target.value)}
-                className="portal-input"
-                placeholder="Occupation"
-              />
-            </div>
-            <div>
-              <label className="portal-label">Civil Status *</label>
-              <select
-                value={form.deceasedCivilStatus}
-                onChange={(event) => updateField('deceasedCivilStatus', event.target.value)}
-                className="portal-input"
-                required
-              >
-                <option value="">Select civil status</option>
-                {civilStatusOptions
-                  .filter((option) => option)
-                  .map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="portal-label">Sex *</label>
-              <select
-                value={form.deceasedSex}
-                onChange={(event) => updateField('deceasedSex', event.target.value)}
-                className="portal-input"
-                required
-              >
-                <option value="">Select sex</option>
-                {sexOptions
-                  .filter((option) => option)
-                  .map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-              </select>
-            </div>
-            <div className="md:col-span-2">
-              <label className="portal-label">Type of Bill</label>
-              <input
-                type="text"
-                value={form.typeOfBill}
-                onChange={(event) => updateField('typeOfBill', event.target.value)}
-                className="portal-input"
-                placeholder="e.g. funeral bill, embalming fee"
-              />
-            </div>
-            <div className="md:col-span-2">
-              <label className="portal-label">Date of Interment *</label>
-              <input
-                type="date"
-                value={form.intermentDate}
-                onChange={(event) => updateField('intermentDate', event.target.value)}
-                className="portal-input"
-                required
-              />
-            </div>
-            <div className="md:col-span-2">
-              <label className="portal-label">Place of Interment *</label>
-              <select
-                value={form.intermentPlace}
-                onChange={(event) => updateField('intermentPlace', event.target.value)}
-                className="portal-input"
-                required
-              >
-                <option value="">Select cemetery...</option>
-                {intermentPlaceOptions.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-                <option value="Others (specify)">Others (specify)</option>
-              </select>
-            </div>
-            <div>
-              <label className="portal-label">Conforme Name *</label>
-              <input
-                type="text"
-                value={form.conformeName}
-                onChange={(event) => updateField('conformeName', event.target.value)}
-                className="portal-input"
-                placeholder="Full name of representative / next of kin"
-              />
-            </div>
-            <div>
-              <label className="portal-label">Relationship to Deceased *</label>
+            <div className="space-y-4">
               <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => setShowBurialRelationshipOptions((current) => !current)}
-                  onBlur={() => setTimeout(() => setShowBurialRelationshipOptions(false), 150)}
-                  className="portal-input flex items-center justify-between text-left"
-                  aria-haspopup="listbox"
-                  aria-expanded={showBurialRelationshipOptions}
-                >
-                  <span className={form.conformeRelationship ? 'text-slate-800' : 'text-slate-400'}>
-                    {form.conformeRelationship || 'Select relationship'}
-                  </span>
-                  <span className="text-slate-500">▼</span>
-                </button>
-                {showBurialRelationshipOptions && (
-                  <div className="absolute z-20 mt-1 max-h-72 w-full overflow-y-auto rounded-md border border-slate-200 bg-white shadow-lg">
-                    {relationshipOptions.map((option) => (
+                <label className="portal-label">Funeral Home *</label>
+                <input
+                  type="text"
+                  value={funeralSearch}
+                  onChange={(event) => {
+                    const value = event.target.value
+                    setFuneralSearch(value)
+                    updateField('funeralHomeId', '')
+                    setShowFuneralResults(true)
+                  }}
+                  onFocus={() => setShowFuneralResults(true)}
+                  onBlur={() => setTimeout(() => setShowFuneralResults(false), 150)}
+                  className="portal-input"
+                  placeholder="Search funeral home"
+                />
+                {showFuneralResults && funeralSearch.trim() && (
+                  <div className="absolute z-20 mt-1 max-h-60 w-full overflow-y-auto rounded-md border border-slate-200 bg-white shadow-lg">
+                    {funeralResults.length ? funeralResults.map((home) => (
                       <button
-                        key={option.value || 'placeholder'}
+                        key={home.id}
                         type="button"
                         onMouseDown={() => {
-                          updateField('conformeRelationship', option.value)
-                          setShowBurialRelationshipOptions(false)
+                          updateField('funeralHomeId', home.id)
+                          setFuneralSearch(formatFuneralOption(home))
+                          setShowFuneralResults(false)
                         }}
-                        className={`block w-full px-4 py-3 text-left text-sm hover:bg-emerald-50 ${
-                          option.value === form.conformeRelationship ? 'bg-emerald-50 font-medium text-brand-primary' : 'text-slate-700'
-                        }`}
-                        role="option"
-                        aria-selected={option.value === form.conformeRelationship}
+                        className="block w-full border-b border-slate-100 px-4 py-3 text-left last:border-b-0 hover:bg-emerald-50"
                       >
-                        {option.label}
+                        <p className="text-sm font-semibold text-[#065f46]">{home.name}</p>
+                        {home.ownerName && <p className="mt-0.5 text-xs text-slate-600">Owner: {home.ownerName}</p>}
+                        {home.address && <p className="mt-0.5 text-xs text-slate-500">{home.address}</p>}
                       </button>
-                    ))}
+                    )) : (
+                      <div className="px-4 py-3 text-sm text-slate-500">No matching funeral home found.</div>
+                    )}
                   </div>
                 )}
+                {selectedFuneralHome?.address && (
+                  <p className="mt-2 text-xs text-slate-500">{selectedFuneralHome.address}</p>
+                )}
+              </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label className="portal-label">Date of Interment *</label>
+                  <input type="date" value={form.intermentDate} onChange={(event) => updateField('intermentDate', event.target.value)} className="portal-input" required />
+                </div>
+                <div>
+                  <label className="portal-label">Place of Interment *</label>
+                  <select value={form.intermentPlace} onChange={(event) => updateField('intermentPlace', event.target.value)} className="portal-input" required>
+                    <option value="">Select cemetery...</option>
+                    {intermentPlaceOptions.map((option) => <option key={option} value={option}>{option}</option>)}
+                    <option value="Others (specify)">Others (specify)</option>
+                  </select>
+                </div>
               </div>
             </div>
           </div>
+
+          {/* Sub-section 3: Representative / Conforme */}
+          <div>
+            <div className="mb-3 flex items-center gap-2 border-b-2 border-slate-100 pb-2">
+              <span className="text-lg">👤</span>
+              <p className="text-sm font-bold uppercase tracking-wide text-slate-700">Representative / Conforme</p>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <label className="portal-label">Conforme Name *</label>
+                <input type="text" value={form.conformeName} onChange={(event) => updateField('conformeName', event.target.value)} className="portal-input" placeholder="Full name of representative / next of kin" />
+              </div>
+              <div>
+                <label className="portal-label">Relationship to Deceased *</label>
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setShowBurialRelationshipOptions((current) => !current)}
+                    onBlur={() => setTimeout(() => setShowBurialRelationshipOptions(false), 150)}
+                    className="portal-input flex items-center justify-between text-left"
+                    aria-haspopup="listbox"
+                    aria-expanded={showBurialRelationshipOptions}
+                  >
+                    <span className={form.conformeRelationship ? 'text-slate-800' : 'text-slate-400'}>
+                      {form.conformeRelationship || 'Select relationship'}
+                    </span>
+                    <span className="text-slate-500">▼</span>
+                  </button>
+                  {showBurialRelationshipOptions && (
+                    <div className="absolute z-20 mt-1 max-h-72 w-full overflow-y-auto rounded-md border border-slate-200 bg-white shadow-lg">
+                      {relationshipOptions.map((option) => (
+                        <button
+                          key={option.value || 'placeholder'}
+                          type="button"
+                          onMouseDown={() => {
+                            updateField('conformeRelationship', option.value)
+                            setShowBurialRelationshipOptions(false)
+                          }}
+                          className={`block w-full px-4 py-3 text-left text-sm hover:bg-emerald-50 ${
+                            option.value === form.conformeRelationship ? 'bg-emerald-50 font-medium text-[#065f46]' : 'text-slate-700'
+                          }`}
+                          role="option"
+                          aria-selected={option.value === form.conformeRelationship}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
         </div>
       )}
+
+
 
       {form.assistanceType === 'medical' && (
         <div className="space-y-3 portal-panel p-4">
@@ -1618,18 +1599,27 @@ export default function ApplyPage() {
         </div>
 
         <div className="p-5">
-          <p className="text-xs font-medium text-slate-500">Requirements</p>
-          <div className="mt-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-bold uppercase tracking-widest text-slate-500">Requirements</p>
+            <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${
+              requirementList.every((r) => documentsByType[r]) ? 'bg-emerald-600 text-white' : 'bg-amber-500 text-white'
+            }`}>
+              {requirementList.filter((r) => documentsByType[r]).length} / {requirementList.length} uploaded
+            </span>
+          </div>
+          <div className="mt-4 space-y-2">
             {requirementList.map((requirement) => {
               const document = documentsByType[requirement]
               return (
-                <div key={requirement} className="flex items-start gap-3 rounded-md border border-slate-200 bg-white px-4 py-3">
-                  <span className={`mt-0.5 text-sm font-bold ${document ? 'text-emerald-700' : 'text-rose-500'}`}>
-                    {document ? 'OK' : 'NO'}
+                <div key={requirement} className={`flex items-start gap-3 rounded-lg border-l-4 px-4 py-3 ${
+                  document ? 'border-l-emerald-600 bg-emerald-50 border border-emerald-200' : 'border-l-red-500 bg-red-50 border border-red-200'
+                }`}>
+                  <span className={`shrink-0 text-lg leading-none ${document ? 'text-emerald-600' : 'text-red-500'}`}>
+                    {document ? '✓' : '✗'}
                   </span>
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-slate-800">{requirement}</p>
-                    <p className="mt-1 text-xs text-slate-500">{document ? document.originalName : 'Not uploaded yet'}</p>
+                    <p className="text-sm font-semibold text-slate-800">{requirement}</p>
+                    <p className="mt-0.5 text-xs text-slate-500">{document ? document.originalName : 'Not uploaded yet'}</p>
                   </div>
                 </div>
               )
@@ -1676,38 +1666,48 @@ export default function ApplyPage() {
       </section>
 
       <section className="portal-surface overflow-hidden">
-        <div className="border-b border-slate-200 bg-slate-50 px-6 py-5">
-          <div className="flex flex-wrap items-center gap-2">
-            {steps.map((item) => {
+        {/* Sticky Progress Bar */}
+        <div className="sticky top-0 z-10 border-b border-slate-200 bg-white px-6 py-4 shadow-sm">
+          <div className="flex items-center gap-2">
+            {steps.map((item, idx) => {
               const isActive = step === item.id
               const isDone = step > item.id
               return (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => {
-                    if (item.id < step) setStep(item.id)
-                  }}
-                  className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
-                    isActive
-                      ? 'bg-[#0c2340] text-white'
-                      : isDone
-                        ? 'bg-emerald-100 text-emerald-800'
-                        : 'bg-white text-slate-500'
-                  }`}
-                >
-                  {item.id}. {item.title}
-                </button>
+                <div key={item.id} className="flex flex-1 items-center">
+                  <button
+                    type="button"
+                    onClick={() => { if (item.id < step) setStep(item.id) }}
+                    className={`flex items-center gap-2 rounded-lg px-3 py-2 text-left transition-all ${
+                      isActive ? 'bg-[#065f46] text-white' :
+                      isDone ? 'cursor-pointer bg-emerald-100 text-emerald-800 hover:bg-emerald-200' :
+                      'bg-slate-100 text-slate-400'
+                    }`}
+                  >
+                    <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                      isActive ? 'bg-white text-[#065f46]' :
+                      isDone ? 'bg-emerald-600 text-white' :
+                      'bg-slate-300 text-slate-500'
+                    }`}>
+                      {isDone ? '✓' : item.id}
+                    </span>
+                    <span className="hidden text-xs font-semibold sm:block">{item.title}</span>
+                  </button>
+                  {idx < steps.length - 1 && (
+                    <div className={`mx-1 h-1 flex-1 rounded-full transition-all ${
+                      step > item.id ? 'bg-emerald-500' : 'bg-slate-200'
+                    }`} />
+                  )}
+                </div>
               )
             })}
           </div>
-          <div className="mt-4 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+          <div className="mt-3 flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-slate-800">{steps[step - 1].title}</p>
-              <p className="text-sm text-slate-500">{steps[step - 1].description}</p>
+              <p className="text-sm font-bold text-slate-800">{steps[step - 1].title}</p>
+              <p className="text-xs text-slate-500">{steps[step - 1].description}</p>
             </div>
-            <p className="text-sm text-slate-500">
-              {applicationStatus === 'resubmission_required' ? 'Resubmission in progress' : 'In progress'} | {documents.length} uploaded documents
+            <p className="text-xs text-slate-400">
+              Step {step} of {steps.length} · {documents.length} doc{documents.length !== 1 ? 's' : ''} uploaded
             </p>
           </div>
         </div>
@@ -1718,7 +1718,7 @@ export default function ApplyPage() {
           {step === 3 && renderRequirementsStep()}
           {step === 4 && renderReviewStep()}
 
-          <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-6">
+          <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t-2 border-slate-100 pt-6">
             <div className="flex gap-3">
               <button
                 type="button"
@@ -1730,9 +1730,9 @@ export default function ApplyPage() {
                   setStep((current) => Math.max(1, current - 1))
                 }}
                 disabled={step === 1}
-                className="portal-button-secondary text-sm disabled:opacity-50"
+                className="portal-button-secondary disabled:opacity-40"
               >
-                Previous
+                ← Previous
               </button>
               {step < steps.length && (
                 <button
@@ -1757,25 +1757,30 @@ export default function ApplyPage() {
                     setStep((current) => Math.min(steps.length, current + 1))
                   }}
                   disabled={saving}
-                  className="portal-button-secondary text-sm disabled:opacity-50"
+                  className="portal-button-primary disabled:opacity-50"
                 >
-                  Next
+                  {saving ? 'Saving...' : 'Next →'}
                 </button>
               )}
             </div>
 
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap items-center gap-3">
+              {savedDraft && (
+                <span className="flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 animate-pulse">
+                  ✓ Draft saved
+                </span>
+              )}
               <button
                 type="button"
                 onClick={() => saveApplication({ validationMode: 'draft' })}
                 disabled={saving}
-                className="portal-button-secondary text-sm disabled:opacity-50"
+                className="portal-button-secondary disabled:opacity-50"
               >
-                Save Draft
+                {saving ? 'Saving...' : '💾 Save Draft'}
               </button>
               {step === steps.length && (
-                <button type="button" onClick={handleSubmitApplication} disabled={saving} className="portal-button-primary text-sm disabled:opacity-50">
-                  Submit Application
+                <button type="button" onClick={handleSubmitApplication} disabled={saving} className="portal-button-primary disabled:opacity-50 px-8">
+                  ✅ Submit Application
                 </button>
               )}
             </div>

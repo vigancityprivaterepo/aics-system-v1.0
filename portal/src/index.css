@@ -26,54 +26,73 @@
 
 @layer components {
   .portal-input {
-    @apply w-full rounded-md border border-slate-300 bg-white px-4 py-3 text-sm transition-all duration-200 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#10b981];
+    @apply w-full rounded-lg border-2 border-slate-300 bg-white px-4 py-3.5 text-base text-slate-800 shadow-sm transition-all duration-150 focus:border-[#065f46] focus:outline-none focus:ring-2 focus:ring-[#065f46]/20 placeholder:text-slate-400 leading-snug;
   }
 
   .portal-label {
-    @apply mb-1 block text-xs font-medium text-slate-600;
+    @apply mb-2 block text-sm font-semibold text-slate-700 tracking-wide;
   }
 
   .btn-primary {
-    @apply flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-50;
+    @apply flex w-full items-center justify-center gap-2 rounded-lg bg-[#065f46] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#064e3b] disabled:cursor-not-allowed disabled:opacity-50;
   }
 
   .btn-secondary {
-    @apply flex w-full items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:opacity-50;
+    @apply flex w-full items-center justify-center gap-2 rounded-lg border-2 border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-400 hover:bg-slate-50 disabled:opacity-50;
   }
 
   .btn-ghost {
-    @apply inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 transition;
+    @apply inline-flex items-center gap-1.5 text-sm font-medium text-slate-600 hover:text-slate-900 transition;
   }
 
   .card {
-    @apply rounded-lg border border-slate-200 bg-white p-6 shadow-sm;
+    @apply rounded-xl border border-slate-200 bg-white p-6 shadow-sm;
   }
 
   .portal-surface {
-    @apply border border-slate-300 bg-white shadow-sm;
+    @apply rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden;
   }
 
   .portal-panel {
-    @apply border border-slate-200 bg-slate-50;
+    @apply rounded-lg border border-slate-200 bg-white;
+  }
+
+  .portal-panel-amber {
+    @apply rounded-lg border-l-4 border-l-amber-500 border border-amber-200 bg-amber-50;
+  }
+
+  .portal-panel-blue {
+    @apply rounded-lg border-l-4 border-l-blue-600 border border-blue-200 bg-blue-50;
   }
 
   .portal-button-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-md border border-[#064e3b] bg-[#064e3b] px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#047857];
+    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-[#065f46] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#064e3b] disabled:cursor-not-allowed disabled:opacity-60;
   }
 
   .portal-button-secondary {
-    @apply inline-flex items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:border-[#0c2340] hover:text-[#0c2340];
+    @apply inline-flex items-center justify-center gap-2 rounded-lg border-2 border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50;
   }
 
   .portal-kicker {
-    @apply text-sm font-semibold text-slate-700;
+    @apply text-xs font-bold uppercase tracking-widest text-slate-500;
   }
 
   .portal-page-title {
-    @apply font-display text-2xl font-semibold text-slate-900;
+    @apply font-display text-2xl font-bold text-slate-900;
   }
 
   .portal-page-subtitle {
     @apply mt-1 text-sm text-slate-500;
   }
+
+  /* === Badge variants for portal === */
+  .p-badge {
+    @apply inline-flex items-center rounded-md px-2.5 py-0.5 text-xs font-semibold tracking-wide;
+  }
+  .p-badge-green  { @apply p-badge bg-emerald-600 text-white; }
+  .p-badge-amber  { @apply p-badge bg-amber-500 text-white; }
+  .p-badge-red    { @apply p-badge bg-red-600 text-white; }
+  .p-badge-blue   { @apply p-badge bg-blue-600 text-white; }
+  .p-badge-slate  { @apply p-badge bg-slate-500 text-white; }
+  .p-badge-indigo { @apply p-badge bg-indigo-600 text-white; }
 }

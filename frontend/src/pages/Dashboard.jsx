@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
-  Tooltip, ResponsiveContainer, Cell,
+  Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend,
 } from 'recharts'
 import api from '../lib/api'
 import { formatDate } from '../lib/utils'
@@ -240,29 +240,36 @@ export default function Dashboard() {
   }))
 
   const statCards = [
-    { label: "Today's Cases", value: stats?.todayCases ?? '—', sub: 'Walk-ins today', Icon: FolderIcon, color: 'text-brand-primary' },
-    { label: 'This Week', value: stats?.weekCases ?? '—', sub: 'Cases opened', Icon: ClockIcon, color: 'text-brand-primary' },
-    { label: 'This Month', value: stats?.monthCases ?? '—', sub: 'Total cases', Icon: FolderIcon, color: 'text-brand-primary' },
-    { label: 'Total Clients', value: stats?.totalClients ?? '—', sub: 'In database', Icon: UsersIcon, color: 'text-brand-primary' },
+    { label: "Today's Cases", value: stats?.todayCases ?? '—', sub: 'Walk-ins today', Icon: FolderIcon, variant: 'stat-card-green' },
+    { label: 'This Week', value: stats?.weekCases ?? '—', sub: 'Cases opened this week', Icon: ClockIcon, variant: 'stat-card-blue' },
+    { label: 'This Month', value: stats?.monthCases ?? '—', sub: 'Total cases this month', Icon: FolderIcon, variant: 'stat-card-teal' },
+    { label: 'Total Clients', value: stats?.totalClients ?? '—', sub: 'Registered in database', Icon: UsersIcon, variant: 'stat-card-violet' },
     ...PRIMARY_TYPE_CARDS.map((type) => {
       const meta = getTypeMeta(type)
+      const variantMap = {
+        medicine: 'stat-card-green',
+        medical: 'stat-card-blue',
+        hospital: 'stat-card-violet',
+        burial: 'stat-card-slate',
+        plain: 'stat-card-teal',
+      }
       return {
         label: `${meta.label} Cases`,
         value: typeCounts[type] ?? '—',
         sub: 'Tracked this month',
         Icon: meta.Icon,
-        color: meta.statColor,
+        variant: variantMap[type] || 'stat-card-slate',
       }
     }),
     {
       label: 'Pending Review',
       value: pendingReviewCount,
-      sub: pendingReviewCount > 0 ? 'Needs attention' : 'No pending review',
+      sub: pendingReviewCount > 0 ? 'Needs attention now' : 'No pending cases',
       Icon: ClockIcon,
-      color: pendingReviewCount > 0 ? 'text-red-600' : 'text-brand-primary',
+      variant: pendingReviewCount > 0 ? 'stat-card-red' : 'stat-card-slate',
       alert: pendingReviewCount > 0,
     },
-    { label: 'Pending Intake', value: stats?.pendingRequirements ?? '—', sub: 'Needs case study start', Icon: FolderIcon, color: 'text-red-500' },
+    { label: 'Pending Intake', value: stats?.pendingRequirements ?? '—', sub: 'Awaiting case study start', Icon: FolderIcon, variant: 'stat-card-amber' },
   ]
 
   if (loading) {
@@ -286,44 +293,44 @@ export default function Dashboard() {
         </Link>
       </div>
 
-      <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4 xl:grid-cols-5">
+      {/* Stat cards — colourful icon blocks */}
+      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-5">
         {statCards.map((s) => (
           <div
             key={s.label}
-            className={`card-sm transition-shadow hover:shadow-md flex items-start gap-3 ${
-              s.alert ? 'border-red-200 bg-red-50/70 shadow-[0_0_0_1px_rgba(220,38,38,0.08)]' : ''
-            }`}
+            className={`stat-card ${s.variant}`}
           >
-            <div className={`mt-0.5 rounded-md p-2 shrink-0 ${s.alert ? 'bg-red-100 text-red-600 animate-pulse' : `bg-slate-50 ${s.color}`}`}>
-              <s.Icon className="h-4 w-4" />
+            <div className="stat-card-icon">
+              <s.Icon className="h-5 w-5" />
             </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <p className={`text-xs font-medium ${s.alert ? 'text-red-700' : 'text-slate-500'}`}>{s.label}</p>
-                {s.alert ? <span className="inline-flex h-2.5 w-2.5 rounded-full bg-red-500 animate-ping" /> : null}
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5">
+                <p className="text-xs font-medium text-slate-500 leading-tight">{s.label}</p>
+                {s.alert ? <span className="inline-flex h-2 w-2 rounded-full bg-red-500 animate-ping shrink-0" /> : null}
               </div>
-              <p className={`mt-0.5 text-xl font-display font-bold ${s.color}`}>{s.value}</p>
-              <p className={`text-[11px] ${s.alert ? 'text-red-500 font-medium' : 'text-slate-400'}`}>{s.sub}</p>
+              <p className="mt-1 text-xl font-display font-bold text-slate-800">{s.value}</p>
+              <p className={`text-[10px] mt-0.5 ${s.alert ? 'text-red-500 font-medium' : 'text-slate-400'}`}>{s.sub}</p>
             </div>
           </div>
         ))}
       </div>
 
-      <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+      {/* Queue cards */}
+      <div className="mb-6 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
         {queueCards.map((queue) => (
           <Link
             key={queue.key}
             to={`/cases?${queue.query}`}
-            className="card-sm flex items-center justify-between gap-3 transition-shadow hover:shadow-md"
+            className="queue-card group"
           >
             <div>
-              <p className="text-xs font-medium text-slate-500">Operational Queue</p>
-              <p className="mt-1 text-sm font-semibold text-slate-800">{queue.label}</p>
-              <p className="mt-1 text-[11px] text-slate-400">Open filtered case list</p>
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Operational Queue</p>
+              <p className="mt-1 text-sm font-semibold text-slate-800 group-hover:text-emerald-800 transition-colors">{queue.label}</p>
+              <p className="mt-0.5 text-[11px] text-slate-400">Tap to open filtered list</p>
             </div>
-            <div className={`rounded-xl px-3 py-2 text-right ${queue.color}`}>
-              <p className="text-2xl font-display font-bold">{queue.count}</p>
-              <p className="text-[10px] font-medium uppercase tracking-wide">cases</p>
+            <div className={`rounded-xl px-3 py-2 text-right min-w-[4rem] ${queue.color}`}>
+              <p className="text-2xl font-display font-bold leading-none">{queue.count}</p>
+              <p className="text-[9px] font-semibold uppercase tracking-wide mt-0.5 opacity-70">cases</p>
             </div>
           </Link>
         ))}
@@ -382,79 +389,136 @@ export default function Dashboard() {
           </div>
           <div className="relative transition-opacity">
           <ResponsiveContainer width="100%" height={220}>
-            <AreaChart data={monthlyTrend}>
-              <defs>
-                {activeChartTypes.map((type) => {
-                  const meta = getTypeMeta(type)
-                  return (
-                    <linearGradient key={meta.gradientId} id={meta.gradientId} x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={meta.chartColor} stopOpacity={0.22} />
-                      <stop offset="95%" stopColor={meta.chartColor} stopOpacity={0} />
-                    </linearGradient>
-                  )
-                })}
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-              <YAxis tick={{ fontSize: 11 }} />
-              <Tooltip />
+            <BarChart data={monthlyTrend} barCategoryGap="20%" barGap={2}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
+              <XAxis dataKey="month" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} width={28} />
+              <Tooltip
+                contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e2e8f0', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}
+                cursor={{ fill: 'rgba(0,0,0,0.04)' }}
+              />
               {activeChartTypes.map((type) => {
                 const meta = getTypeMeta(type)
                 return (
-                  <Area
+                  <Bar
                     key={type}
-                    type="monotone"
                     dataKey={type}
                     name={meta.label}
-                    stroke={meta.chartColor}
-                    fill={`url(#${meta.gradientId})`}
-                    strokeWidth={2}
+                    fill={meta.chartColor}
+                    radius={[4, 4, 0, 0]}
+                    maxBarSize={24}
                   />
                 )
               })}
-            </AreaChart>
+            </BarChart>
           </ResponsiveContainer>
           </div>
         </div>
 
-        <div className="card">
-          <h3 className="font-display text-base font-semibold text-slate-800 mb-0.5">Top Barangays</h3>
-          <p className="text-xs text-slate-400 mb-4">Served this month</p>
-          <ResponsiveContainer width="100%" height={220}>
-            <BarChart data={charts?.topBarangays || []} layout="vertical">
-              <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-              <XAxis type="number" tick={{ fontSize: 10 }} />
-              <YAxis dataKey="name" type="category" tick={{ fontSize: 10 }} width={68} />
-              <Tooltip />
-              <Bar dataKey="cases" radius={[0, 4, 4, 0]}>
-                {(charts?.topBarangays || []).map((_, i) => (
-                  <Cell key={i} fill={i === 0 ? '#10b981' : '#0c2340'} fillOpacity={1 - i * 0.12} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+        {/* Top Barangays — pie chart */}
+        <div className="card flex flex-col">
+          <div className="mb-4">
+            <h3 className="font-display text-base font-bold text-slate-800">Top Barangays</h3>
+            <p className="text-xs text-slate-400 mt-0.5">Served this month</p>
+          </div>
+
+          {(() => {
+            const data = charts?.topBarangays || []
+            const total = data.reduce((sum, d) => sum + (d.cases || 0), 0)
+            const PIE_COLORS = ['#10b981', '#3b82f6', '#8b5cf6', '#f59e0b', '#64748b']
+
+            if (data.length === 0) {
+              return <p className="text-center text-xs text-slate-400 py-10">No data available</p>
+            }
+
+            const renderCustomLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
+              if (percent < 0.07) return null
+              const RADIAN = Math.PI / 180
+              const radius = innerRadius + (outerRadius - innerRadius) * 0.55
+              const x = cx + radius * Math.cos(-midAngle * RADIAN)
+              const y = cy + radius * Math.sin(-midAngle * RADIAN)
+              return (
+                <text x={x} y={y} fill="white" textAnchor="middle" dominantBaseline="central"
+                  fontSize={11} fontWeight={700}>
+                  {`${(percent * 100).toFixed(0)}%`}
+                </text>
+              )
+            }
+
+            return (
+              <>
+                <ResponsiveContainer width="100%" height={200}>
+                  <PieChart>
+                    <Pie
+                      data={data}
+                      dataKey="cases"
+                      nameKey="name"
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={90}
+                      innerRadius={48}
+                      paddingAngle={2}
+                      labelLine={false}
+                      label={renderCustomLabel}
+                    >
+                      {data.map((_, i) => (
+                        <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      formatter={(value, name) => [`${value} case${value !== 1 ? 's' : ''}`, name]}
+                      contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e2e8f0' }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+
+                {/* Custom legend */}
+                <div className="mt-3 space-y-1.5">
+                  {data.map((entry, i) => {
+                    const pct = total > 0 ? Math.round((entry.cases / total) * 100) : 0
+                    return (
+                      <div key={entry.name} className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span
+                            className="h-2.5 w-2.5 shrink-0 rounded-full"
+                            style={{ backgroundColor: PIE_COLORS[i % PIE_COLORS.length] }}
+                          />
+                          <span className="text-xs text-slate-600 truncate">{entry.name}</span>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="text-xs font-semibold text-slate-800">{entry.cases}</span>
+                          <span className="w-9 text-right text-[10px] text-slate-400">{pct}%</span>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </>
+            )
+          })()}
         </div>
       </div>
 
+      {/* Recent Cases */}
       <div className="card">
-        <div className="mb-4 flex items-center justify-between">
+        <div className="mb-5 flex items-center justify-between">
           <div>
-            <h3 className="font-display text-base font-semibold text-slate-800">Recent Cases</h3>
-            <p className="text-xs text-slate-400 mt-0.5">Latest activity</p>
+            <h3 className="font-display text-base font-bold text-slate-800">Recent Cases</h3>
+            <p className="text-xs text-slate-400 mt-0.5">Last 6 cases across all types</p>
           </div>
           <Link to="/cases" className="portal-button-secondary text-xs">
             View All <ArrowRightIcon className="h-3.5 w-3.5" />
           </Link>
         </div>
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto -mx-6">
           <table className="w-full">
             <thead>
               <tr>
-                <th className="table-header rounded-tl-lg text-left">Case Number</th>
+                <th className="table-header text-left first:pl-6">Case Number</th>
                 <th className="table-header text-left">Client</th>
                 <th className="table-header text-left">Type</th>
                 <th className="table-header text-left">Status</th>
-                <th className="table-header rounded-tr-lg text-left">Date</th>
+                <th className="table-header text-left last:pr-6">Date</th>
               </tr>
             </thead>
             <tbody>

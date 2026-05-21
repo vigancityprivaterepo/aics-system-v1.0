@@ -17,6 +17,29 @@ const QUEUE_LABEL = {
   blocked_incomplete: 'Blocked / Incomplete',
 }
 
+function workflowApprovalMessages(caseRow) {
+  const approvalSummary = caseRow.approvalSummary || {}
+  const summaries = [
+    approvalSummary.for_review,
+    approvalSummary.recommending_approval,
+    approvalSummary.for_approval,
+  ].filter(Boolean)
+
+  if (caseRow.status === 'recommending_approval') {
+    return summaries.filter((summary) => summary.stage === 'for_review')
+  }
+
+  if (caseRow.status === 'for_approval') {
+    return summaries.filter((summary) => ['for_review', 'recommending_approval'].includes(summary.stage))
+  }
+
+  if (caseRow.status === 'approved' || caseRow.status === 'released' || caseRow.status === 'rejected') {
+    return summaries
+  }
+
+  return []
+}
+
 export default function CaseList() {
   const [searchParams] = useSearchParams()
   const typeParam = searchParams.get('type') ?? ''
@@ -119,13 +142,16 @@ export default function CaseList() {
 
   return (
     <div className="animate-fade-in">
-      {/* Header */}
-      <div className="mb-6 flex items-center justify-between gap-4">
+      {/* Page header */}
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-5">
         <div>
-          <h1 className="portal-page-title">
+          <p className="portal-kicker">
+            {typeParam ? `Cases › ${TYPE_LABEL[typeParam] ?? typeParam}` : 'Case Management'}
+          </p>
+          <h1 className="mt-1 font-display text-2xl font-bold text-slate-900">
             {typeParam ? `${TYPE_LABEL[typeParam] ?? typeParam} Cases` : 'All Cases'}
           </h1>
-          <p className="portal-page-subtitle">{total} case{total !== 1 ? 's' : ''} found</p>
+          <p className="portal-page-subtitle">{total} case{total !== 1 ? 's' : ''} found in total</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <Link to="/documents/verify" className="portal-button-secondary">
@@ -144,7 +170,7 @@ export default function CaseList() {
       </div>
 
       {/* Filters */}
-      <div className="mb-4 flex flex-col gap-3 bg-white border border-slate-200 rounded-lg px-4 py-3">
+      <div className="card mb-4 p-3">
           <div className="flex flex-col gap-3 sm:flex-row">
           <div className="relative flex-1">
             <SearchIcon className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -161,7 +187,6 @@ export default function CaseList() {
               id="case-search"
             />
           </div>
-          {/* Hide type filter when locked from nav */}
           {!typeParam && (
             <select value={filterTypeInput} onChange={(e) => { setLoading(true); setFilterTypeInput(e.target.value); setPage(1) }} className="portal-input w-40" id="filter-type">
               <option value="">All Types</option>
@@ -180,13 +205,13 @@ export default function CaseList() {
             ))}
           </select>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <label className="inline-flex items-center gap-2 text-sm text-slate-600">
-              <input type="checkbox" checked={filterBlocked} onChange={(e) => { setLoading(true); setFilterBlocked(e.target.checked); setPage(1) }} />
+          <div className="flex flex-wrap items-center gap-3 pt-1 border-t border-slate-100 mt-1">
+            <label className="inline-flex items-center gap-2 text-sm text-slate-600 cursor-pointer">
+              <input type="checkbox" checked={filterBlocked} onChange={(e) => { setLoading(true); setFilterBlocked(e.target.checked); setPage(1) }} className="accent-emerald-600" />
               Blocked only
             </label>
-            <label className="inline-flex items-center gap-2 text-sm text-slate-600">
-              <input type="checkbox" checked={filterOverdue} onChange={(e) => { setLoading(true); setFilterOverdue(e.target.checked); setPage(1) }} />
+            <label className="inline-flex items-center gap-2 text-sm text-slate-600 cursor-pointer">
+              <input type="checkbox" checked={filterOverdue} onChange={(e) => { setLoading(true); setFilterOverdue(e.target.checked); setPage(1) }} className="accent-emerald-600" />
               Overdue only
             </label>
             <select value={filterOwner} onChange={(e) => { setLoading(true); setFilterOwner(e.target.value); setPage(1) }} className="portal-input w-40" id="filter-owner">
@@ -198,6 +223,12 @@ export default function CaseList() {
 
       {/* Table */}
       <div className="card p-0 overflow-hidden">
+        <div className="border-b border-slate-100 bg-slate-50/60 px-5 py-3 flex items-center justify-between">
+          <p className="text-sm font-semibold text-slate-700">
+            {typeParam ? `${TYPE_LABEL[typeParam] ?? typeParam} Cases` : 'All Cases'}
+          </p>
+          <p className="text-xs text-slate-400">{total} result{total !== 1 ? 's' : ''}</p>
+        </div>
         {loading ? (
           <div className="flex justify-center py-16">
             <div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-green border-t-transparent" />
@@ -223,7 +254,9 @@ export default function CaseList() {
               </tr>
             </thead>
             <tbody>
-              {cases.map((c) => (
+              {cases.map((c) => {
+                const approvalMessages = workflowApprovalMessages(c)
+                return (
                 <tr key={c.id} className="table-row">
                   <td className="table-cell">
                     <Link to={`/cases/${c.id}`} className="font-mono text-xs font-bold text-brand-primary hover:underline">
@@ -255,6 +288,22 @@ export default function CaseList() {
                         {QUEUE_LABEL[c.queue] || c.queue}
                       </span>
                       <p className="text-[11px] text-slate-500">{c.nextAction}</p>
+                      {approvalMessages.map((summary) => {
+                        const verb =
+                          summary.action === 'rejected'
+                            ? 'rejected'
+                            : summary.stage === 'for_review'
+                              ? 'reviewed'
+                              : summary.stage === 'recommending_approval'
+                                ? 'recommended'
+                                : 'approved'
+
+                        return (
+                          <p key={`${c.id}-${summary.stage}`} className="text-[11px] text-slate-600">
+                            {summary.actorName} {verb} this application on {formatDate(summary.actedAt)}.
+                          </p>
+                        )
+                      })}
                       <div className="flex flex-wrap items-center gap-2 text-[10px]">
                         {c.isBlocked ? <span className="text-red-600 font-medium">{c.blockers?.length || 0} blocker(s)</span> : null}
                         {c.overdue ? <span className="text-amber-600 font-medium">Overdue</span> : null}
@@ -283,7 +332,8 @@ export default function CaseList() {
                     </div>
                   </td>
                 </tr>
-              ))}
+                )
+              })}
             </tbody>
           </table>
         )}

@@ -3,7 +3,7 @@ import StepCaseStudy from './StepCaseStudy'
 import ApprovalHierarchy from './ApprovalHierarchy'
 
 const EDITABLE_STATUSES = ['encoding', 'for_review', 'recommending_approval', 'for_approval']
-const APPROVAL_STATUSES = ['for_review', 'recommending_approval', 'for_approval']
+const APPROVAL_STATUSES = ['for_review', 'recommending_approval', 'for_approval', 'approved', 'released', 'rejected']
 const LOCKED_STATUSES = ['intake']
 
 export default function TabCaseStudy() {

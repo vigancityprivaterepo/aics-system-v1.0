@@ -74,13 +74,16 @@ export default function ApplicantAccountsPage() {
 
   return (
     <div className="animate-fade-in">
-      <div className="mb-6">
-        <p className="portal-kicker">Administration</p>
-        <h1 className="portal-page-title">Applicant Accounts</h1>
-        <p className="portal-page-subtitle">Review and delete applicant portal accounts managed by the admin office.</p>
+      {/* Page header */}
+      <div className="mb-6 flex flex-wrap items-start justify-between gap-4 border-b border-slate-200 pb-5">
+        <div>
+          <p className="portal-kicker">Administration</p>
+          <h1 className="mt-1 font-display text-2xl font-bold text-slate-900">Applicant Accounts</h1>
+          <p className="portal-page-subtitle">Review and manage applicant portal accounts.</p>
+        </div>
       </div>
 
-      <section className="card mb-4">
+      <section className="card mb-4 p-3">
         <div className="relative">
           <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <input
@@ -97,6 +100,11 @@ export default function ApplicantAccountsPage() {
       </section>
 
       <section className="card p-0 overflow-hidden">
+        {/* section header accent */}
+        <div className="border-b border-slate-100 bg-slate-50/60 px-5 py-3 flex items-center justify-between">
+          <p className="text-sm font-semibold text-slate-700">Portal Accounts</p>
+          <p className="text-xs text-slate-400">{total} account{total === 1 ? '' : 's'}</p>
+        </div>
         {loading ? (
           <div className="flex justify-center py-16">
             <div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-green border-t-transparent" />

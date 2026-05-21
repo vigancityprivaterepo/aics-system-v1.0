@@ -16,6 +16,32 @@ import { generateFindingsSchema, updateCaseSchema } from '../schemas/caseSchemas
 import { statusToApprovalStage } from '../services/approvalService.js'
 import { auditLog } from '../utils/auditLog.js'
 
+function formatApprovalSummary(stage: 'for_review' | 'recommending_approval' | 'for_approval', approval: {
+  actedByName: string | null
+  actedAt: Date | null
+  action: 'approved' | 'rejected'
+} | null) {
+  if (!approval?.actedAt || !approval?.actedByName) return null
+
+  const verb =
+    stage === 'for_review'
+      ? approval.action === 'rejected' ? 'rejected' : 'reviewed'
+      : stage === 'recommending_approval'
+        ? approval.action === 'rejected' ? 'rejected' : 'recommended this application'
+        : approval.action === 'rejected' ? 'rejected' : 'approved this application'
+
+  return {
+    stage,
+    actorName: approval.actedByName,
+    actedAt: approval.actedAt.toISOString(),
+    action: approval.action,
+    message:
+      stage === 'for_review'
+        ? `${approval.actedByName} ${verb} this application on ${approval.actedAt.toISOString().slice(0, 10)}.`
+        : `${approval.actedByName} ${verb} on ${approval.actedAt.toISOString().slice(0, 10)}.`,
+  }
+}
+
 export async function listCases(req: Request, res: Response) {
   if (!req.user) throw new HttpError(401, 'Unauthorized')
 
@@ -69,6 +95,15 @@ export async function listCases(req: Request, res: Response) {
             id: true,
           },
         },
+        approvals: {
+          orderBy: { actedAt: 'asc' },
+          select: {
+            stage: true,
+            action: true,
+            actedAt: true,
+            actedByName: true,
+          },
+        },
         statusLogs: {
           orderBy: { changedAt: 'desc' },
           take: 1,
@@ -81,6 +116,12 @@ export async function listCases(req: Request, res: Response) {
 
   const hydratedCases = cases.map((c) => {
     const workflow = assessCaseWorkflow(c, assigneesByStage)
+    const approvalsByStage = new Map((c.approvals ?? []).map((approval) => [approval.stage, approval]))
+    const reviewedSummary = formatApprovalSummary('for_review', approvalsByStage.get('for_review') as any ?? null)
+    const recommendedSummary = formatApprovalSummary('recommending_approval', approvalsByStage.get('recommending_approval') as any ?? null)
+    const approvedSummary = formatApprovalSummary('for_approval', approvalsByStage.get('for_approval') as any ?? null)
+    const latestApprovalSummary = approvedSummary ?? recommendedSummary ?? reviewedSummary ?? null
+
     return {
       id: c.id,
       caseNumber: (c as any).caseNumber ?? null,
@@ -97,6 +138,12 @@ export async function listCases(req: Request, res: Response) {
       dateOfAssessment: c.dateOfAssessment?.toISOString().slice(0, 10) ?? null,
       amount: currencyFromDb(c.amount),
       createdAt: c.createdAt,
+      approvalSummary: {
+        latest: latestApprovalSummary,
+        for_review: reviewedSummary,
+        recommending_approval: recommendedSummary,
+        for_approval: approvedSummary,
+      },
       ...workflow,
       workflow,
     }

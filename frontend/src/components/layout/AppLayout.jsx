@@ -27,7 +27,7 @@ function SectionLabel({ children }) {
   return (
     <p
       aria-hidden="true"
-      className="px-3 pt-5 pb-1.5 text-[10px] font-semibold text-white/35 select-none tracking-wide"
+      className="px-3 pt-6 pb-2 text-[9px] font-bold uppercase tracking-[0.15em] text-white/30 select-none"
     >
       {children}
     </p>
@@ -42,11 +42,11 @@ function NavItem({ to, Icon, label, onClick, end = false }) {
       end={end}
       onClick={onClick}
       className={({ isActive }) =>
-        `flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors outline-none
+        `flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150 outline-none
         focus-visible:ring-2 focus-visible:ring-emerald-400 ${
           isActive
-            ? 'bg-white/10 text-white border-l-2 border-white'
-            : 'text-white/60 hover:bg-white/8 hover:text-white/90 border-l-2 border-transparent'
+            ? 'bg-emerald-400/15 text-white shadow-sm'
+            : 'text-white/55 hover:bg-white/8 hover:text-white'
         }`
       }
     >
@@ -63,11 +63,11 @@ function NavItemWithBadge({ to, Icon, label, onClick, badge = 0, end = false }) 
       end={end}
       onClick={onClick}
       className={({ isActive }) =>
-        `flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors outline-none
+        `flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150 outline-none
         focus-visible:ring-2 focus-visible:ring-emerald-400 ${
           isActive
-            ? 'bg-white/10 text-white border-l-2 border-white'
-            : 'text-white/60 hover:bg-white/8 hover:text-white/90 border-l-2 border-transparent'
+            ? 'bg-emerald-400/15 text-white shadow-sm'
+            : 'text-white/55 hover:bg-white/8 hover:text-white'
         }`
       }
     >
@@ -124,11 +124,11 @@ function CasesGroup({ onNavigate, pendingByType = {} }) {
                 to={`/cases?type=${child.type}`}
                 onClick={onNavigate}
                 aria-current={isActive ? 'page' : undefined}
-                className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors
-                  outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 border-l-2 ${
+                className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150
+                  outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 ${
                   isActive
-                    ? 'bg-white/10 text-white border-white'
-                    : 'text-white/60 hover:bg-white/8 hover:text-white/90 border-transparent'
+                    ? 'bg-emerald-400/15 text-white shadow-sm'
+                    : 'text-white/55 hover:bg-white/8 hover:text-white'
                 }`}
               >
                 <child.Icon className="h-4 w-4 shrink-0" />
@@ -165,11 +165,11 @@ function DatabaseGroup({ onNavigate }) {
         onClick={() => setOpen((current) => !current)}
         aria-expanded={open}
         aria-controls="database-submenu"
-        className={`flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors outline-none
-          focus-visible:ring-2 focus-visible:ring-emerald-400 border-l-2 ${
+        className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150 outline-none
+          focus-visible:ring-2 focus-visible:ring-emerald-400 ${
           isDatabaseRoute
-            ? 'bg-white/10 text-white border-white'
-            : 'text-white/60 hover:bg-white/8 hover:text-white/90 border-transparent'
+            ? 'bg-emerald-400/15 text-white shadow-sm'
+            : 'text-white/55 hover:bg-white/8 hover:text-white'
         }`}
       >
         <DatabaseIcon className="h-4 w-4 shrink-0" />
@@ -184,11 +184,11 @@ function DatabaseGroup({ onNavigate }) {
               to="/medicines"
               onClick={onNavigate}
               className={({ isActive }) =>
-                `flex items-center gap-3 rounded-md py-2 pr-3 pl-8 text-sm font-medium transition-colors outline-none
-                focus-visible:ring-2 focus-visible:ring-emerald-400 border-l-2 ${
+                `flex items-center gap-2.5 rounded-lg py-2 pr-3 pl-8 text-sm font-medium transition-all duration-150 outline-none
+                focus-visible:ring-2 focus-visible:ring-emerald-400 ${
                   isActive
-                    ? 'bg-white/10 text-white border-white'
-                    : 'text-white/60 hover:bg-white/8 hover:text-white/90 border-transparent'
+                    ? 'bg-emerald-400/15 text-white shadow-sm'
+                    : 'text-white/55 hover:bg-white/8 hover:text-white'
                 }`
               }
             >
@@ -199,11 +199,11 @@ function DatabaseGroup({ onNavigate }) {
               to="/hospitals"
               onClick={onNavigate}
               className={({ isActive }) =>
-                `flex items-center gap-3 rounded-md py-2 pr-3 pl-8 text-sm font-medium transition-colors outline-none
-                focus-visible:ring-2 focus-visible:ring-emerald-400 border-l-2 ${
+                `flex items-center gap-2.5 rounded-lg py-2 pr-3 pl-8 text-sm font-medium transition-all duration-150 outline-none
+                focus-visible:ring-2 focus-visible:ring-emerald-400 ${
                   isActive
-                    ? 'bg-white/10 text-white border-white'
-                    : 'text-white/60 hover:bg-white/8 hover:text-white/90 border-transparent'
+                    ? 'bg-emerald-400/15 text-white shadow-sm'
+                    : 'text-white/55 hover:bg-white/8 hover:text-white'
                 }`
               }
             >
@@ -214,11 +214,11 @@ function DatabaseGroup({ onNavigate }) {
               to="/funeral-homes"
               onClick={onNavigate}
               className={({ isActive }) =>
-                `flex items-center gap-3 rounded-md py-2 pr-3 pl-8 text-sm font-medium transition-colors outline-none
-                focus-visible:ring-2 focus-visible:ring-emerald-400 border-l-2 ${
+                `flex items-center gap-2.5 rounded-lg py-2 pr-3 pl-8 text-sm font-medium transition-all duration-150 outline-none
+                focus-visible:ring-2 focus-visible:ring-emerald-400 ${
                   isActive
-                    ? 'bg-white/10 text-white border-white'
-                    : 'text-white/60 hover:bg-white/8 hover:text-white/90 border-transparent'
+                    ? 'bg-emerald-400/15 text-white shadow-sm'
+                    : 'text-white/55 hover:bg-white/8 hover:text-white'
                 }`
               }
             >
@@ -338,23 +338,23 @@ export default function AppLayout() {
 
       {/* ── Sidebar ── */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-60 flex-col
-          bg-[#064e3b]
+        className={`fixed inset-y-0 left-0 z-50 flex w-62 flex-col
+          bg-[#053d2e]
           transition-transform duration-300 ease-in-out
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
           md:translate-x-0`}
+        style={{ width: '15rem' }}
       >
-        {/* Logo */}
-        <div className="flex items-center gap-3 px-4 py-4 border-b border-white/10 shrink-0">
-          <img src={logo} alt="AICS Logo" className="h-9 w-9 shrink-0 rounded-full object-contain" />
+        {/* Logo area */}
+        <div className="flex items-center gap-3 px-4 py-4 shrink-0" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/20">
+            <img src={logo} alt="AICS Logo" className="h-7 w-7 rounded-lg object-contain" />
+          </div>
           <div className="min-w-0">
-            <p className="text-[10px] text-emerald-300/80 leading-tight">
-              Republic of the Philippines
+            <p className="font-display text-[13px] font-bold text-white leading-tight truncate">
+              Vigan AICS
             </p>
-            <p className="font-display text-sm font-bold text-white leading-tight truncate">
-              Vigan — AICS
-            </p>
-            <p className="text-[10px] text-white/40 leading-tight truncate">
+            <p className="text-[10px] text-emerald-400/70 leading-tight truncate">
               Case Management System
             </p>
           </div>
@@ -370,10 +370,10 @@ export default function AppLayout() {
         />
 
         {/* User + Logout */}
-        <div className="shrink-0 border-t border-white/10 px-4 py-4 space-y-2">
+        <div className="shrink-0 px-3 py-3 space-y-1.5" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
           <button
             onClick={() => setProfileOpen(true)}
-            className="w-full rounded-md px-3 py-2.5 hover:bg-white/10 transition-colors
+            className="w-full rounded-xl px-3 py-2.5 hover:bg-white/8 transition-colors text-left
               outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
           >
             <div className="flex items-center gap-2.5">
@@ -381,7 +381,7 @@ export default function AppLayout() {
                 <img
                   src={user.photoUrl}
                   alt={user?.name || 'User'}
-                  className="h-10 w-10 rounded-full border border-white/20 object-cover"
+                  className="h-9 w-9 rounded-full border-2 border-white/15 object-cover"
                   onError={(e) => {
                     e.currentTarget.style.display = 'none'
                     const sibling = e.currentTarget.nextElementSibling
@@ -389,24 +389,23 @@ export default function AppLayout() {
                   }}
                 />
               ) : null}
-              <div className={`${user?.photoUrl ? 'hidden' : ''} h-10 w-10 rounded-full border border-white/20 bg-white/10 text-white text-xs font-bold flex items-center justify-center`}>
+              <div className={`${user?.photoUrl ? 'hidden' : ''} h-9 w-9 shrink-0 rounded-full border-2 border-emerald-500/30 bg-emerald-500/20 text-emerald-300 text-xs font-bold flex items-center justify-center`}>
                 {initials}
               </div>
-              <div className="min-w-0 text-left">
-                <p className="text-[10px] font-medium text-emerald-300/80">{roleLabel}</p>
-                <p className="text-sm font-medium text-white truncate">{user?.name || 'User'}</p>
-                <p className="text-[10px] text-white/40 mt-0.5">View profile</p>
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-white truncate">{user?.name || 'User'}</p>
+                <p className="text-[10px] text-emerald-400/60 truncate">{roleLabel}</p>
               </div>
             </div>
           </button>
           <button
             onClick={handleLogout}
-            className="flex w-full items-center gap-2 rounded-lg border border-white/15 bg-white/5
-              px-3 py-2 text-sm text-white/80 transition-colors hover:bg-white/15 hover:text-white
+            className="flex w-full items-center gap-2 rounded-lg px-3 py-2
+              text-xs text-white/50 transition-colors hover:bg-white/8 hover:text-white/80
               outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
           >
-            <LogoutIcon className="h-4 w-4" />
-            Sign Out
+            <LogoutIcon className="h-3.5 w-3.5" />
+            Sign out
           </button>
         </div>
       </aside>
@@ -414,7 +413,27 @@ export default function AppLayout() {
       <MyProfileModal isOpen={profileOpen} onClose={() => setProfileOpen(false)} />
 
       {/* ── Main area ── */}
-      <div className="flex flex-1 flex-col md:ml-60">
+      <div className="flex flex-1 flex-col" style={{ marginLeft: '15rem' }}>
+
+        {/* Desktop sticky top bar */}
+        <header className="sticky top-0 z-30 hidden md:flex items-center justify-between gap-4
+          border-b border-slate-200 bg-white/95 backdrop-blur-sm px-6 py-3 shadow-sm">
+          <div className="flex items-center gap-2 text-sm text-slate-500">
+            <span className="font-semibold text-emerald-800">Vigan AICS</span>
+            <span className="text-slate-300">/</span>
+            <span className="text-slate-600">Case Management System</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-slate-400">{new Date().toLocaleDateString('en-PH', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}</span>
+            <button
+              onClick={() => setProfileOpen(true)}
+              className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 pl-2 pr-3 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:bg-emerald-50 hover:border-emerald-200 hover:text-emerald-800"
+            >
+              <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-emerald-600 text-[9px] font-bold text-white">{initials}</span>
+              {user?.name?.split(' ')[0] || 'User'}
+            </button>
+          </div>
+        </header>
 
         {/* Mobile top bar */}
         <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-slate-200
@@ -427,8 +446,8 @@ export default function AppLayout() {
             <MenuIcon className="h-5 w-5" />
           </button>
           <div className="flex items-center gap-2">
-            <img src={logo} alt="AICS Logo" className="h-4 w-4 object-contain" />
-            <span className="font-display text-sm font-bold text-emerald-800">AICS CMS</span>
+            <img src={logo} alt="AICS Logo" className="h-5 w-5 object-contain" />
+            <span className="font-display text-sm font-bold text-emerald-800">Vigan AICS</span>
           </div>
         </header>
 
