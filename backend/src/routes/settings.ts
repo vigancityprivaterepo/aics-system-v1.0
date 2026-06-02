@@ -4,9 +4,15 @@ import { prisma } from '../utils/prisma.js'
 import { asyncHandler } from '../utils/asyncHandler.js'
 import { requireRole } from '../middleware/auth.js'
 import { HttpError } from '../utils/httpError.js'
+import { createBackup, getBackupFile, listBackups, restoreBackup } from '../services/backupService.js'
 
 const router = Router()
 const APPROVAL_LEVEL_VALUES = ['reviewer', 'recommender', 'approver'] as const
+const adminOnly = requireRole(['admin'])
+
+function paramValue(value: string | string[] | undefined) {
+  return Array.isArray(value) ? (value[0] ?? '') : (value ?? '')
+}
 
 function parseApprovalLevels(stored: string | null | undefined): string[] {
   if (!stored || stored === 'none') return []
@@ -89,6 +95,28 @@ router.put('/', requireRole(['admin']), asyncHandler(async (req, res) => {
     },
   })
   res.json(settings)
+}))
+
+router.get('/backups', adminOnly, asyncHandler(async (_req, res) => {
+  res.json({
+    backups: await listBackups(),
+  })
+}))
+
+router.post('/backups', adminOnly, asyncHandler(async (_req, res) => {
+  const backup = await createBackup()
+  res.status(201).json(backup)
+}))
+
+router.get('/backups/:filename/download', adminOnly, asyncHandler(async (req, res) => {
+  const filename = paramValue(req.params.filename)
+  const filePath = await getBackupFile(filename)
+  res.download(filePath, filename)
+}))
+
+router.post('/backups/:filename/restore', adminOnly, asyncHandler(async (req, res) => {
+  await restoreBackup(paramValue(req.params.filename))
+  res.json({ ok: true })
 }))
 
 export default router

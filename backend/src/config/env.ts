@@ -63,6 +63,7 @@ export const env = {
   burialGlMaxAmount: Number(process.env.BURIAL_GL_MAX_AMOUNT ?? 10000),
   hospitalGlMaxAmount: Number(process.env.HOSPITAL_GL_MAX_AMOUNT ?? 10000),
   uploadsRoot: process.env.UPLOAD_ROOT ?? 'uploads',
+  backupsRoot: process.env.BACKUPS_ROOT ?? 'backups',
   portalJwtSecret,
   portalJwtExpiresIn: process.env.PORTAL_JWT_EXPIRES_IN ?? '30d',
   documentVerifySecret,
