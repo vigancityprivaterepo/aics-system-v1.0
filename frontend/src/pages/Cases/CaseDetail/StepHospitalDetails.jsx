@@ -1,15 +1,16 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
 import api from '../../../lib/api'
 import { HospitalIcon } from '../../../components/ui/Icons'
+import HospitalFacilityPicker from '../../../components/HospitalFacilityPicker'
 import { formatCurrency } from '../../../lib/utils'
 
 const GL_MAX = 10000
 
 export default function StepHospitalDetails({ caseData, onUpdate }) {
   const [saving, setSaving] = useState(false)
-  const { register, handleSubmit, watch } = useForm({
+  const { register, handleSubmit, watch, setValue } = useForm({
     defaultValues: {
       templateType: caseData.hospitalDetails?.templateType || 'personal',
       patientName: caseData.hospitalDetails?.patientName || '',
@@ -30,19 +31,24 @@ export default function StepHospitalDetails({ caseData, onUpdate }) {
   const parsedAmount = Number(amount)
   const isOverCap = Number.isFinite(parsedAmount) && parsedAmount > GL_MAX
 
+  const handleFacilitySelect = (facility) => {
+    const address = facility.fullAddress || [facility.municipality, facility.province].filter(Boolean).join(', ')
+    setValue('hospitalName', facility.facilityName || '', { shouldDirty: true, shouldTouch: true })
+    setValue('hospitalAddress', address, { shouldDirty: true, shouldTouch: true })
+  }
   const onSave = async (data) => {
     setSaving(true)
     try {
       const res = await api.put(`/cases/${caseData.id}/hospital`, data)
-      onUpdate({ hospitalDetails: res.data, amount: res.data?.amount ?? data.amount })
-      toast.success('Hospital details saved')
+      onUpdate({ hospitalDetails: res.data, amount: res.data?.amount ?? data.amount, status: res.data?.status ?? caseData.status })
+      toast.success(res.data?.approvalsReset ? 'Hospital details saved. Case returned to encoding for re-review.' : 'Hospital details saved')
     } catch (err) {
       if (err.response) {
         toast.error(err.response?.data?.message || 'Failed to save hospital details')
         return
       }
       onUpdate({ hospitalDetails: data, amount: data.amount })
-      toast.success('Saved (demo mode)')
+      toast.error(err.response?.data?.message || 'Failed to save changes')
     } finally {
       setSaving(false)
     }
@@ -76,9 +82,7 @@ export default function StepHospitalDetails({ caseData, onUpdate }) {
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {/* Sub-section: Patient & Admission Info */}
-          <div className="sm:col-span-2 mt-2 mb-1 flex items-center gap-2 border-b border-slate-150 pb-2">
-            <span className="text-base">👤</span>
-            <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Patient &amp; Admission Info</p>
+          <div className="sm:col-span-2 mt-2 mb-1 flex items-center gap-2 border-b border-slate-150 pb-2"><p className="text-xs font-bold uppercase tracking-wider text-slate-500">Patient &amp; Admission Info</p>
           </div>
 
           <div className="sm:col-span-2">
@@ -95,14 +99,17 @@ export default function StepHospitalDetails({ caseData, onUpdate }) {
           </div>
 
           {/* Sub-section: Hospital & Physician Details */}
-          <div className="sm:col-span-2 mt-4 mb-1 flex items-center gap-2 border-b border-slate-150 pb-2">
-            <span className="text-base">🏥</span>
-            <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Hospital &amp; Physician Details</p>
+          <div className="sm:col-span-2 mt-4 mb-1 flex items-center gap-2 border-b border-slate-150 pb-2"><p className="text-xs font-bold uppercase tracking-wider text-slate-500">Hospital &amp; Physician Details</p>
           </div>
 
           <div>
             <label className="portal-label">Hospital / Facility Name *</label>
-            <input type="text" {...register('hospitalName')} className="portal-input" placeholder="Name of the hospital" />
+            <HospitalFacilityPicker
+              value={watch('hospitalName')}
+              onChange={(value) => setValue('hospitalName', value, { shouldDirty: true, shouldTouch: true })}
+              onSelect={handleFacilitySelect}
+              placeholder="Search hospital or facility..."
+            />
           </div>
           <div>
             <label className="portal-label">Hospital Address</label>
@@ -122,9 +129,7 @@ export default function StepHospitalDetails({ caseData, onUpdate }) {
           </div>
 
           {/* Sub-section: Representative & Conforme */}
-          <div className="sm:col-span-2 mt-4 mb-1 flex items-center gap-2 border-b border-slate-150 pb-2">
-            <span className="text-base">👥</span>
-            <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Representative &amp; Conforme</p>
+          <div className="sm:col-span-2 mt-4 mb-1 flex items-center gap-2 border-b border-slate-150 pb-2"><p className="text-xs font-bold uppercase tracking-wider text-slate-500">Representative &amp; Conforme</p>
           </div>
 
           <div>
@@ -137,17 +142,14 @@ export default function StepHospitalDetails({ caseData, onUpdate }) {
           </div>
 
           {/* Sub-section: Financial Assistance */}
-          <div className="sm:col-span-2 mt-4 mb-1 flex items-center gap-2 border-b border-slate-150 pb-2">
-            <span className="text-base">💵</span>
-            <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Financial Assistance</p>
+          <div className="sm:col-span-2 mt-4 mb-1 flex items-center gap-2 border-b border-slate-150 pb-2"><p className="text-xs font-bold uppercase tracking-wider text-slate-500">Financial Assistance</p>
           </div>
 
           <div>
             <label className="portal-label">Guarantee Letter Amount (PHP) *</label>
             <input type="number" min="0" step="any" {...register('amount')} className="portal-input" placeholder="0.00" />
             {isOverCap && (
-              <p className="mt-1 text-xs text-amber-600">
-                ⚠ Amount exceeds the maximum cap of {formatCurrency(GL_MAX)} per DSWD MC.
+              <p className="mt-1 text-xs text-amber-600">                Amount exceeds the maximum cap of {formatCurrency(GL_MAX)} per DSWD MC.
               </p>
             )}
           </div>
@@ -162,3 +164,4 @@ export default function StepHospitalDetails({ caseData, onUpdate }) {
     </div>
   )
 }
+

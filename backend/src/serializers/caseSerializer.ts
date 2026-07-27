@@ -1,4 +1,4 @@
-import type { ApprovalStage } from '@prisma/client'
+﻿import type { ApprovalStage } from '@prisma/client'
 import { APPROVAL_STAGE_ORDER, APPROVAL_STAGE_META, type ApprovalAssigneeByStage } from '../types/caseTypes.js'
 import { approvalActorTitle } from '../services/approvalService.js'
 import { assessCaseWorkflow } from '../services/caseWorkflowService.js'
@@ -109,7 +109,6 @@ export function serializeCase(caseRow: any, assigneesByStage?: ApprovalAssigneeB
     caseRow.client.barangay,
     caseRow.client.municipality,
     caseRow.client.province,
-    caseRow.client.region,
   ]
     .filter(Boolean)
     .join(', ')
@@ -133,7 +132,7 @@ export function serializeCase(caseRow: any, assigneesByStage?: ApprovalAssigneeB
     caseNumber: caseRow.caseNumber ?? null,
     assistanceType: caseRow.assistanceType,
     status: normalizeWorkflowStatus(caseRow.status),
-    socialWorkerName: caseRow.socialWorkerName,
+    socialWorkerName: caseRow.socialWorkerName ?? caseRow.socialWorker?.name ?? null,
     dateOfAssessment: caseRow.dateOfAssessment?.toISOString().slice(0, 10) ?? null,
     presentingProblem: caseRow.presentingProblem,
     familyComposition: caseRow.familyComposition ?? [],
@@ -201,6 +200,11 @@ export function serializeCase(caseRow: any, assigneesByStage?: ApprovalAssigneeB
           guaranteeLetterUrl: caseRow.burialDetails.guaranteeLetterUrl,
           signedGlUrl: caseRow.burialDetails.signedGlUrl,
           glUploadedAt: caseRow.burialDetails.glUploadedAt,
+          openSignDocumentId: caseRow.burialDetails.openSignDocumentId ?? null,
+          openSignStatus: caseRow.burialDetails.openSignStatus ?? null,
+          openSignSignUrl: caseRow.burialDetails.openSignSignUrl ?? null,
+          openSignSentAt: caseRow.burialDetails.openSignSentAt ?? null,
+          openSignSignedAt: caseRow.burialDetails.openSignSignedAt ?? null,
         }
       : null,
     hospitalDetails: caseRow.hospitalDetails
@@ -220,6 +224,11 @@ export function serializeCase(caseRow: any, assigneesByStage?: ApprovalAssigneeB
           guaranteeLetterUrl: caseRow.hospitalDetails.guaranteeLetterUrl ?? null,
           signedGlUrl: caseRow.hospitalDetails.signedGlUrl ?? null,
           glUploadedAt: caseRow.hospitalDetails.glUploadedAt ?? null,
+          openSignDocumentId: caseRow.hospitalDetails.openSignDocumentId ?? null,
+          openSignStatus: caseRow.hospitalDetails.openSignStatus ?? null,
+          openSignSignUrl: caseRow.hospitalDetails.openSignSignUrl ?? null,
+          openSignSentAt: caseRow.hospitalDetails.openSignSentAt ?? null,
+          openSignSignedAt: caseRow.hospitalDetails.openSignSignedAt ?? null,
         }
       : null,
     medicalDetails: caseRow.medicalDetails
@@ -241,6 +250,11 @@ export function serializeCase(caseRow: any, assigneesByStage?: ApprovalAssigneeB
           guaranteeLetterUrl: caseRow.medicalDetails.guaranteeLetterUrl ?? null,
           signedGlUrl: caseRow.medicalDetails.signedGlUrl ?? null,
           glUploadedAt: caseRow.medicalDetails.glUploadedAt ?? null,
+          openSignDocumentId: caseRow.medicalDetails.openSignDocumentId ?? null,
+          openSignStatus: caseRow.medicalDetails.openSignStatus ?? null,
+          openSignSignUrl: caseRow.medicalDetails.openSignSignUrl ?? null,
+          openSignSentAt: caseRow.medicalDetails.openSignSentAt ?? null,
+          openSignSignedAt: caseRow.medicalDetails.openSignSignedAt ?? null,
         }
       : null,
     eyeglassDetails: caseRow.eyeglassDetails
@@ -255,6 +269,11 @@ export function serializeCase(caseRow: any, assigneesByStage?: ApprovalAssigneeB
           guaranteeLetterUrl: caseRow.eyeglassDetails.guaranteeLetterUrl ?? null,
           signedGlUrl: caseRow.eyeglassDetails.signedGlUrl ?? null,
           glUploadedAt: caseRow.eyeglassDetails.glUploadedAt ?? null,
+          openSignDocumentId: caseRow.eyeglassDetails.openSignDocumentId ?? null,
+          openSignStatus: caseRow.eyeglassDetails.openSignStatus ?? null,
+          openSignSignUrl: caseRow.eyeglassDetails.openSignSignUrl ?? null,
+          openSignSentAt: caseRow.eyeglassDetails.openSignSentAt ?? null,
+          openSignSignedAt: caseRow.eyeglassDetails.openSignSignedAt ?? null,
         }
       : null,
     plainDetails: caseRow.plainDetails
@@ -300,3 +319,7 @@ export function serializeCase(caseRow: any, assigneesByStage?: ApprovalAssigneeB
 export type SerializedCase = ReturnType<typeof serializeCase>
 
 export { portalContextFromAuditFlags, normalizeWorkflowStatus, mapRequirements, APPROVAL_STAGE_META, APPROVAL_STAGE_ORDER }
+
+
+
+

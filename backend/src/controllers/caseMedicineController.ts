@@ -4,6 +4,7 @@ import { prisma } from '../utils/prisma.js'
 import { HttpError } from '../utils/httpError.js'
 import { assertCaseReadable, assertEditableCase, paramId } from '../services/caseService.js'
 import { saveMedicinesSchema } from '../schemas/caseSchemas.js'
+import { resetApprovalsAfterMaterialEdit, valuesDiffer } from '../services/workflowIntegrityService.js'
 
 export async function getMedicines(req: Request, res: Response) {
   const caseId = paramId(req.params.id)
@@ -27,7 +28,7 @@ export async function getMedicines(req: Request, res: Response) {
 
 export async function saveMedicines(req: Request, res: Response) {
   const caseId = paramId(req.params.id)
-  const { medicines } = saveMedicinesSchema.parse(req.body)
+  const { medicines, amount } = saveMedicinesSchema.parse(req.body)
 
   const caseData = await prisma.case.findUnique({ where: { id: caseId } })
   if (!caseData) throw new HttpError(404, 'Case not found')
@@ -35,27 +36,42 @@ export async function saveMedicines(req: Request, res: Response) {
   if (caseData.assistanceType !== 'medicine') throw new HttpError(400, 'Only medicine cases can store medicines')
 
   const normalized = medicines.map((m) => {
-    const quantity = Number(m.quantity)
-    const unitPrice = Number(m.unitPrice)
+    const quantity = Number(m.quantity || 1)
+    const unitPrice = Number(m.unitPrice || 0)
     const calculated = Number(m.totalPrice ?? quantity * unitPrice)
     return { medicineId: m.medicineId ?? null, medicineName: m.medicineName, quantity, unit: m.unit ?? null, unitPrice, totalPrice: calculated }
   })
 
-  const totalAmount = normalized.reduce((sum, m) => sum + m.totalPrice, 0)
+  const existingItems = await prisma.caseMedicine.findMany({ where: { caseId: caseData.id }, orderBy: { createdAt: 'asc' } })
+  const currentNormalized = existingItems.map((item) => ({
+    medicineId: item.medicineId ?? null,
+    medicineName: item.medicineName,
+    quantity: Number(item.quantity),
+    unit: item.unit ?? null,
+    unitPrice: Number(item.unitPrice),
+    totalPrice: Number(item.totalPrice),
+  }))
+
+  const sumTotal = normalized.reduce((sum, m) => sum + m.totalPrice, 0)
+  const finalTotalAmount = amount != null && amount !== '' ? Number(amount) : sumTotal
+  const changedFields: string[] = []
+  if (valuesDiffer(currentNormalized, normalized)) changedFields.push('medicines')
+  if (valuesDiffer(caseData.amount == null ? null : Number(caseData.amount), finalTotalAmount)) changedFields.push('amount')
+
   const existingAuditFlags =
     typeof caseData.auditFlags === 'object' && caseData.auditFlags && !Array.isArray(caseData.auditFlags)
       ? (caseData.auditFlags as Record<string, unknown>)
       : {}
   const mergedAuditFlags: Record<string, unknown> = {
     ...existingAuditFlags,
-    manual_amount_override: false,
-    computed_total: totalAmount,
+    manual_amount_override: amount != null,
+    computed_total: finalTotalAmount,
   }
   delete mergedAuditFlags.override_reason
   delete mergedAuditFlags.override_by
   delete mergedAuditFlags.override_at
 
-  await prisma.$transaction(async (tx) => {
+  const resetResult = await prisma.$transaction(async (tx) => {
     await tx.caseMedicine.deleteMany({ where: { caseId: caseData.id } })
     if (normalized.length > 0) {
       await tx.caseMedicine.createMany({
@@ -64,11 +80,21 @@ export async function saveMedicines(req: Request, res: Response) {
     }
     await tx.case.update({
       where: { id: caseData.id },
-      data: { amount: totalAmount, auditFlags: mergedAuditFlags as Prisma.InputJsonValue },
+      data: { amount: finalTotalAmount, auditFlags: mergedAuditFlags as Prisma.InputJsonValue },
+    })
+    return resetApprovalsAfterMaterialEdit(tx, {
+      caseId: caseData.id,
+      changedById: req.user?.id,
+      changedFields,
     })
   })
 
-  res.status(201).json({ medicines: normalized, totalAmount })
+  res.status(201).json({
+    medicines: normalized,
+    totalAmount: finalTotalAmount,
+    status: resetResult.status ?? caseData.status,
+    approvalsReset: resetResult.approvalsReset,
+  })
 }
 
 export async function deleteMedicine(req: Request, res: Response) {
@@ -96,10 +122,17 @@ export async function deleteMedicine(req: Request, res: Response) {
   delete mergedAuditFlags.override_by
   delete mergedAuditFlags.override_at
 
-  await prisma.case.update({
-    where: { id: caseId },
-    data: { amount: total, auditFlags: mergedAuditFlags as Prisma.InputJsonValue },
+  const resetResult = await prisma.$transaction(async (tx) => {
+    await tx.case.update({
+      where: { id: caseId },
+      data: { amount: total, auditFlags: mergedAuditFlags as Prisma.InputJsonValue },
+    })
+    return resetApprovalsAfterMaterialEdit(tx, {
+      caseId: caseData.id,
+      changedById: req.user?.id,
+      changedFields: ['medicines', 'amount'],
+    })
   })
 
-  res.status(204).send()
+  res.status(200).json({ totalAmount: total, status: resetResult.status ?? caseData.status, approvalsReset: resetResult.approvalsReset })
 }

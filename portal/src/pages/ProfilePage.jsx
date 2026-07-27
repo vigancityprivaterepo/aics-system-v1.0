@@ -120,76 +120,47 @@ function ProfileForm({ applicant, onSaved }) {
       ) : null}
 
       <section className="portal-surface overflow-hidden">
-        <div className="border-b border-slate-300 bg-gradient-to-r from-[#064e3b] via-[#065f46] to-[#047857] px-6 py-6 text-white">
+        <div className="border-b border-slate-200 bg-gradient-to-r from-[#064e3b] via-[#065f46] to-[#047857] px-6 py-6 text-white">
           <p className="text-xs uppercase tracking-[0.18em] text-slate-200">Applicant Profile</p>
           <h1 className="mt-2 font-display text-3xl font-bold">My Profile</h1>
-          <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-100">
-            Complete and register your profile to support verification, document review, and applicant coordination.
+          <p className="mt-2 max-w-xl text-sm leading-6 text-slate-100">
+            Please complete your personal details before submitting an application.
           </p>
         </div>
 
-        {!isProfileComplete ? (
-          <div className="flex items-start gap-4 border-b border-amber-300 bg-amber-500 px-6 py-4">
-            <span className="mt-0.5 shrink-0 text-xl text-white">⚠</span>
-            <div>
-              <p className="text-sm font-bold text-white">
-                {profileCompletionRequired ? 'Profile completion is required before you can continue.' : 'Complete your profile before filing an application.'}
-              </p>
-              <p className="mt-0.5 text-sm text-amber-100">
-                Fill in your contact, personal, and address details so staff case creation does not start with blank client information.
-              </p>
-            </div>
+        <div className="grid gap-4 bg-slate-50 px-6 py-5 md:grid-cols-3">
+          <div className="portal-panel p-4">
+            <p className="portal-kicker">Email</p>
+            <p className="mt-2 break-words text-sm font-bold text-slate-800">{applicant?.email}</p>
           </div>
-        ) : null}
-
-        <div className="flex items-start gap-4 border-b border-blue-700 bg-blue-700 px-6 py-4">
-          <span className="mt-0.5 shrink-0 text-xl text-white">ℹ</span>
-          <div>
-            <p className="text-sm font-bold text-white">Important Profile Notice</p>
-            <p className="mt-0.5 text-sm text-blue-100">
-              {isProfileLocked
-                ? 'Your profile is already finalized and locked. Only the admin office can change these details.'
-                : 'Review your profile carefully before finalizing it. Once your profile details are already final, changes should only be handled by the admin office.'}
+          <div className="portal-panel p-4">
+            <p className="portal-kicker">Client ID</p>
+            <p className="mt-2 text-sm font-bold text-slate-800">
+              {applicant?.clientCaseNumber || <span className="font-medium text-slate-400">Pending</span>}
             </p>
           </div>
-        </div>
-
-        <div className="grid gap-4 px-6 py-5 md:grid-cols-2 xl:grid-cols-4 bg-slate-50">
-          <div className="portal-panel p-4 xl:col-span-2 border-t-4 border-t-[#065f46]">
-            <p className="portal-kicker">Account Email</p>
-            <p className="mt-2 text-base font-bold text-slate-800">{applicant?.email}</p>
-            <p className="mt-1 text-xs text-slate-500">Your email address is fixed for account security and verification.</p>
-          </div>
-          <div className="portal-panel p-4 border-t-4 border-t-slate-500">
-            <p className="portal-kicker">Client ID Number</p>
-            <p className="mt-2 text-base font-bold text-slate-800">
-              {applicant?.clientCaseNumber || <span className="text-slate-400 font-medium text-sm">Pending assignment</span>}
-            </p>
-            <p className="mt-1 text-xs text-slate-500">
-              This is your client record number used by the AICS office.
-            </p>
-          </div>
-          <div className={`portal-panel p-4 border-t-4 ${isProfileComplete ? 'border-t-emerald-600' : 'border-t-amber-500'}`}>
-            <p className="portal-kicker">Profile Status</p>
-            <p className={`mt-2 inline-flex items-center gap-1.5 text-sm font-bold px-2.5 py-1 rounded-md ${
+          <div className="portal-panel p-4">
+            <p className="portal-kicker">Status</p>
+            <p className={`mt-2 inline-flex rounded-md px-2.5 py-1 text-sm font-bold ${
               isProfileComplete ? 'bg-emerald-600 text-white' : 'bg-amber-500 text-white'
             }`}>
-              <span>{isProfileComplete ? '✓' : '!'}</span>
-              {isProfileComplete ? 'Profile Complete' : 'More Details Needed'}
-            </p>
-            <p className="mt-2 text-xs text-slate-500">
-              {isProfileComplete
-                ? 'Your applicant profile is ready for application processing.'
-                : 'Add your missing details to avoid delays during application review.'}
+              {isProfileComplete ? 'Complete' : 'Needs Details'}
             </p>
           </div>
         </div>
-      </section>
 
+        <div className={`border-t px-6 py-4 text-sm ${isProfileComplete ? 'border-emerald-100 bg-emerald-50 text-emerald-800' : 'border-amber-100 bg-amber-50 text-amber-800'}`}>
+          {isProfileLocked
+            ? 'Your profile is complete. Contact the AICS office if you need to correct saved information.'
+            : profileCompletionRequired
+              ? 'Complete the required fields below to continue.'
+              : 'Fill in the required fields below. Review your details before saving.'}
+        </div>
+      </section>
       <section className="portal-surface">
         <div className="border-b-2 border-slate-100 bg-white px-6 py-4">
           <h2 className="font-display text-lg font-bold text-slate-800">Personal Information</h2>
-          <p className="mt-0.5 text-sm text-slate-500">Fill in all required fields accurately. These details will be used in your applications.</p>
+          <p className="mt-0.5 text-sm text-slate-500">Enter your basic personal, contact, and address information.</p>
         </div>
         <div className="p-6">
         <form onSubmit={handleSave} className="flex flex-col gap-6">

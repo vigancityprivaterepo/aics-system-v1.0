@@ -1,4 +1,4 @@
-﻿import { useState } from 'react'
+import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import api from '../../lib/api'
@@ -76,7 +76,7 @@ export default function NewCase() {
   const stepNum = step === 'type' ? 1 : (presetType ? 1 : 2)
 
   return (
-    <div className="animate-fade-in mx-auto max-w-2xl">
+    <div className="animate-fade-in mx-auto w-full max-w-[1440px] px-3 sm:px-5 lg:px-8">
       <div className="mb-6">
         {step !== 'type' && !presetType && (
           <button onClick={goBack} className="btn-ghost mb-3 text-sm">
@@ -129,7 +129,7 @@ export default function NewCase() {
 
       {step === 'client' && (
         <div className="space-y-4">
-          <div className="card">
+          <div className="card mx-auto w-full max-w-6xl">
             <div className="form-section-title mb-4">Search Client Profile</div>
             <ClientSearchBar onSelect={handleClientSelect} />
 
@@ -150,7 +150,7 @@ export default function NewCase() {
 
             {selectedClient && (
               <div className="mt-4 rounded-xl border border-brand-green/30 bg-emerald-50 p-4">
-                <div className="flex items-start justify-between">
+                <div className="flex items-start justify-between gap-6">
                   <div>
                     <p className="font-semibold text-brand-dark">
                       {selectedClient.lastName}, {selectedClient.firstName} {selectedClient.middleName || ''}
@@ -171,7 +171,7 @@ export default function NewCase() {
           </div>
 
           {selectedClient && (
-            <div className="flex justify-end">
+            <div className="mx-auto flex w-full max-w-6xl justify-end">
               <button onClick={handleCreateCase} disabled={loading} className="portal-button-primary px-8 py-3 text-base">
                 {loading ? 'Creating...' : 'Create Case & Continue'}
                 {!loading && <ArrowRightIcon className="h-5 w-5" />}

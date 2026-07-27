@@ -12,6 +12,7 @@ import { HttpError } from '../utils/httpError.js'
 import { requireRole } from '../middleware/auth.js'
 import { eSignatureDirectory, eSignaturePublicUrl, profilePhotoPublicUrl, profilePhotosDirectory } from '../services/storageService.js'
 import { removeStoredUpload, validateStoredUpload } from '../services/uploadValidation.js'
+import { logAdminAudit } from '../services/adminAuditService.js'
 
 const router = Router()
 
@@ -310,6 +311,19 @@ router.post('/', adminOnly, asyncHandler(async (req, res) => {
     },
     select: userSelect,
   })
+  await logAdminAudit(prisma, {
+    actorId: req.user?.id,
+    action: 'user.create',
+    targetType: 'user',
+    targetId: user.id,
+    summary: `Created user ${user.name}`,
+    details: {
+      username: user.username,
+      role: user.role,
+      approvalLevel: user.approvalLevel,
+      isActive: user.isActive,
+    },
+  })
 
   res.status(201).json(safeUser(user))
 }))
@@ -341,6 +355,31 @@ router.patch('/:id', adminOnly, asyncHandler(async (req, res) => {
     },
     select: userSelect,
   })
+  await logAdminAudit(prisma, {
+    actorId: req.user?.id,
+    action: 'user.update',
+    targetType: 'user',
+    targetId: user.id,
+    summary: `Updated user ${user.name}`,
+    details: {
+      previous: {
+        username: existing.username,
+        role: existing.role,
+        approvalLevel: existing.approvalLevel,
+        signatureParam: existing.signatureParam,
+        position: existing.position,
+        isActive: existing.isActive,
+      },
+      next: {
+        username: user.username,
+        role: user.role,
+        approvalLevel: user.approvalLevel,
+        signatureParam: user.signatureParam,
+        position: user.position,
+        isActive: user.isActive,
+      },
+    },
+  })
 
   res.json(safeUser(user))
 }))
@@ -365,6 +404,19 @@ router.delete('/:id', adminOnly, asyncHandler(async (req, res) => {
   }
 
   await prisma.user.delete({ where: { id: userId } })
+  await logAdminAudit(prisma, {
+    actorId: req.user?.id,
+    action: 'user.delete',
+    targetType: 'user',
+    targetId: existing.id,
+    summary: `Deleted user ${existing.name}`,
+    details: {
+      username: existing.username,
+      role: existing.role,
+      approvalLevel: existing.approvalLevel,
+      isActive: existing.isActive,
+    },
+  })
 
   res.status(204).send()
 }))
@@ -380,6 +432,17 @@ router.post('/:id/reset-password', adminOnly, asyncHandler(async (req, res) => {
 
   const passwordHash = await bcrypt.hash(password, 12)
   await prisma.user.update({ where: { id: userId }, data: { passwordHash } })
+  await logAdminAudit(prisma, {
+    actorId: req.user?.id,
+    action: 'user.reset_password',
+    targetType: 'user',
+    targetId: existing.id,
+    summary: `Reset password for ${existing.name}`,
+    details: {
+      username: existing.username,
+      employeeId: existing.employeeId,
+    },
+  })
 
   res.json({ message: 'Password reset successfully' })
 }))
@@ -418,6 +481,19 @@ router.post('/:id/e-signature', eSignatureUpload.single('file'), asyncHandler(as
       },
       select: userSelect,
     })
+    if (req.user?.role === 'admin' || req.user?.id !== userId) {
+      await logAdminAudit(prisma, {
+        actorId: req.user?.id,
+        action: 'user.upload_signature',
+        targetType: 'user',
+        targetId: updated.id,
+        summary: `Uploaded e-signature for ${updated.name}`,
+        details: {
+          username: updated.username,
+          eSignatureUploadedAt: updated.eSignatureUploadedAt?.toISOString() ?? null,
+        },
+      })
+    }
 
     res.status(201).json(safeUser(updated))
   } catch (error) {
@@ -454,6 +530,19 @@ router.post('/:id/profile-photo', profilePhotoUpload.single('file'), asyncHandle
       data: { photoUrl: newUrl },
       select: userSelect,
     })
+    if (req.user?.role === 'admin' || req.user?.id !== userId) {
+      await logAdminAudit(prisma, {
+        actorId: req.user?.id,
+        action: 'user.upload_profile_photo',
+        targetType: 'user',
+        targetId: updated.id,
+        summary: `Uploaded profile photo for ${updated.name}`,
+        details: {
+          username: updated.username,
+          photoUrl: updated.photoUrl,
+        },
+      })
+    }
     res.status(201).json(safeUser(updated))
   } catch (error) {
     await removeStoredUpload(file)

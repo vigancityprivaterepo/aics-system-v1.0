@@ -1,8 +1,9 @@
-﻿import { useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import api from '../lib/api'
 import logo from '../assets/logo.png'
+import GoogleSignInButton from '../components/GoogleSignInButton'
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const mobilePattern = /^(09|\+639)\d{9}$/
@@ -342,6 +343,14 @@ export default function RegisterPage() {
                 Sign In
               </Link>
             </p>
+
+            <div className="my-6 flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+              <span className="h-px flex-1 bg-slate-200" />
+              <span>Or Continue With</span>
+              <span className="h-px flex-1 bg-slate-200" />
+            </div>
+
+            <GoogleSignInButton text="signup_with" disabled={loading} />
           </div>
         </div>
 

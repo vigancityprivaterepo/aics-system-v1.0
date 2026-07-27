@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react'
+﻿import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import api from '../../lib/api'
 import { useAuthStore } from '../../store/authStore'
 import { ChevronLeftIcon, ChevronRightIcon } from '../../components/ui/Icons'
+import ProtectedImage from '../../components/shared/ProtectedImage'
 import ApplicantAccountsPage from '../Applicants/ApplicantAccountsPage'
 
 const TABS = [
@@ -492,7 +493,7 @@ export default function SettingsPage() {
         ))}
       </div>
 
-      {/* ── User Access Control ── */}
+      {/* User Access Control */}
       {activeTab === 'users' && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
@@ -537,7 +538,7 @@ export default function SettingsPage() {
                               <div className="h-8 w-8 rounded-full border border-dashed border-slate-300 bg-slate-50" />
                             )}
                             <label className="cursor-pointer rounded-md border border-slate-200 bg-white px-2 py-1 text-[11px] font-medium text-slate-600 hover:bg-slate-50 whitespace-nowrap">
-                              {uploadingPhotoUserId === u.id ? 'Uploading…' : 'Photo'}
+                              {uploadingPhotoUserId === u.id ? 'Uploading...' : 'Photo'}
                               <input type="file" accept="image/*" className="hidden"
                                 disabled={uploadingPhotoUserId === u.id}
                                 onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadProfilePhoto(u.id, f); e.target.value = '' }}
@@ -549,7 +550,7 @@ export default function SettingsPage() {
                         <td className="px-5 py-4">
                           <span className={roleBadge(u.role)}>{roleLabel(u.role)}</span>
                         </td>
-                        {/* Approval levels — individual chips */}
+                        {/* Approval levels - individual chips */}
                         <td className="px-5 py-4">
                           {levels.length === 0 ? (
                             <span className="text-xs text-slate-400">None</span>
@@ -568,13 +569,12 @@ export default function SettingsPage() {
                           <div className="flex items-center gap-2">
                             {u.eSignatureUrl ? (
                               <div className="h-12 w-28 rounded border border-slate-200 bg-slate-50 flex items-center justify-center overflow-hidden">
-                                <img
+                                <ProtectedImage
                                   src={u.eSignatureUrl}
                                   alt="signature"
                                   className="max-h-11 max-w-[108px] object-contain"
-                                  onError={(e) => { e.currentTarget.style.display = 'none'; e.currentTarget.nextSibling.style.display = 'flex' }}
+                                  fallback={<span className="text-xs text-slate-400 items-center justify-center w-full h-full flex">No preview</span>}
                                 />
-                                <span className="hidden text-xs text-slate-400 items-center justify-center w-full h-full">No preview</span>
                               </div>
                             ) : (
                               <div className="h-12 w-28 rounded border border-dashed border-slate-300 bg-slate-50 flex items-center justify-center">
@@ -582,7 +582,7 @@ export default function SettingsPage() {
                               </div>
                             )}
                             <label className="cursor-pointer rounded-md border border-slate-200 bg-white px-2 py-1 text-[11px] font-medium text-slate-600 hover:bg-slate-50 whitespace-nowrap">
-                              {uploadingSignatureUserId === u.id ? 'Uploading…' : 'Upload'}
+                              {uploadingSignatureUserId === u.id ? 'Uploading...' : 'Upload'}
                               <input type="file" accept="image/*" className="hidden"
                                 disabled={uploadingSignatureUserId === u.id}
                                 onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadSignature(u.id, f); e.target.value = '' }}
@@ -602,7 +602,7 @@ export default function SettingsPage() {
                             <button onClick={() => openEdit(u)} className="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors">Edit</button>
                             <button onClick={() => openReset(u)} className="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors">Reset PW</button>
                             {u.id !== currentUser?.id && (
-                              <>
+                              <div className="grid gap-4 md:grid-cols-2">
                                 <button onClick={() => toggleActive(u)}
                                   className={`rounded-md border px-3 py-1.5 text-xs font-medium transition-colors ${u.isActive ? 'border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100' : 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'}`}>
                                   {u.isActive ? 'Deactivate' : 'Activate'}
@@ -611,7 +611,7 @@ export default function SettingsPage() {
                                   className="rounded-md border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-100 transition-colors">
                                   Delete
                                 </button>
-                              </>
+                              </div>
                             )}
                           </div>
                         </td>
@@ -628,7 +628,7 @@ export default function SettingsPage() {
         </div>
       )}
 
-      {/* ── Audit Trail ── */}
+      {/* Audit Trail */}
       {activeTab === 'audit' && (
         <div className="card overflow-hidden p-0">
           <div className="border-b border-slate-200 px-5 py-4">
@@ -717,7 +717,7 @@ export default function SettingsPage() {
         </div>
       )}
 
-      {/* ── Case Number Format ── */}
+      {/* Case Number Format */}
       {activeTab === 'format' && (
         <div className="card">
           <div className="mb-4 border-b border-slate-100 pb-3">
@@ -805,7 +805,7 @@ export default function SettingsPage() {
                         value={selectedId || ''}
                         onChange={(e) => setFmt((f) => ({ ...f, [field]: e.target.value || null }))}
                       >
-                        <option value="">— Unassigned —</option>
+                        <option value="">- Unassigned -</option>
                         {pool.map((u) => (
                           <option key={u.id} value={u.id}>{u.name}</option>
                         ))}
@@ -819,19 +819,20 @@ export default function SettingsPage() {
                       {selectedUser ? (
                         <div className="mt-2 flex items-center gap-2 rounded-md border border-slate-200 bg-white px-2 py-1.5">
                           {selectedUser.eSignatureUrl ? (
-                            <>
-                              <img
+                            <div className="grid gap-4 md:grid-cols-2">
+                              <ProtectedImage
                                 src={selectedUser.eSignatureUrl}
                                 alt={selectedUser.name}
                                 className="h-8 w-20 rounded border border-slate-100 object-contain"
+                                fallback={<div className="h-8 w-20 rounded border border-dashed border-slate-200 bg-slate-50" />}
                               />
                               <span className="text-xs text-slate-500 truncate">{selectedUser.name}</span>
-                            </>
+                            </div>
                           ) : (
-                            <>
-                              <span className="text-lg">✍</span>
-                              <span className="text-xs text-amber-600">{selectedUser.name} — no e-signature uploaded</span>
-                            </>
+                            <div className="grid gap-4 md:grid-cols-2">
+                              <span className="text-lg">Signature</span>
+                              <span className="text-xs text-amber-600">{selectedUser.name} - no e-signature uploaded</span>
+                            </div>
                           )}
                         </div>
                       ) : (
@@ -953,7 +954,7 @@ export default function SettingsPage() {
         <ApplicantAccountsPage />
       )}
 
-      {/* ── Delete Confirmation Modal ── */}
+      {/* Delete Confirmation Modal */}
       {modal === 'delete' && target && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
           <div className="w-full max-w-sm rounded-xl bg-white shadow-2xl">
@@ -985,24 +986,24 @@ export default function SettingsPage() {
         </div>
       )}
 
-      {/* ── Create / Edit / Reset Modal ── */}
+      {/* Create / Edit / Reset Modal */}
       {modal && modal !== 'delete' && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-          <div className="w-full max-w-md rounded-xl bg-white shadow-2xl">
+          <div className={`w-full rounded-xl bg-white shadow-2xl ${modal === 'reset' ? 'max-w-md' : 'max-w-3xl'}`}>
             <div className="rounded-t-xl bg-gradient-to-r from-[#064e3b] to-[#065f46] px-6 py-4">
               <h2 className="font-display text-lg font-bold text-white">
                 {modal === 'create' && 'Add New User'}
-                {modal === 'edit'   && `Edit — ${target?.name}`}
-                {modal === 'reset'  && `Reset Password — ${target?.name}`}
+                {modal === 'edit'   && `Edit - ${target?.name}`}
+                {modal === 'reset'  && `Reset Password - ${target?.name}`}
               </h2>
             </div>
             <form
               onSubmit={modal === 'create' ? handleCreate : modal === 'edit' ? handleEdit : handleReset}
-              className="space-y-4 px-6 py-6"
+              className="px-6 py-6"
             >
               {modal !== 'reset' && (
-                <>
-                  <div>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="md:col-span-2">
                     <label className="portal-label">Full Name</label>
                     <input className="portal-input" required value={form.name}
                       onChange={(e) => setForm({ ...form, name: e.target.value })} />
@@ -1024,7 +1025,7 @@ export default function SettingsPage() {
                       {ROLES.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
                     </select>
                   </div>
-                  <div>
+                  <div className="md:row-span-2">
                     <label className="portal-label">Approval Level</label>
                     <div className="mt-1 space-y-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5">
                       {APPROVAL_LEVELS.map((lvl) => (
@@ -1049,7 +1050,7 @@ export default function SettingsPage() {
                         <p className="text-xs text-slate-400">City Health Office accounts cannot be assigned to case approval levels.</p>
                       )}
                       {(form.approvalLevels ?? []).length === 0 && (
-                        <p className="text-xs text-slate-400">No approval levels — employee only</p>
+                        <p className="text-xs text-slate-400">No approval levels - employee only</p>
                       )}
                     </div>
                   </div>
@@ -1067,7 +1068,7 @@ export default function SettingsPage() {
                     <label className="portal-label">
                       Signature Template Key
                       <span className="ml-1.5 text-slate-400 font-normal normal-case tracking-normal">
-                        — used as <code className="bg-slate-100 px-1 rounded text-xs">{'{'}key{'}'}</code> in DOCX templates
+                        - used as <code className="bg-slate-100 px-1 rounded text-xs">{'{'}key{'}'}</code> in DOCX templates
                       </span>
                     </label>
                     <input
@@ -1078,17 +1079,17 @@ export default function SettingsPage() {
                       onChange={(e) => setForm({ ...form, signatureParam: e.target.value.replace(/[^a-zA-Z0-9_]/g, '') })}
                     />
                   </div>
-                </>
+                </div>
               )}
               {(modal === 'create' || modal === 'reset') && (
-                <div>
+                <div className="mt-4">
                   <label className="portal-label">{modal === 'reset' ? 'New Password' : 'Password'}</label>
                   <input className="portal-input" type="password" required minLength={8} value={form.password}
                     onChange={(e) => setForm({ ...form, password: e.target.value })}
                     placeholder="Minimum 8 characters" />
                 </div>
               )}
-              <div className="flex justify-end gap-3 pt-2">
+              <div className="mt-6 flex justify-end gap-3 pt-2">
                 <button type="button" onClick={closeModal}
                   className="rounded-lg border border-slate-200 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50">
                   Cancel
@@ -1104,3 +1105,7 @@ export default function SettingsPage() {
     </div>
   )
 }
+
+
+
+

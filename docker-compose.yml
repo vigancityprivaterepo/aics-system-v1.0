@@ -27,7 +27,7 @@ services:
     volumes:
       - aics_uploads:/app/backend/uploads
     ports:
-      - "5001:5001"
+      - "5101:5001"
 
   frontend:
     build:
@@ -36,11 +36,13 @@ services:
     depends_on:
       - backend
     ports:
-      - "8080:80"
+      - "8081:80"
 
   portal:
     build:
       context: ./portal
+      args:
+        VITE_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
     restart: unless-stopped
     depends_on:
       - backend

@@ -113,12 +113,13 @@ export const updatePlainSchema = z.object({
 })
 
 export const saveMedicinesSchema = z.object({
+  amount: z.union([z.number(), z.string()]).optional().nullable(),
   medicines: z.array(z.object({
     medicineId: z.string().uuid().optional().nullable(),
     medicineName: z.string().min(1),
     quantity: z.union([z.number(), z.string()]),
     unit: z.string().optional().nullable(),
-    unitPrice: z.union([z.number(), z.string()]),
+    unitPrice: z.union([z.number(), z.string()]).optional().nullable(),
     totalPrice: z.union([z.number(), z.string()]).optional().nullable(),
   })),
 })

@@ -3,6 +3,7 @@ import toast from 'react-hot-toast'
 import api from '../../lib/api'
 import { useAuthStore } from '../../store/authStore'
 import { XIcon, UploadIcon } from '../ui/Icons'
+import ProtectedImage from './ProtectedImage'
 
 const APPROVAL_LEVEL_LABELS = {
   none: 'None',
@@ -229,10 +230,11 @@ export default function MyProfileModal({ isOpen, onClose }) {
                 {profile.eSignatureUrl ? (
                   <div className="mb-3">
                     <div className="inline-block rounded-lg border border-slate-200 bg-slate-50 p-3">
-                      <img
+                      <ProtectedImage
                         src={profile.eSignatureUrl}
                         alt="E-signature"
                         className="h-16 w-48 object-contain"
+                        fallback={<div className="h-16 w-48" />}
                       />
                     </div>
                     {profile.eSignatureUploadedAt && (

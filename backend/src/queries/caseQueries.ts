@@ -1,4 +1,4 @@
-import { prisma } from '../utils/prisma.js'
+﻿import { prisma } from '../utils/prisma.js'
 
 export async function findCaseWithDetails(id: string) {
   return prisma.case.findUnique({
@@ -31,7 +31,7 @@ export async function findCaseWithDetails(id: string) {
           },
         },
       },
-      socialWorker: { select: { id: true, eSignatureUrl: true, signatureParam: true, position: true } },
+      socialWorker: { select: { id: true, name: true, eSignatureUrl: true, signatureParam: true, position: true } },
       statusLogs: {
         orderBy: { changedAt: 'desc' },
         take: 1,
@@ -62,3 +62,4 @@ export async function getApprovalSettings() {
 
 export type ApprovalSettings = Awaited<ReturnType<typeof getApprovalSettings>>
 export type CaseWithDetails = NonNullable<Awaited<ReturnType<typeof findCaseWithDetails>>>
+

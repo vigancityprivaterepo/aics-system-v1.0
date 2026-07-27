@@ -56,7 +56,7 @@ router.use('/documents', documentRoutes)
 
 router.use(requireAuth)
 router.use('/medicines', requireRole(['admin', 'employee', 'city_health_office']), medicineRoutes)
-router.use('/hospitals', requireRole(['admin', 'employee', 'city_health_office']), hospitalRoutes)
+router.use('/hospitals', requireRole(['admin', 'employee']), hospitalRoutes)
 router.use('/users', userRoutes)
 router.use('/applicants', applicantsRoutes)
 router.use(requireRole(['admin', 'employee']))

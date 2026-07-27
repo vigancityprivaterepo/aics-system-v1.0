@@ -17,6 +17,7 @@ import {
   generatePlainCaseStudyDocx,
 } from '../services/docxService.js'
 import { generateCaseReportPdf } from '../services/pdfService.js'
+import { buildConversionBasename, convertDocxBufferToHtml, convertDocxBufferToPdf } from '../services/officeConversionService.js'
 import { buildCaseStudyVerificationAssets, buildRenderableCaseStudy } from '../services/caseStudyVerificationService.js'
 import {
   generateGuaranteeLetterDocxForCase,
@@ -47,39 +48,75 @@ async function loadSerializedCase(caseId: string, user: Express.AuthUser | undef
   return { caseData, serialized }
 }
 
+async function generateCaseStudyDocxBuffer(caseData: NonNullable<Awaited<ReturnType<typeof findCaseWithDetails>>>) {
+  const { serialized } = await buildRenderableCaseStudy(caseData)
+
+  if (caseData.assistanceType === 'burial') {
+    return generateBurialCaseStudyDocx(serialized)
+  }
+  if (caseData.assistanceType === 'hospital') {
+    return generateHospitalCaseStudyDocx(serialized, (caseData.hospitalDetails?.templateType ?? 'personal') as 'personal' | 'proxy')
+  }
+  if (caseData.assistanceType === 'medicine') {
+    return generateMedicineCaseStudyDocx(serialized, (serialized.medicineDetails?.templateType ?? 'personal') as 'personal' | 'proxy')
+  }
+  if (caseData.assistanceType === 'medical') {
+    return generateMedicalCaseStudyDocx(serialized, (caseData.medicalDetails?.templateType ?? 'personal') as 'personal' | 'proxy')
+  }
+  if (caseData.assistanceType === 'eyeglass') {
+    return generateEyeglassCaseStudyDocx(serialized, (serialized.eyeglassDetails?.templateType ?? 'personal') as 'personal' | 'proxy')
+  }
+  if (caseData.assistanceType === 'plain') {
+    return generatePlainCaseStudyDocx(serialized)
+  }
+
+  throw new HttpError(400, 'Word document report is not available for this assistance type')
+}
+
 export async function caseStudyDocx(req: Request, res: Response) {
   const caseId = paramId(req.params.id)
   const caseData = await findCaseWithDetails(caseId)
   if (!caseData) throw new HttpError(404, 'Case not found')
   assertReportAccess(caseData, req.user, 'docx report')
-  const { serialized } = await buildRenderableCaseStudy(caseData)
+
+  const buffer = await generateCaseStudyDocxBuffer(caseData)
   const baseFilename = `${caseData.caseNumber ?? caseData.client.caseNumber}-case-study.docx`
-  let buffer: Buffer
-
-  if (caseData.assistanceType === 'burial') {
-    buffer = await generateBurialCaseStudyDocx(serialized)
-  } else if (caseData.assistanceType === 'hospital') {
-    buffer = await generateHospitalCaseStudyDocx(serialized, (caseData.hospitalDetails?.templateType ?? 'personal') as 'personal' | 'proxy')
-  } else if (caseData.assistanceType === 'medicine') {
-    buffer = await generateMedicineCaseStudyDocx(serialized, (serialized.medicineDetails?.templateType ?? 'personal') as 'personal' | 'proxy')
-  } else if (caseData.assistanceType === 'medical') {
-    buffer = await generateMedicalCaseStudyDocx(serialized, ((caseData as any).medicalDetails?.templateType ?? 'personal') as 'personal' | 'proxy')
-  } else if (caseData.assistanceType === 'eyeglass') {
-    buffer = await generateEyeglassCaseStudyDocx(serialized, (serialized.eyeglassDetails?.templateType ?? 'personal') as 'personal' | 'proxy')
-  } else if (caseData.assistanceType === 'plain') {
-    buffer = await generatePlainCaseStudyDocx(serialized)
-  } else {
-    throw new HttpError(400, 'Word document report is not available for this assistance type')
-  }
-
   sendDocx(res, buffer, baseFilename)
 }
 
+export async function caseStudyHtml(req: Request, res: Response) {
+  const caseId = paramId(req.params.id)
+  const caseData = await findCaseWithDetails(caseId)
+  if (!caseData) throw new HttpError(404, 'Case not found')
+  assertReportAccess(caseData, req.user, 'case study preview')
+
+  const docxBuffer = await generateCaseStudyDocxBuffer(caseData)
+  const caseNumber = caseData.caseNumber ?? caseData.client.caseNumber
+  const html = await convertDocxBufferToHtml(docxBuffer, buildConversionBasename(`${caseNumber}-case-study`))
+  if (!html) throw new HttpError(503, 'LibreOffice HTML preview is not available.')
+
+  res.setHeader('Content-Type', 'text/html; charset=utf-8')
+  res.setHeader('Cache-Control', 'no-store')
+  res.send(html)
+}
 export async function caseStudyPdf(req: Request, res: Response) {
   const caseId = paramId(req.params.id)
-  const caseData = await prisma.case.findUnique({ where: { id: caseId }, include: { client: true } })
-  if (!caseData) throw new HttpError(404, 'Case not found')
-  assertReportAccess(caseData, req.user, 'case study report')
+  const detailedCaseData = await findCaseWithDetails(caseId)
+  if (!detailedCaseData) throw new HttpError(404, 'Case not found')
+  assertReportAccess(detailedCaseData, req.user, 'case study report')
+
+  try {
+    const docxBuffer = await generateCaseStudyDocxBuffer(detailedCaseData)
+    const caseNumber = detailedCaseData.caseNumber ?? detailedCaseData.client.caseNumber
+    const convertedPdf = await convertDocxBufferToPdf(docxBuffer, buildConversionBasename(`${caseNumber}-case-study`))
+    if (convertedPdf) {
+      return sendPdf(res, convertedPdf, `${caseNumber}-case-study.pdf`)
+    }
+  } catch (error) {
+    console.warn('[CaseStudy PDF Conversion] DOCX-based conversion unavailable, using PDFKit fallback.', error)
+  }
+
+  const caseData = detailedCaseData
   const verificationAssets = await buildCaseStudyVerificationAssets(caseData)
 
   const buffer = await generateCaseReportPdf({

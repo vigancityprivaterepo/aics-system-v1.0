@@ -6,13 +6,14 @@ import { prisma } from '../utils/prisma.js'
 import { asyncHandler } from '../utils/asyncHandler.js'
 import { HttpError } from '../utils/httpError.js'
 import { requirePortalAuth, signPortalToken } from '../middleware/portalAuth.js'
-import { buildEmailKey, softRateLimit } from '../middleware/softRateLimit.js'
+import { buildBodyFieldKey, buildEmailKey, softRateLimit } from '../middleware/softRateLimit.js'
 import { sendMail, otpEmailHtml, passwordResetEmailHtml } from '../services/mailer.js'
-import { sendSms, otpSmsMessage } from '../services/sms.js'
+
 import { env } from '../config/env.js'
 import { generateClientCaseNumber } from '../utils/caseNumber.js'
-import { buildPersonMatchInput, findClientDuplicateMatches, recordClientDedupEvent } from '../services/clientDedupService.js'
+import { buildPersonMatchInput, findClientDuplicateMatches, mergeClientRecords, recordClientDedupEvent } from '../services/clientDedupService.js'
 import { respondIdempotentJson } from '../utils/idempotency.js'
+import { verifyGoogleIdToken } from '../services/googleIdTokenService.js'
 
 const router = Router()
 
@@ -34,6 +35,44 @@ const otpFlowEmailLimiter = (scope: string, maxAttempts: number) => softRateLimi
   maxAttempts,
   cooldownMs: 2 * 60 * 1000,
   key: buildEmailKey(),
+  message: authCooldownMessage,
+})
+const portalLoginEmailLimiter = softRateLimit({
+  scope: 'portal-auth-login-email',
+  windowMs: 5 * 60 * 1000,
+  maxAttempts: 8,
+  cooldownMs: 10 * 60 * 1000,
+  key: buildEmailKey(),
+  message: authCooldownMessage,
+})
+const portalLoginIpLimiter = softRateLimit({
+  scope: 'portal-auth-login-ip',
+  windowMs: 5 * 60 * 1000,
+  maxAttempts: 20,
+  cooldownMs: 5 * 60 * 1000,
+  message: authCooldownMessage,
+})
+const portalRegisterEmailLimiter = softRateLimit({
+  scope: 'portal-auth-register-email',
+  windowMs: 10 * 60 * 1000,
+  maxAttempts: 4,
+  cooldownMs: 15 * 60 * 1000,
+  key: buildEmailKey(),
+  message: authCooldownMessage,
+})
+const portalGoogleIpLimiter = softRateLimit({
+  scope: 'portal-auth-google-ip',
+  windowMs: 5 * 60 * 1000,
+  maxAttempts: 20,
+  cooldownMs: 5 * 60 * 1000,
+  message: authCooldownMessage,
+})
+const portalGoogleCredentialLimiter = softRateLimit({
+  scope: 'portal-auth-google-credential',
+  windowMs: 5 * 60 * 1000,
+  maxAttempts: 10,
+  cooldownMs: 10 * 60 * 1000,
+  key: buildBodyFieldKey('credential'),
   message: authCooldownMessage,
 })
 
@@ -89,6 +128,35 @@ async function sendOtpEmailOrThrow(email: string, firstName: string, otp: string
   }
 }
 
+function hasCompleteClientProfile(applicant: {
+  firstName: string
+  lastName: string
+  mobileNumber: string | null
+  dateOfBirth: Date | null
+  sex: string | null
+  civilStatus: string | null
+  barangay: string | null
+  municipality: string | null
+  province: string | null
+  region: string | null
+  occupation: string | null
+  religion: string | null
+}) {
+  return Boolean(
+    applicant.firstName?.trim()
+    && applicant.lastName?.trim()
+    && applicant.mobileNumber?.trim()
+    && applicant.dateOfBirth
+    && applicant.sex?.trim()
+    && applicant.civilStatus?.trim()
+    && applicant.barangay?.trim()
+    && applicant.municipality?.trim()
+    && applicant.province?.trim()
+    && applicant.region?.trim()
+    && applicant.occupation?.trim()
+    && applicant.religion?.trim()
+  )
+}
 async function syncApplicantClient(applicant: {
   id: string
   email: string
@@ -129,20 +197,7 @@ async function syncApplicantClient(applicant: {
     isSenior: applicant.isSenior,
   }
 
-  const existing = await prisma.client.findUnique({
-    where: { applicantId: applicant.id },
-    select: { id: true },
-  })
-
-  if (existing) {
-    await prisma.client.update({
-      where: { id: existing.id },
-      data: payload,
-    })
-    return
-  }
-
-  const duplicateResult = await findClientDuplicateMatches(prisma, buildPersonMatchInput({
+  const matchInput = buildPersonMatchInput({
     applicantId: applicant.id,
     email: applicant.email,
     contactNumber: applicant.mobileNumber,
@@ -154,29 +209,76 @@ async function syncApplicantClient(applicant: {
     barangay: applicant.barangay,
     municipality: applicant.municipality,
     province: applicant.province,
-  }))
+  })
 
-  if (duplicateResult.duplicateStatus === 'strong_match') {
-    const reusable = duplicateResult.matches.find((match) => !match.applicantId)
-    if (reusable) {
-      await prisma.client.update({
-        where: { id: reusable.id },
-        data: payload,
-      })
+  const existing = await prisma.client.findUnique({
+    where: { applicantId: applicant.id },
+    select: { id: true, applicantId: true, mergedIntoClientId: true },
+  })
 
-      await recordClientDedupEvent(prisma, {
-        applicantId: applicant.id,
-        targetClientId: reusable.id,
-        action: 'portal_auto_link_existing_client',
-        notes: 'Portal profile automatically linked to an existing client profile with a strong duplicate match.',
-        payload: {
-          duplicateStatus: duplicateResult.duplicateStatus,
-          matchId: reusable.id,
-          score: reusable.score,
-        },
+  if (existing?.mergedIntoClientId) {
+    await prisma.$transaction(async (tx) => {
+      const target = await tx.client.findUnique({ where: { id: existing.mergedIntoClientId! } })
+      if (!target) return
+      if (target.applicantId && target.applicantId !== applicant.id) return
+
+      await tx.client.update({ where: { id: existing.id }, data: { applicantId: null } })
+      await tx.client.update({ where: { id: target.id }, data: payload })
+    })
+    return
+  }
+
+  const duplicateResult = await findClientDuplicateMatches(prisma, matchInput, {
+    excludeClientId: existing?.id ?? null,
+  })
+  const reusable = duplicateResult.duplicateStatus === 'strong_match'
+    ? duplicateResult.matches.find((match) => !match.applicantId || match.applicantId === applicant.id)
+    : null
+
+  if (existing) {
+    if (reusable && reusable.id !== existing.id) {
+      await prisma.$transaction(async (tx) => {
+        await mergeClientRecords(tx, {
+          sourceClientId: existing.id,
+          targetClientId: reusable.id,
+          actorId: null,
+          notes: 'Portal profile completed and matched an existing staff client profile.',
+          payload: { applicantId: applicant.id, source: 'portal_profile_sync', duplicateScore: reusable.score },
+        })
+        await tx.client.update({ where: { id: reusable.id }, data: payload })
       })
       return
     }
+
+    await prisma.client.update({
+      where: { id: existing.id },
+      data: payload,
+    })
+    return
+  }
+
+  if (reusable) {
+    await prisma.client.update({
+      where: { id: reusable.id },
+      data: payload,
+    })
+
+    await recordClientDedupEvent(prisma, {
+      applicantId: applicant.id,
+      targetClientId: reusable.id,
+      action: 'portal_auto_link_existing_client',
+      notes: 'Portal profile automatically linked to an existing client profile with a strong duplicate match.',
+      payload: {
+        duplicateStatus: duplicateResult.duplicateStatus,
+        matchId: reusable.id,
+        score: reusable.score,
+      },
+    })
+    return
+  }
+
+  if (!hasCompleteClientProfile(applicant)) {
+    return
   }
 
   const caseNumber = await generateClientCaseNumber()
@@ -200,15 +302,16 @@ async function syncApplicantClient(applicant: {
     })
   }
 }
-
 function serializeApplicant(a: {
   id: string; email: string; mobileNumber: string | null; firstName: string; lastName: string;
   middleName: string | null; dateOfBirth: Date | null; sex: string | null; civilStatus: string | null;
   barangay: string | null; municipality: string | null; province: string | null; region: string | null;
   occupation: string | null; religion: string | null; is4ps: boolean; isPwd: boolean; isSenior: boolean;
   createdAt: Date;
-  client?: { id: string; caseNumber: string } | null;
+  client?: { id: string; caseNumber: string; mergedIntoClient?: { id: string; caseNumber: string } | null } | null;
 }) {
+  const activeClient = a.client?.mergedIntoClient ?? a.client ?? null
+
   return {
     id: a.id,
     email: a.email,
@@ -228,12 +331,11 @@ function serializeApplicant(a: {
     is4ps: a.is4ps,
     isPwd: a.isPwd,
     isSenior: a.isSenior,
-    clientId: a.client?.id ?? null,
-    clientCaseNumber: a.client?.caseNumber ?? null,
+    clientId: activeClient?.id ?? null,
+    clientCaseNumber: activeClient?.caseNumber ?? null,
     createdAt: a.createdAt,
   }
 }
-
 async function loadPortalApplicant(applicantId: string) {
   return prisma.applicant.findUnique({
     where: { id: applicantId },
@@ -242,6 +344,12 @@ async function loadPortalApplicant(applicantId: string) {
         select: {
           id: true,
           caseNumber: true,
+          mergedIntoClient: {
+            select: {
+              id: true,
+              caseNumber: true,
+            },
+          },
         },
       },
     },
@@ -298,6 +406,10 @@ const loginSchema = z.object({
   password: z.string().min(1),
 })
 
+const googleAuthSchema = z.object({
+  credential: z.string().min(20),
+})
+
 const forgotPasswordSchema = z.object({
   email: z.string().email(),
 })
@@ -329,7 +441,7 @@ const updateProfileSchema = z.object({
 
 // ── POST /register ─────────────────────────────────────────────────────────
 
-router.post('/register', asyncHandler(async (req, res) => {
+router.post('/register', otpFlowIpLimiter, portalRegisterEmailLimiter, asyncHandler(async (req, res) => {
   const body = registerSchema.parse(req.body)
 
   return respondIdempotentJson({
@@ -375,9 +487,6 @@ router.post('/register', asyncHandler(async (req, res) => {
       await syncApplicantClient(applicant)
       await sendOtpEmailOrThrow(body.email, body.firstName, otp)
 
-      if (body.mobileNumber) {
-        sendSms(body.mobileNumber, otpSmsMessage(otp)).catch(console.error)
-      }
 
       return {
         status: 201,
@@ -466,9 +575,6 @@ router.post('/resend-otp', otpFlowIpLimiter, otpFlowEmailLimiter('portal-auth-re
 
       await sendOtpEmailOrThrow(body.email, applicant.firstName, otp)
 
-      if (applicant.mobileNumber) {
-        sendSms(applicant.mobileNumber, otpSmsMessage(otp)).catch(console.error)
-      }
 
       return {
         status: 200,
@@ -480,7 +586,7 @@ router.post('/resend-otp', otpFlowIpLimiter, otpFlowEmailLimiter('portal-auth-re
 
 // ── POST /login ────────────────────────────────────────────────────────────
 
-router.post('/login', asyncHandler(async (req, res) => {
+router.post('/login', portalLoginIpLimiter, portalLoginEmailLimiter, asyncHandler(async (req, res) => {
   const { email, password } = loginSchema.parse(req.body)
 
   const applicant = await prisma.applicant.findUnique({ where: { email } })
@@ -501,8 +607,54 @@ router.post('/login', asyncHandler(async (req, res) => {
   res.json({ token, applicant: serializeApplicant(portalApplicant) })
 }))
 
-// ── POST /forgot-password ──────────────────────────────────────────────────
 
+// POST /google
+
+router.post('/google', portalGoogleIpLimiter, portalGoogleCredentialLimiter, asyncHandler(async (req, res) => {
+  const { credential } = googleAuthSchema.parse(req.body)
+  const googleUser = await verifyGoogleIdToken(credential)
+  const email = googleUser.email!.trim().toLowerCase()
+  const firstName = String(googleUser.given_name || googleUser.name || 'Applicant').trim().slice(0, 100) || 'Applicant'
+  const lastName = String(googleUser.family_name || 'Google User').trim().slice(0, 100) || 'Google User'
+
+  let applicant = await prisma.applicant.findUnique({ where: { email } })
+
+  if (applicant) {
+    if (!applicant.isVerified) {
+      applicant = await prisma.applicant.update({
+        where: { id: applicant.id },
+        data: {
+          isVerified: true,
+          otpHash: null,
+          otpExpiresAt: null,
+          otpAttempts: 0,
+          firstName: applicant.firstName || firstName,
+          lastName: applicant.lastName || lastName,
+        },
+      })
+    }
+  } else {
+    const passwordHash = await bcrypt.hash(`google-oauth:${crypto.randomBytes(32).toString('hex')}`, BCRYPT_ROUNDS)
+    applicant = await prisma.applicant.create({
+      data: {
+        email,
+        passwordHash,
+        firstName,
+        lastName,
+        isVerified: true,
+      },
+    })
+  }
+
+  await syncApplicantClient(applicant)
+  const portalApplicant = await loadPortalApplicant(applicant.id)
+  if (!portalApplicant) throw new HttpError(404, 'Account not found')
+
+  const token = signPortalToken(applicant)
+  res.json({ token, applicant: serializeApplicant(portalApplicant) })
+}))
+
+// POST /forgot-password
 router.post('/forgot-password', otpFlowIpLimiter, otpFlowEmailLimiter('portal-auth-forgot-password-email', 4), asyncHandler(async (req, res) => {
   const body = forgotPasswordSchema.parse(req.body)
 

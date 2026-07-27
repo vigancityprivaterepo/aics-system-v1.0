@@ -13,6 +13,18 @@ const RELATIONSHIP_OPTIONS = ['Spouse', 'Son', 'Daughter', 'Father', 'Mother', '
 const GUARANTEE_LETTER_MAX = 10000
 const PLAIN_AICS_MAX = 35000
 
+function normalizeNarrativeText(value) {
+  return String(value ?? '')
+    .replace(/\u00e2\u20ac\u00a2/g, '-')
+    .replace(/\u00e2\u20ac\u2122/g, "'")
+    .replace(/\u00e2\u20ac[\u0153\u009d]/g, '"')
+    .replace(/\u00e2\u20ac[\u201c\u201d]/g, '-')
+    .replace(/\u00c2\u00b7/g, '-')
+    .replace(/\u00c2/g, '')
+    .replace(/\u00a0/g, ' ')
+    .trim()
+}
+
 function resolveAmountCap(assistanceType) {
   if (['burial', 'hospital', 'medical', 'eyeglass'].includes(assistanceType)) {
     return GUARANTEE_LETTER_MAX
@@ -94,9 +106,9 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false }) 
     const casePayload = {
       dateOfAssessment: data.dateOfAssessment || null,
       socialWorkerName: data.socialWorkerName,
-      presentingProblem: data.presentingProblem,
-      backgroundOfProblem: data.findings,
-      assessment: data.findings,
+      presentingProblem: normalizeNarrativeText(data.presentingProblem),
+      backgroundOfProblem: normalizeNarrativeText(data.findings),
+      assessment: normalizeNarrativeText(data.findings),
       familyComposition: family,
       amount: isMedicine ? undefined : data.amount,
     }
@@ -113,7 +125,7 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false }) 
 
     try {
       if (isMedicine) {
-        const [, medicinesRes] = await Promise.all([
+        const [caseRes, medicinesRes] = await Promise.all([
           api.put(`/cases/${caseData.id}`, casePayload),
           api.post(`/cases/${caseData.id}/medicines`, { medicines }),
         ])
@@ -123,6 +135,7 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false }) 
           ...casePayload,
           medicines: medicinesRes.data?.medicines ?? medicines,
           amount: totalAmount,
+          status: medicinesRes.data?.status ?? caseRes.data?.status ?? caseData.status,
         })
       } else if (isBurial) {
         const [caseRes, burialRes] = await Promise.all([
@@ -136,12 +149,14 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false }) 
           burialDetails: burialRes.data,
           beneficiaryName: burialRes.data?.deceasedName || caseData.proxyName || '',
           beneficiaryAddress: burialRes.data?.deceasedAddress || caseData.client?.address || '',
+          status: burialRes.data?.status ?? caseRes.data?.status ?? caseData.status,
         })
       } else {
         const res = await api.put(`/cases/${caseData.id}`, casePayload)
         onUpdate({
           ...casePayload,
           amount: res.data?.amount ?? data.amount,
+          status: res.data?.status ?? caseData.status,
         })
       }
 
@@ -167,7 +182,7 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false }) 
             }
           : {}),
       })
-      toast.success('Saved (demo mode)')
+      toast.error(err.response?.data?.message || 'Failed to save changes')
     } finally {
       setSaving(false)
     }
@@ -365,7 +380,7 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false }) 
 
             {/* Sub-section: Findings & Narrative */}
             <div className="mt-2 mb-1 flex items-center gap-2 border-b border-slate-150 pb-2">
-              <span className="text-base">📝</span>
+              <span className="text-base">📌</span>
               <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Findings &amp; Narrative</p>
             </div>
 
@@ -467,3 +482,4 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false }) 
     </div>
   )
 }
+

@@ -72,12 +72,13 @@ export default function StepBurialDetails({ caseData, onUpdate }) {
     try {
       const res = await api.put(`/cases/${caseData.id}/burial`, data)
       onUpdate({
-        burialDetails: data,
+        burialDetails: res.data,
         amount: res.data?.amount ?? data.amount,
         beneficiaryName: data.deceasedName || caseData.proxyName || '',
         proxyRelationship: data.conformeRelationship || null,
+        status: res.data?.status ?? caseData.status,
       })
-      toast.success('Burial details saved')
+      toast.success(res.data?.approvalsReset ? 'Burial details saved. Case returned to encoding for re-review.' : 'Burial details saved')
     } catch (err) {
       if (err.response) {
         toast.error(err.response?.data?.message || 'Failed to save burial details')
@@ -89,7 +90,7 @@ export default function StepBurialDetails({ caseData, onUpdate }) {
         beneficiaryName: data.deceasedName || caseData.proxyName || '',
         proxyRelationship: data.conformeRelationship || null,
       })
-      toast.success('Saved (demo mode)')
+      toast.error(err.response?.data?.message || 'Failed to save changes')
     } finally {
       setSaving(false)
     }
@@ -233,7 +234,7 @@ export default function StepBurialDetails({ caseData, onUpdate }) {
             <input type="number" min="0" step="any" {...register('amount')} className="portal-input" placeholder="0.00" />
             {isOverCap && (
               <p className="mt-1 text-xs text-amber-600">
-                ⚠ Amount exceeds the maximum cap of {formatCurrency(GL_MAX)} per DSWD MC.
+                Warning: Amount exceeds the maximum cap of {formatCurrency(GL_MAX)} per DSWD MC.
               </p>
             )}
           </div>
@@ -249,3 +250,5 @@ export default function StepBurialDetails({ caseData, onUpdate }) {
     </div>
   )
 }
+
+

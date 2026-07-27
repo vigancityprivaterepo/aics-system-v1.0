@@ -22,13 +22,19 @@ export function richTextToPlainText(value: unknown) {
     source
       .replace(/<script[\s\S]*?<\/script>/gi, '')
       .replace(/<style[\s\S]*?<\/style>/gi, '')
-      .replace(/<li\b[^>]*>/gi, '\n• ')
+      .replace(/<li\b[^>]*>/gi, '\n- ')
       .replace(BLOCK_BREAK_PATTERN, '\n')
       .replace(/<\/td>/gi, '\t')
       .replace(/<[^>]+>/g, '')
   )
 
   return decoded
+    .replace(/\u00e2\u20ac\u00a2/g, '-')
+    .replace(/\u00e2\u20ac\u2122/g, "'")
+    .replace(/\u00e2\u20ac[\u0153\u009d]/g, '"')
+    .replace(/\u00e2\u20ac[\u201c\u201d]/g, '-')
+    .replace(/\u00c2\u00b7/g, '-')
+    .replace(/\u00c2/g, '')
     .replace(/\r/g, '')
     .replace(/\u00a0/g, ' ')
     .replace(/\n{3,}/g, '\n\n')

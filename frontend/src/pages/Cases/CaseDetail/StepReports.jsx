@@ -212,18 +212,7 @@ export default function StepReports({ caseData }) {
           No report templates available for this assistance type.
         </div>
       )}
-
-      <div className="mt-4 rounded-lg bg-slate-50 border border-slate-200 px-4 py-3">
-        <p className="text-xs text-slate-500 font-medium">
-          Documents require DSWD templates with <code className="font-mono">{'{placeholder}'}</code> tags in the{' '}
-          <code className="font-mono">
-            {isBurial ? 'templates/Burial Case Study and GL/' : isHospital ? 'templates/Hospital Case Study and GL/' : isMedical ? 'templates/Medical Case Study and GL/' : isMedicine ? 'templates/Medicine Case Study/' : isEyeglass ? 'templates/Eyeglass Case Study and GL/' : isPlain ? 'templates/Plain AICS/' : 'templates/'}
-          </code>{' '}
-          folder.
-        </p>
-      </div>
-
-      {isBurial && (
+{isBurial && (
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
             <p className="portal-label">Beneficiary</p>

@@ -15,6 +15,7 @@ import { generateClaudeFindingsDraft } from '../services/aiService.js'
 import { generateFindingsSchema, updateCaseSchema } from '../schemas/caseSchemas.js'
 import { statusToApprovalStage } from '../services/approvalService.js'
 import { auditLog } from '../utils/auditLog.js'
+import { resetApprovalsAfterMaterialEdit, valuesDiffer } from '../services/workflowIntegrityService.js'
 
 function formatApprovalSummary(stage: 'for_review' | 'recommending_approval' | 'for_approval', approval: {
   actedByName: string | null
@@ -245,7 +246,7 @@ export async function createCase(req: Request, res: Response) {
       socialWorkerEmpId: req.user?.employeeId,
       dateOfAssessment: body.dateOfAssessment ? new Date(body.dateOfAssessment) : null,
       presentingProblem: body.presentingProblem ?? null,
-      familyComposition: body.familyComposition ?? undefined,
+      familyComposition: body.familyComposition ?? (Array.isArray((client as any).familyComposition) ? (client as any).familyComposition as any : undefined),
       backgroundOfProblem: body.backgroundOfProblem ?? null,
       assessment: body.assessment ?? null,
       recommendation: body.recommendation ?? null,
@@ -344,29 +345,90 @@ export async function updateCase(req: Request, res: Response) {
     auditFlags.eyeglass_template_type = body.eyeglassTemplateType === 'proxy' ? 'proxy' : 'personal'
   }
 
-  const updated = await prisma.case.update({
-    where: { id: caseId },
-    data: {
-      dateOfAssessment: body.dateOfAssessment
-        ? new Date(body.dateOfAssessment)
-        : body.dateOfAssessment === null
-          ? null
-          : undefined,
-      socialWorkerName: body.socialWorkerName,
-      socialWorkerEmpId: body.socialWorkerEmpId,
-      presentingProblem: body.presentingProblem,
-      familyComposition: body.familyComposition,
-      backgroundOfProblem: body.backgroundOfProblem,
-      assessment: body.assessment,
-      recommendation: body.recommendation,
-      amount: requestedAmount,
-      hospitalClinic: body.hospitalClinic,
-      remarks: body.remarks,
-      auditFlags: auditFlags as Prisma.InputJsonValue,
-    },
+  const nextDateOfAssessment =
+    body.dateOfAssessment !== undefined
+      ? (body.dateOfAssessment ? new Date(body.dateOfAssessment) : null)
+      : current.dateOfAssessment
+  const nextFamilyComposition = body.familyComposition !== undefined ? body.familyComposition : current.familyComposition
+  const nextBackground = body.backgroundOfProblem !== undefined ? body.backgroundOfProblem : current.backgroundOfProblem
+  const nextAssessment = body.assessment !== undefined ? body.assessment : current.assessment
+  const nextRecommendation = body.recommendation !== undefined ? body.recommendation : current.recommendation
+  const nextHospitalClinic = body.hospitalClinic !== undefined ? body.hospitalClinic : current.hospitalClinic
+  const nextRemarks = body.remarks !== undefined ? body.remarks : current.remarks
+  const nextSocialWorkerName = body.socialWorkerName !== undefined ? body.socialWorkerName : current.socialWorkerName
+  const nextSocialWorkerEmpId = body.socialWorkerEmpId !== undefined ? body.socialWorkerEmpId : current.socialWorkerEmpId
+  const nextPresentingProblem = body.presentingProblem !== undefined ? body.presentingProblem : current.presentingProblem
+  const nextAmount = requestedAmount !== null ? requestedAmount : current.amount == null ? null : Number(current.amount)
+  const nextMedicineTemplateType = auditFlags.medicine_template_type === 'proxy' ? 'proxy' : 'personal'
+  const nextMedicineConformeName = typeof auditFlags.medicine_conforme_name === 'string' ? auditFlags.medicine_conforme_name : null
+  const nextMedicineConformeRelationship =
+    typeof auditFlags.medicine_conforme_relationship === 'string' ? auditFlags.medicine_conforme_relationship : null
+  const nextEyeglassTemplateType = auditFlags.eyeglass_template_type === 'proxy' ? 'proxy' : 'personal'
+
+  const changedFields: string[] = []
+  if (body.dateOfAssessment !== undefined && valuesDiffer(current.dateOfAssessment?.toISOString().slice(0, 10) ?? null, nextDateOfAssessment?.toISOString().slice(0, 10) ?? null)) changedFields.push('dateOfAssessment')
+  if (body.socialWorkerName !== undefined && valuesDiffer(current.socialWorkerName ?? null, nextSocialWorkerName ?? null)) changedFields.push('socialWorkerName')
+  if (body.socialWorkerEmpId !== undefined && valuesDiffer(current.socialWorkerEmpId ?? null, nextSocialWorkerEmpId ?? null)) changedFields.push('socialWorkerEmpId')
+  if (body.presentingProblem !== undefined && valuesDiffer(current.presentingProblem ?? null, nextPresentingProblem ?? null)) changedFields.push('presentingProblem')
+  if (body.familyComposition !== undefined && valuesDiffer(current.familyComposition ?? null, nextFamilyComposition ?? null)) changedFields.push('familyComposition')
+  if (body.backgroundOfProblem !== undefined && valuesDiffer(current.backgroundOfProblem ?? null, nextBackground ?? null)) changedFields.push('backgroundOfProblem')
+  if (body.assessment !== undefined && valuesDiffer(current.assessment ?? null, nextAssessment ?? null)) changedFields.push('assessment')
+  if (body.recommendation !== undefined && valuesDiffer(current.recommendation ?? null, nextRecommendation ?? null)) changedFields.push('recommendation')
+  if (body.amount !== undefined && valuesDiffer(current.amount == null ? null : Number(current.amount), nextAmount)) changedFields.push('amount')
+  if (body.hospitalClinic !== undefined && valuesDiffer(current.hospitalClinic ?? null, nextHospitalClinic ?? null)) changedFields.push('hospitalClinic')
+  if (body.remarks !== undefined && valuesDiffer(current.remarks ?? null, nextRemarks ?? null)) changedFields.push('remarks')
+  if (current.assistanceType === 'medicine') {
+    const currentMedicineTemplateType = typeof (current.auditFlags as any)?.medicine_template_type === 'string' && (current.auditFlags as any).medicine_template_type === 'proxy' ? 'proxy' : 'personal'
+    const currentMedicineConformeName = typeof (current.auditFlags as any)?.medicine_conforme_name === 'string' ? (current.auditFlags as any).medicine_conforme_name : null
+    const currentMedicineConformeRelationship = typeof (current.auditFlags as any)?.medicine_conforme_relationship === 'string' ? (current.auditFlags as any).medicine_conforme_relationship : null
+    if (body.medicineTemplateType !== undefined && valuesDiffer(currentMedicineTemplateType, nextMedicineTemplateType)) changedFields.push('medicineTemplateType')
+    if (body.medicineConformeName !== undefined && valuesDiffer(currentMedicineConformeName, nextMedicineConformeName)) changedFields.push('medicineConformeName')
+    if (body.medicineConformeRelationship !== undefined && valuesDiffer(currentMedicineConformeRelationship, nextMedicineConformeRelationship)) changedFields.push('medicineConformeRelationship')
+  }
+  if (current.assistanceType === 'eyeglass' && body.eyeglassTemplateType !== undefined) {
+    const currentEyeglassTemplateType = typeof (current.auditFlags as any)?.eyeglass_template_type === 'string' && (current.auditFlags as any).eyeglass_template_type === 'proxy' ? 'proxy' : 'personal'
+    if (valuesDiffer(currentEyeglassTemplateType, nextEyeglassTemplateType)) changedFields.push('eyeglassTemplateType')
+  }
+
+  const result = await prisma.$transaction(async (tx) => {
+    const updated = await tx.case.update({
+      where: { id: caseId },
+      data: {
+        dateOfAssessment: body.dateOfAssessment
+          ? new Date(body.dateOfAssessment)
+          : body.dateOfAssessment === null
+            ? null
+            : undefined,
+        socialWorkerName: body.socialWorkerName,
+        socialWorkerEmpId: body.socialWorkerEmpId,
+        presentingProblem: body.presentingProblem,
+        familyComposition: body.familyComposition,
+        backgroundOfProblem: body.backgroundOfProblem,
+        assessment: body.assessment,
+        recommendation: body.recommendation,
+        amount: requestedAmount,
+        hospitalClinic: body.hospitalClinic,
+        remarks: body.remarks,
+        auditFlags: auditFlags as Prisma.InputJsonValue,
+      },
+    })
+
+    const resetResult = await resetApprovalsAfterMaterialEdit(tx, {
+      caseId: current.id,
+      changedById: req.user?.id,
+      changedFields,
+      reason: overrideReason ?? null,
+    })
+
+    return { updated, resetResult }
   })
 
-  res.json({ id: updated.id, status: updated.status, amount: currencyFromDb(updated.amount) })
+  res.json({
+    id: result.updated.id,
+    status: result.resetResult.status ?? result.updated.status,
+    amount: currencyFromDb(result.updated.amount),
+    approvalsReset: result.resetResult.approvalsReset,
+  })
 }
 
 export async function deleteCase(req: Request, res: Response) {

@@ -2,10 +2,10 @@ import type { Request, Response } from 'express'
 import { ApplicantApplicationStatus, ApprovalAction, type CaseStatus } from '@prisma/client'
 import { prisma } from '../utils/prisma.js'
 import { HttpError } from '../utils/httpError.js'
-import { APPROVAL_STAGE_META } from '../types/caseTypes.js'
+import { ACTIVE_APPROVAL_STATUSES, APPROVAL_STAGE_META } from '../types/caseTypes.js'
 import { findCaseWithDetails, getApprovalSettings } from '../queries/caseQueries.js'
 import { updateStatusSchema } from '../schemas/caseSchemas.js'
-import { paramId, assertCaseReadable, normalizeWorkflowStatus, caseStatusToStep } from '../services/caseService.js'
+import { paramId, assertCaseReadable, assertEditableCase, normalizeWorkflowStatus, caseStatusToStep } from '../services/caseService.js'
 import {
   resolveApprovalAssignees,
   statusToApprovalStage,
@@ -48,12 +48,22 @@ export async function updateStatus(req: Request, res: Response) {
   }
 
   if (currentStatus === 'encoding' && nextStatus === 'for_review') {
+    assertEditableCase(caseData, req.user, 'Case status')
     const settings = await getApprovalSettings()
     const assigneesByStage = await resolveApprovalAssignees(settings)
     const workflow = assessCaseWorkflow(caseData, assigneesByStage)
     if (!workflow.readyForReview && !normalizedNotes) {
       throw new HttpError(400, `Case is not ready for review. Resolve blockers first or provide an override reason. Blockers: ${workflow.blockers.join('; ')}`)
     }
+  }
+
+  if (
+    (currentStatus === 'intake' && nextStatus === 'encoding') ||
+    (currentStatus === 'encoding' && nextStatus === 'intake') ||
+    (ACTIVE_APPROVAL_STATUSES.has(currentStatus) && nextStatus === 'encoding') ||
+    (currentStatus === 'rejected' && nextStatus === 'encoding')
+  ) {
+    assertEditableCase(caseData, req.user, 'Case status')
   }
 
   assertTransitionPermission(currentStatus, nextStatus as CaseStatus, req.user, normalizedNotes ?? undefined)
@@ -81,21 +91,35 @@ export async function updateStatus(req: Request, res: Response) {
 
     const actingUser = await prisma.user.findUnique({
       where: { id: req.user!.id },
-      select: { id: true, approvalLevel: true, isActive: true },
+      select: { id: true, name: true, approvalLevel: true, isActive: true, eSignatureUrl: true },
     })
     if (!actingUser || !actingUser.isActive) throw new HttpError(403, 'Your account is inactive.')
     const actorLevels = parseApprovalLevels(actingUser.approvalLevel)
     if (!actorLevels.includes(expectedLevel)) {
       throw new HttpError(403, `Only users with ${expectedLevel} approval level can perform this action.`)
     }
+    if (actingUser.id !== stageAssignee.id) {
+      throw new HttpError(403, `Only the assigned ${APPROVAL_STAGE_META[currentStage].label.toLowerCase()} may perform this action.`)
+    }
 
-    if (isApprovalProgressTransition(caseData.status, nextStatus as CaseStatus) && !stageAssignee.eSignatureUrl) {
+    if (isApprovalProgressTransition(caseData.status, nextStatus as CaseStatus) && !actingUser.eSignatureUrl) {
       throw new HttpError(400, `Assigned ${APPROVAL_STAGE_META[currentStage].label.toLowerCase()} must have an e-signature before approval.`)
+    }
+
+    stageAssignee = {
+      ...stageAssignee,
+      id: actingUser.id,
+      name: actingUser.name,
+      eSignatureUrl: actingUser.eSignatureUrl,
     }
   }
 
   const updated = await prisma.$transaction(async (tx) => {
     const next = await tx.case.update({ where: { id: caseData.id }, data: { status: nextStatus as CaseStatus } })
+
+    if (((ACTIVE_APPROVAL_STATUSES.has(currentStatus) && nextStatus === 'encoding') || (currentStatus === 'rejected' && nextStatus === 'encoding'))) {
+      await tx.caseApproval.deleteMany({ where: { caseId: caseData.id } })
+    }
 
     if (shouldCaptureStageAction && currentStage && stageAssignee) {
       const action: ApprovalAction = isReject ? 'rejected' : 'approved'

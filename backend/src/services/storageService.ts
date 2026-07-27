@@ -16,6 +16,10 @@ export function initStorageDirs() {
   fs.mkdirSync(profilePhotosDir, { recursive: true })
 }
 
+export function signedGlDirectory(): string {
+  return signedGlDir
+}
+
 export function signedGlAbsolutePath(filename: string): string {
   return path.join(signedGlDir, filename)
 }
@@ -47,3 +51,5 @@ export function profilePhotosDirectory(): string {
 export function profilePhotoPublicUrl(filename: string): string {
   return `${env.apiBaseUrl}/uploads/profile-photos/${filename}`
 }
+
+

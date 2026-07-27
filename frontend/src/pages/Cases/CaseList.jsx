@@ -257,7 +257,20 @@ export default function CaseList() {
               {cases.map((c) => {
                 const approvalMessages = workflowApprovalMessages(c)
                 return (
-                <tr key={c.id} className="table-row">
+                <tr
+                  key={c.id}
+                  className="table-row cursor-pointer focus-within:bg-slate-50 hover:bg-slate-50"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => navigate(`/cases/${c.id}`)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault()
+                      navigate(`/cases/${c.id}`)
+                    }
+                  }}
+                  title="Open case"
+                >
                   <td className="table-cell">
                     <Link to={`/cases/${c.id}`} className="font-mono text-xs font-bold text-brand-primary hover:underline">
                       {c.caseNumber || <span className="font-normal text-slate-400">—</span>}
@@ -315,14 +328,20 @@ export default function CaseList() {
                   <td className="table-cell">
                     <div className="flex items-center gap-1">
                       <button
-                        onClick={() => navigate(`/cases/${c.id}`)}
-                        title="Edit case"
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          navigate(`/cases/${c.id}`)
+                        }}
+                        title="Open case"
                         className="rounded p-1.5 text-slate-400 hover:bg-blue-50 hover:text-blue-600 transition-colors"
                       >
                         <EditIcon className="h-4 w-4" />
                       </button>
                       <button
-                        onClick={() => handleDelete(c)}
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          handleDelete(c)
+                        }}
                         disabled={deletingId === c.id}
                         title="Delete case"
                         className="rounded p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600 transition-colors disabled:opacity-40"

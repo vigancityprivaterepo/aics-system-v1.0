@@ -25,7 +25,7 @@ const RENDER_OPTIONS = {
 }
 
 export default function MedicineCaseStudyPreview({ caseData }) {
-  const [state, setState] = useState({ loading: true, error: false })
+  const [state, setState] = useState({ loading: true, error: false, message: '' })
   const abCache = useRef(null)
   const containerRef = useRef(null)
 
@@ -34,9 +34,14 @@ export default function MedicineCaseStudyPreview({ caseData }) {
     containerRef.current.innerHTML = ''
     try {
       await renderAsync(arrayBuffer, containerRef.current, null, RENDER_OPTIONS)
-      setState({ loading: false, error: false })
-    } catch {
-      setState({ loading: false, error: true })
+      setState({ loading: false, error: false, message: '' })
+    } catch (error) {
+      console.error('[MedicineCaseStudyPreview] DOCX render failed', error)
+      setState({
+        loading: false,
+        error: true,
+        message: error instanceof Error ? error.message : String(error),
+      })
     }
   }, [])
 
@@ -47,15 +52,22 @@ export default function MedicineCaseStudyPreview({ caseData }) {
     }
 
     let cancelled = false
+    setState({ loading: true, error: false, message: '' })
+
     api.get(DOC.endpoint(caseData.id), { responseType: 'arraybuffer' })
       .then((res) => {
         if (cancelled) return
         abCache.current = res.data
         doRender(res.data)
       })
-      .catch(() => {
+      .catch((error) => {
         if (cancelled) return
-        setState({ loading: false, error: true })
+        console.error('[MedicineCaseStudyPreview] DOCX fetch failed', error)
+        setState({
+          loading: false,
+          error: true,
+          message: error.response?.data?.message ?? error.message ?? 'Unable to load DOCX preview.',
+        })
       })
 
     return () => { cancelled = true }
@@ -73,8 +85,8 @@ export default function MedicineCaseStudyPreview({ caseData }) {
       a.download = `${caseData.caseNumber}-${DOC.downloadLabel}.docx`
       a.click()
       URL.revokeObjectURL(url)
-    } catch {
-      // parent handles toast
+    } catch (error) {
+      console.error('[MedicineCaseStudyPreview] DOCX download failed', error)
     }
   }
 
@@ -102,9 +114,10 @@ export default function MedicineCaseStudyPreview({ caseData }) {
           </div>
         )}
         {state.error && (
-          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-slate-300 text-slate-500 text-sm">
+          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-slate-300 px-6 text-center text-slate-500 text-sm">
             <FileTextIcon className="h-8 w-8 text-slate-400" />
-            <p>Preview unavailable - backend may be offline or template is missing.</p>
+            <p>Preview unavailable - DOCX renderer could not display this file.</p>
+            {state.message && <p className="max-w-xl text-xs text-slate-500">{state.message}</p>}
           </div>
         )}
         <div ref={containerRef} />

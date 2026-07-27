@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import api from '../../lib/api'
@@ -7,6 +7,12 @@ import { PlusIcon, SearchIcon, EditIcon, TrashIcon, PillIcon } from '../../compo
 import { ChevronLeftIcon, ChevronRightIcon } from '../../components/ui/Icons'
 
 const PAGE_SIZE = 20
+
+function displayOptional(value) {
+  const normalized = String(value ?? '').trim()
+  if (!normalized || ['\u00e2\u20ac\u201d', '\u2014', '\u2013'].includes(normalized)) return '-'
+  return normalized
+}
 
 export default function MedicineDatabase() {
   const [medicines, setMedicines] = useState([])
@@ -20,7 +26,7 @@ export default function MedicineDatabase() {
   const [categories, setCategories] = useState([])
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState(null)
-  const [form, setForm] = useState({ genericName: '', brandName: '', unit: '', strength: '', category: '', unitPrice: '' })
+  const [form, setForm] = useState({ genericName: '', brandName: '', unit: '', strength: '', category: '', isAvailable: true })
   const [importing, setImporting] = useState(false)
   const [importModal, setImportModal] = useState(null) // { file, name, rowCount } or null
   const [deleteAllModal, setDeleteAllModal] = useState(false)
@@ -108,7 +114,7 @@ export default function MedicineDatabase() {
       }
       setShowForm(false)
       setEditing(null)
-      setForm({ genericName: '', brandName: '', unit: '', strength: '', category: '', unitPrice: '' })
+      setForm({ genericName: '', brandName: '', unit: '', strength: '', category: '', isAvailable: true })
       fetchMedicines(page)
     } catch (err) {
       toast.error(err.response?.data?.message ?? 'Failed to save')
@@ -117,8 +123,20 @@ export default function MedicineDatabase() {
 
   const handleEdit = (m) => {
     setEditing(m)
-    setForm({ genericName: m.genericName, brandName: m.brandName, unit: m.unit, strength: m.strength ?? '', category: m.category, unitPrice: m.unitPrice })
+    setForm({ genericName: m.genericName, brandName: m.brandName ?? '', unit: m.unit ?? '', strength: m.strength ?? '', category: m.category ?? '', isAvailable: m.isAvailable !== false })
     setShowForm(true)
+  }
+
+  const handleToggleAvailability = async (m) => {
+    const nextStatus = m.isAvailable === false ? true : false
+    setMedicines(prev => prev.map(item => item.id === m.id ? { ...item, isAvailable: nextStatus } : item))
+    try {
+      await api.patch(`/medicines/${m.id}/availability`, { isAvailable: nextStatus })
+      toast.success(`${m.genericName} set to ${nextStatus ? 'Available' : 'Not Available'}`)
+    } catch {
+      setMedicines(prev => prev.map(item => item.id === m.id ? { ...item, isAvailable: m.isAvailable } : item))
+      toast.error('Failed to update availability')
+    }
   }
 
   // Count data rows in CSV for confirmation preview (client-side)
@@ -215,7 +233,7 @@ export default function MedicineDatabase() {
               }}
             />
           </label>
-          <button onClick={() => { setShowForm(!showForm); setEditing(null); setForm({ genericName: '', brandName: '', unit: '', strength: '', category: '', unitPrice: '' }) }}
+          <button onClick={() => { setShowForm(!showForm); setEditing(null); setForm({ genericName: '', brandName: '', unit: '', strength: '', category: '', isAvailable: true }) }}
             className="portal-button-green" id="btn-add-medicine">
             <PlusIcon className="h-4 w-4" />
             Add Medicine
@@ -251,8 +269,19 @@ export default function MedicineDatabase() {
               </select>
             </div>
             <div>
-              <label className="portal-label">Unit Price (PHP)</label>
-              <input type="number" min="0" step="0.01" value={form.unitPrice} onChange={e => setForm({ ...form, unitPrice: e.target.value })} className="portal-input" placeholder="0.00" />
+              <label className="portal-label">Availability Status</label>
+              <button
+                type="button"
+                onClick={() => setForm({ ...form, isAvailable: !form.isAvailable })}
+                className={`w-full py-2 px-3 rounded-lg font-medium text-sm border flex items-center justify-center gap-2 transition-colors ${
+                  form.isAvailable
+                    ? 'bg-emerald-50 border-emerald-300 text-emerald-800'
+                    : 'bg-rose-50 border-rose-300 text-rose-800'
+                }`}
+              >
+                <span className={`h-2.5 w-2.5 rounded-full ${form.isAvailable ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                {form.isAvailable ? 'Available' : 'Not Available'}
+              </button>
             </div>
           </div>
           <div className="mt-4 flex gap-2">
@@ -337,7 +366,7 @@ export default function MedicineDatabase() {
                 <p>Drug Category to Category</p>
                 <p>Strength / Concentration to Strength / Conc.</p>
                 <p>Dosage Form to Dosage Form</p>
-                <p className="text-slate-500 mt-1">Unit Price defaults to PHP 0.00 - update after import.</p>
+                <p className="text-slate-500 mt-1">Status defaults to Available - CHO can update availability anytime.</p>
               </div>
               <div className="flex justify-end gap-3 pt-1">
                 <button type="button" onClick={() => setImportModal(null)}
@@ -373,7 +402,7 @@ export default function MedicineDatabase() {
                 <th className="table-header text-left">Strength / Conc.</th>
                 <th className="table-header text-left">Dosage Form</th>
                 <th className="table-header text-left">Category</th>
-                <th className="table-header text-right">Unit Price</th>
+                <th className="table-header text-center">Availability Status</th>
                 <th className="table-header text-center">Actions</th>
               </tr>
             </thead>
@@ -384,11 +413,25 @@ export default function MedicineDatabase() {
                     {(page - 1) * PAGE_SIZE + idx + 1}
                   </td>
                   <td className="table-cell font-semibold text-brand-primary">{m.genericName}</td>
-                  <td className="table-cell text-slate-500">{m.brandName || 'â€”'}</td>
-                  <td className="table-cell text-xs">{m.unit || 'â€”'}</td>
-                  <td className="table-cell text-xs font-medium">{m.strength || 'â€”'}</td>
+                  <td className="table-cell text-slate-500">{displayOptional(m.brandName)}</td>
+                  <td className="table-cell text-xs">{displayOptional(m.unit)}</td>
+                  <td className="table-cell text-xs font-medium">{displayOptional(m.strength)}</td>
                   <td className="table-cell"><span className="badge badge-green">{m.category}</span></td>
-                  <td className="table-cell text-right font-mono font-semibold">{formatCurrency(m.unitPrice)}</td>
+                  <td className="table-cell text-center">
+                    <button
+                      type="button"
+                      onClick={() => handleToggleAvailability(m)}
+                      title="Click to toggle availability status"
+                      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all shadow-sm ${
+                        m.isAvailable !== false
+                          ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200 border border-emerald-300'
+                          : 'bg-rose-100 text-rose-800 hover:bg-rose-200 border border-rose-300'
+                      }`}
+                    >
+                      <span className={`h-2 w-2 rounded-full ${m.isAvailable !== false ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                      {m.isAvailable !== false ? 'Available' : 'Not Available'}
+                    </button>
+                  </td>
                   <td className="table-cell text-center">
                     <div className="flex justify-center gap-2">
                       <button onClick={() => handleEdit(m)} className="text-brand-primary hover:text-brand-dark"><EditIcon className="h-4 w-4" /></button>

@@ -8,7 +8,7 @@ const PAGE_SIZE = 20
 
 function displayOptional(value) {
   const normalized = String(value ?? '').trim()
-  if (!normalized || ['â€”', '—', '–'].includes(normalized)) return '-'
+  if (!normalized || ['\u00e2\u20ac\u201d', '\u2014', '\u2013'].includes(normalized)) return '-'
   return normalized
 }
 

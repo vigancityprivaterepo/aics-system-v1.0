@@ -7,6 +7,7 @@ import { env } from '../config/env.js'
 import { prisma } from '../utils/prisma.js'
 import { asyncHandler } from '../utils/asyncHandler.js'
 import { HttpError } from '../utils/httpError.js'
+import { buildBodyFieldKey, softRateLimit } from '../middleware/softRateLimit.js'
 
 const router = Router()
 
@@ -22,6 +23,22 @@ function normalizeRole(role: string): UserRole {
 }
 
 const APPROVAL_LEVEL_VALUES = ['reviewer', 'recommender', 'approver', 'preparer'] as const
+const authCooldownMessage = 'Too many login attempts. Please wait a few minutes and try again.'
+const staffLoginIpLimiter = softRateLimit({
+  scope: 'staff-auth-ip',
+  windowMs: 5 * 60 * 1000,
+  maxAttempts: 100,
+  cooldownMs: 5 * 60 * 1000,
+  message: authCooldownMessage,
+})
+const staffLoginIdentifierLimiter = softRateLimit({
+  scope: 'staff-auth-identifier',
+  windowMs: 5 * 60 * 1000,
+  maxAttempts: 8,
+  cooldownMs: 10 * 60 * 1000,
+  key: buildBodyFieldKey('identifier'),
+  message: authCooldownMessage,
+})
 
 function parseApprovalLevels(stored: string | null | undefined): string[] {
   if (!stored || stored === 'none') return []
@@ -31,7 +48,7 @@ function parseApprovalLevels(stored: string | null | undefined): string[] {
     .filter((s) => (APPROVAL_LEVEL_VALUES as readonly string[]).includes(s))
 }
 
-router.post('/login', asyncHandler(async (req, res) => {
+router.post('/login', staffLoginIpLimiter, staffLoginIdentifierLimiter, asyncHandler(async (req, res) => {
   const { identifier, password } = loginSchema.parse(req.body)
   const normalizedIdentifier = identifier.trim().toLowerCase()
 
@@ -57,6 +74,7 @@ router.post('/login', asyncHandler(async (req, res) => {
       email: user.email,
       employeeId: user.employeeId,
       role: normalizeRole(String(user.role)),
+      approvalLevel: parseApprovalLevels(user.approvalLevel),
     },
     env.jwtSecret,
     { expiresIn: env.jwtExpiresIn as jwt.SignOptions['expiresIn'] }

@@ -7,8 +7,15 @@ import { assertCaseReadable, assertEditableCase, paramId } from '../services/cas
 import { signedGlPublicUrl } from '../services/storageService.js'
 import { updateBurialSchema, updateHospitalSchema, updateMedicalSchema, updateEyeglassSchema, updatePlainSchema } from '../schemas/caseSchemas.js'
 import { removeStoredUpload, validateStoredUpload } from '../services/uploadValidation.js'
+import { resetApprovalsAfterMaterialEdit, valuesDiffer } from '../services/workflowIntegrityService.js'
 
-// ── Burial ─────────────────────────────────────────────────────────────────
+function addChangedField(changedFields: string[], label: string, currentValue: unknown, nextValue: unknown) {
+  if (valuesDiffer(currentValue ?? null, nextValue ?? null)) {
+    changedFields.push(label)
+  }
+}
+
+// ── Burial ──────────────────────────────────────────────────────────────────
 
 export async function getBurial(req: Request, res: Response) {
   const caseId = paramId(req.params.id)
@@ -25,7 +32,7 @@ export async function getBurial(req: Request, res: Response) {
       [caseData.client.firstName, caseData.client.middleName, caseData.client.lastName].filter(Boolean).join(' '),
     beneficiaryAddress:
       String(caseData.burialDetails?.deceasedAddress ?? '').trim() ||
-      [caseData.client.barangay, caseData.client.municipality, caseData.client.province, caseData.client.region].filter(Boolean).join(', '),
+      [caseData.client.barangay, caseData.client.municipality, caseData.client.province].filter(Boolean).join(', '),
     proxyName: [caseData.client.firstName, caseData.client.middleName, caseData.client.lastName].filter(Boolean).join(' '),
     proxyRelationship: caseData.burialDetails?.conformeRelationship ?? null,
     burialDetails: caseData.burialDetails
@@ -58,7 +65,7 @@ export async function updateBurial(req: Request, res: Response) {
   const caseId = paramId(req.params.id)
   const body = updateBurialSchema.parse(req.body)
 
-  const caseData = await prisma.case.findUnique({ where: { id: caseId }, include: { client: true } })
+  const caseData = await prisma.case.findUnique({ where: { id: caseId }, include: { client: true, burialDetails: true } })
   if (!caseData) throw new HttpError(404, 'Case not found')
   assertEditableCase(caseData, req.user, 'Burial details')
   if (caseData.assistanceType !== 'burial') throw new HttpError(400, 'Only burial cases can store burial details')
@@ -73,70 +80,98 @@ export async function updateBurial(req: Request, res: Response) {
 
   const deceasedAge = toOptionalInt(body.deceasedAge)
   const guaranteeLetterUrl = `${env.apiBaseUrl}/api/cases/${caseData.id}/guarantee-letter/pdf`
+  const nextDateOfDeath = body.dateOfDeath ? new Date(body.dateOfDeath) : body.dateOfDeath === null ? null : caseData.burialDetails?.dateOfDeath ?? null
+  const changedFields: string[] = []
+  addChangedField(changedFields, 'deceasedName', caseData.burialDetails?.deceasedName ?? null, body.deceasedName ?? null)
+  addChangedField(changedFields, 'deceasedAddress', caseData.burialDetails?.deceasedAddress ?? null, body.deceasedAddress ?? null)
+  addChangedField(changedFields, 'deceasedAge', caseData.burialDetails?.deceasedAge ?? null, deceasedAge ?? null)
+  addChangedField(changedFields, 'deceasedOccupation', caseData.burialDetails?.deceasedOccupation ?? null, body.deceasedOccupation ?? null)
+  addChangedField(changedFields, 'deceasedCivilStatus', caseData.burialDetails?.deceasedCivilStatus ?? null, body.deceasedCivilStatus ?? null)
+  addChangedField(changedFields, 'deceasedSex', caseData.burialDetails?.deceasedSex ?? null, body.deceasedSex ?? null)
+  addChangedField(changedFields, 'dateOfDeath', caseData.burialDetails?.dateOfDeath?.toISOString().slice(0, 10) ?? null, nextDateOfDeath?.toISOString().slice(0, 10) ?? null)
+  addChangedField(changedFields, 'causeOfDeath', caseData.burialDetails?.causeOfDeath ?? null, body.causeOfDeath ?? null)
+  addChangedField(changedFields, 'funeralHome', caseData.burialDetails?.funeralHome ?? null, body.funeralHome ?? null)
+  addChangedField(changedFields, 'funeralHomeOwner', caseData.burialDetails?.funeralHomeOwner ?? null, body.funeralHomeOwner ?? null)
+  addChangedField(changedFields, 'funeralOwnerAddress', caseData.burialDetails?.funeralOwnerAddress ?? null, body.funeralOwnerAddress ?? null)
+  addChangedField(changedFields, 'typeOfBill', caseData.burialDetails?.typeOfBill ?? null, body.typeOfBill ?? null)
+  addChangedField(changedFields, 'intermentPlace', caseData.burialDetails?.intermentPlace ?? null, body.intermentPlace ?? null)
+  addChangedField(changedFields, 'conformeName', caseData.burialDetails?.conformeName ?? null, body.conformeName ?? null)
+  addChangedField(changedFields, 'conformeRelationship', caseData.burialDetails?.conformeRelationship ?? null, body.conformeRelationship ?? null)
+  addChangedField(changedFields, 'amount', currencyFromDb(caseData.amount), amount)
 
-  const burial = await prisma.burialDetail.upsert({
-    where: { caseId: caseData.id },
-    update: {
-      deceasedName: body.deceasedName,
-      deceasedAddress: body.deceasedAddress,
-      deceasedAge: deceasedAge === null ? null : deceasedAge,
-      deceasedOccupation: body.deceasedOccupation,
-      deceasedCivilStatus: body.deceasedCivilStatus,
-      deceasedSex: body.deceasedSex,
-      dateOfDeath: body.dateOfDeath ? new Date(body.dateOfDeath) : body.dateOfDeath === null ? null : undefined,
-      causeOfDeath: body.causeOfDeath,
-      funeralHome: body.funeralHome,
-      funeralHomeOwner: body.funeralHomeOwner,
-      funeralOwnerAddress: body.funeralOwnerAddress,
-      typeOfBill: body.typeOfBill,
-      intermentPlace: body.intermentPlace,
-      conformeName: body.conformeName,
-      conformeRelationship: body.conformeRelationship,
-      guaranteeLetterUrl,
-    },
-    create: {
+  const result = await prisma.$transaction(async (tx) => {
+    const burial = await tx.burialDetail.upsert({
+      where: { caseId: caseData.id },
+      update: {
+        deceasedName: body.deceasedName,
+        deceasedAddress: body.deceasedAddress,
+        deceasedAge: deceasedAge === null ? null : deceasedAge,
+        deceasedOccupation: body.deceasedOccupation,
+        deceasedCivilStatus: body.deceasedCivilStatus,
+        deceasedSex: body.deceasedSex,
+        dateOfDeath: body.dateOfDeath ? new Date(body.dateOfDeath) : body.dateOfDeath === null ? null : undefined,
+        causeOfDeath: body.causeOfDeath,
+        funeralHome: body.funeralHome,
+        funeralHomeOwner: body.funeralHomeOwner,
+        funeralOwnerAddress: body.funeralOwnerAddress,
+        typeOfBill: body.typeOfBill,
+        intermentPlace: body.intermentPlace,
+        conformeName: body.conformeName,
+        conformeRelationship: body.conformeRelationship,
+        guaranteeLetterUrl,
+      },
+      create: {
+        caseId: caseData.id,
+        deceasedName: body.deceasedName ?? null,
+        deceasedAddress: body.deceasedAddress ?? null,
+        deceasedAge: deceasedAge ?? null,
+        deceasedOccupation: body.deceasedOccupation ?? null,
+        deceasedCivilStatus: body.deceasedCivilStatus ?? null,
+        deceasedSex: body.deceasedSex ?? null,
+        dateOfDeath: body.dateOfDeath ? new Date(body.dateOfDeath) : null,
+        causeOfDeath: body.causeOfDeath ?? null,
+        funeralHome: body.funeralHome ?? null,
+        funeralHomeOwner: body.funeralHomeOwner ?? null,
+        funeralOwnerAddress: body.funeralOwnerAddress ?? null,
+        typeOfBill: body.typeOfBill ?? null,
+        intermentPlace: body.intermentPlace ?? null,
+        conformeName: body.conformeName ?? null,
+        conformeRelationship: body.conformeRelationship ?? null,
+        guaranteeLetterUrl,
+      },
+    })
+    await tx.case.update({ where: { id: caseData.id }, data: { amount } })
+    const resetResult = await resetApprovalsAfterMaterialEdit(tx, {
       caseId: caseData.id,
-      deceasedName: body.deceasedName ?? null,
-      deceasedAddress: body.deceasedAddress ?? null,
-      deceasedAge: deceasedAge ?? null,
-      deceasedOccupation: body.deceasedOccupation ?? null,
-      deceasedCivilStatus: body.deceasedCivilStatus ?? null,
-      deceasedSex: body.deceasedSex ?? null,
-      dateOfDeath: body.dateOfDeath ? new Date(body.dateOfDeath) : null,
-      causeOfDeath: body.causeOfDeath ?? null,
-      funeralHome: body.funeralHome ?? null,
-      funeralHomeOwner: body.funeralHomeOwner ?? null,
-      funeralOwnerAddress: body.funeralOwnerAddress ?? null,
-      typeOfBill: body.typeOfBill ?? null,
-      intermentPlace: body.intermentPlace ?? null,
-      conformeName: body.conformeName ?? null,
-      conformeRelationship: body.conformeRelationship ?? null,
-      guaranteeLetterUrl,
-    },
+      changedById: req.user?.id,
+      changedFields,
+    })
+    return { burial, resetResult }
   })
-  await prisma.case.update({ where: { id: caseData.id }, data: { amount } })
 
   res.json({
-    id: burial.id,
+    id: result.burial.id,
     caseId: caseData.id,
-    deceasedName: burial.deceasedName,
-    deceasedAddress: burial.deceasedAddress ?? null,
-    deceasedAge: burial.deceasedAge ?? null,
-    deceasedOccupation: burial.deceasedOccupation ?? null,
-    deceasedCivilStatus: burial.deceasedCivilStatus ?? null,
-    deceasedSex: burial.deceasedSex ?? null,
-    dateOfDeath: burial.dateOfDeath?.toISOString().slice(0, 10) ?? null,
-    causeOfDeath: burial.causeOfDeath,
-    funeralHome: burial.funeralHome,
-    funeralHomeOwner: burial.funeralHomeOwner ?? null,
-    funeralOwnerAddress: burial.funeralOwnerAddress ?? null,
-    typeOfBill: burial.typeOfBill ?? null,
-    intermentPlace: burial.intermentPlace ?? null,
-    conformeName: burial.conformeName ?? null,
-    conformeRelationship: burial.conformeRelationship ?? null,
-    guaranteeLetterUrl: burial.guaranteeLetterUrl,
-    signedGlUrl: burial.signedGlUrl,
+    deceasedName: result.burial.deceasedName,
+    deceasedAddress: result.burial.deceasedAddress ?? null,
+    deceasedAge: result.burial.deceasedAge ?? null,
+    deceasedOccupation: result.burial.deceasedOccupation ?? null,
+    deceasedCivilStatus: result.burial.deceasedCivilStatus ?? null,
+    deceasedSex: result.burial.deceasedSex ?? null,
+    dateOfDeath: result.burial.dateOfDeath?.toISOString().slice(0, 10) ?? null,
+    causeOfDeath: result.burial.causeOfDeath,
+    funeralHome: result.burial.funeralHome,
+    funeralHomeOwner: result.burial.funeralHomeOwner ?? null,
+    funeralOwnerAddress: result.burial.funeralOwnerAddress ?? null,
+    typeOfBill: result.burial.typeOfBill ?? null,
+    intermentPlace: result.burial.intermentPlace ?? null,
+    conformeName: result.burial.conformeName ?? null,
+    conformeRelationship: result.burial.conformeRelationship ?? null,
+    guaranteeLetterUrl: result.burial.guaranteeLetterUrl,
+    signedGlUrl: result.burial.signedGlUrl,
     amount,
+    status: result.resetResult.status ?? caseData.status,
+    approvalsReset: result.resetResult.approvalsReset,
   })
 }
 
@@ -206,7 +241,7 @@ export async function updateHospital(req: Request, res: Response) {
   const caseId = paramId(req.params.id)
   const body = updateHospitalSchema.parse(req.body)
 
-  const caseData = await prisma.case.findUnique({ where: { id: caseId }, include: { client: true } })
+  const caseData = await prisma.case.findUnique({ where: { id: caseId }, include: { client: true, hospitalDetails: true } })
   if (!caseData) throw new HttpError(404, 'Case not found')
   assertEditableCase(caseData, req.user, 'Hospital details')
   if (caseData.assistanceType !== 'hospital') throw new HttpError(400, 'Only hospital cases can store hospital details')
@@ -220,36 +255,61 @@ export async function updateHospital(req: Request, res: Response) {
   }
 
   const guaranteeLetterUrl = `${env.apiBaseUrl}/api/cases/${caseData.id}/guarantee-letter/pdf`
-  const hospital = await prisma.hospitalDetail.upsert({
-    where: { caseId: caseData.id },
-    update: {
-      templateType: body.templateType, patientName: body.patientName, hospitalName: body.hospitalName,
-      hospitalAddress: body.hospitalAddress, doctorName: body.doctorName, mdPosition: body.mdPosition,
-      admissionDate: body.admissionDate ? new Date(body.admissionDate) : body.admissionDate === null ? null : undefined,
-      diagnosis: body.diagnosis, typeOfBill: body.typeOfBill, conformeName: body.conformeName,
-      conformeRelationship: body.conformeRelationship, guaranteeLetterUrl,
-    },
-    create: {
-      caseId: caseData.id, templateType: body.templateType ?? 'personal',
-      patientName: body.patientName ?? null, hospitalName: body.hospitalName ?? null,
-      hospitalAddress: body.hospitalAddress ?? null, doctorName: body.doctorName ?? null,
-      mdPosition: body.mdPosition ?? null,
-      admissionDate: body.admissionDate ? new Date(body.admissionDate) : null,
-      diagnosis: body.diagnosis ?? null, typeOfBill: body.typeOfBill ?? null,
-      conformeName: body.conformeName ?? null, conformeRelationship: body.conformeRelationship ?? null,
-      guaranteeLetterUrl,
-    },
+  const nextAdmissionDate = body.admissionDate ? new Date(body.admissionDate) : body.admissionDate === null ? null : caseData.hospitalDetails?.admissionDate ?? null
+  const changedFields: string[] = []
+  addChangedField(changedFields, 'templateType', caseData.hospitalDetails?.templateType ?? 'personal', body.templateType ?? 'personal')
+  addChangedField(changedFields, 'patientName', caseData.hospitalDetails?.patientName ?? null, body.patientName ?? null)
+  addChangedField(changedFields, 'hospitalName', caseData.hospitalDetails?.hospitalName ?? null, body.hospitalName ?? null)
+  addChangedField(changedFields, 'hospitalAddress', caseData.hospitalDetails?.hospitalAddress ?? null, body.hospitalAddress ?? null)
+  addChangedField(changedFields, 'doctorName', caseData.hospitalDetails?.doctorName ?? null, body.doctorName ?? null)
+  addChangedField(changedFields, 'mdPosition', caseData.hospitalDetails?.mdPosition ?? null, body.mdPosition ?? null)
+  addChangedField(changedFields, 'admissionDate', caseData.hospitalDetails?.admissionDate?.toISOString().slice(0, 10) ?? null, nextAdmissionDate?.toISOString().slice(0, 10) ?? null)
+  addChangedField(changedFields, 'diagnosis', caseData.hospitalDetails?.diagnosis ?? null, body.diagnosis ?? null)
+  addChangedField(changedFields, 'typeOfBill', caseData.hospitalDetails?.typeOfBill ?? null, body.typeOfBill ?? null)
+  addChangedField(changedFields, 'conformeName', caseData.hospitalDetails?.conformeName ?? null, body.conformeName ?? null)
+  addChangedField(changedFields, 'conformeRelationship', caseData.hospitalDetails?.conformeRelationship ?? null, body.conformeRelationship ?? null)
+  addChangedField(changedFields, 'amount', currencyFromDb(caseData.amount), amount)
+
+  const result = await prisma.$transaction(async (tx) => {
+    const hospital = await tx.hospitalDetail.upsert({
+      where: { caseId: caseData.id },
+      update: {
+        templateType: body.templateType, patientName: body.patientName, hospitalName: body.hospitalName,
+        hospitalAddress: body.hospitalAddress, doctorName: body.doctorName, mdPosition: body.mdPosition,
+        admissionDate: body.admissionDate ? new Date(body.admissionDate) : body.admissionDate === null ? null : undefined,
+        diagnosis: body.diagnosis, typeOfBill: body.typeOfBill, conformeName: body.conformeName,
+        conformeRelationship: body.conformeRelationship, guaranteeLetterUrl,
+      },
+      create: {
+        caseId: caseData.id, templateType: body.templateType ?? 'personal',
+        patientName: body.patientName ?? null, hospitalName: body.hospitalName ?? null,
+        hospitalAddress: body.hospitalAddress ?? null, doctorName: body.doctorName ?? null,
+        mdPosition: body.mdPosition ?? null,
+        admissionDate: body.admissionDate ? new Date(body.admissionDate) : null,
+        diagnosis: body.diagnosis ?? null, typeOfBill: body.typeOfBill ?? null,
+        conformeName: body.conformeName ?? null, conformeRelationship: body.conformeRelationship ?? null,
+        guaranteeLetterUrl,
+      },
+    })
+    await tx.case.update({ where: { id: caseData.id }, data: { amount } })
+    const resetResult = await resetApprovalsAfterMaterialEdit(tx, {
+      caseId: caseData.id,
+      changedById: req.user?.id,
+      changedFields,
+    })
+    return { hospital, resetResult }
   })
-  await prisma.case.update({ where: { id: caseData.id }, data: { amount } })
 
   res.json({
-    id: hospital.id, caseId: caseData.id, templateType: hospital.templateType,
-    patientName: hospital.patientName ?? null, hospitalName: hospital.hospitalName ?? null,
-    hospitalAddress: hospital.hospitalAddress ?? null, doctorName: hospital.doctorName ?? null,
-    mdPosition: hospital.mdPosition ?? null, admissionDate: hospital.admissionDate?.toISOString().slice(0, 10) ?? null,
-    diagnosis: hospital.diagnosis ?? null, typeOfBill: hospital.typeOfBill ?? null,
-    conformeName: hospital.conformeName ?? null, conformeRelationship: hospital.conformeRelationship ?? null,
-    guaranteeLetterUrl: hospital.guaranteeLetterUrl ?? null, signedGlUrl: hospital.signedGlUrl ?? null, amount,
+    id: result.hospital.id, caseId: caseData.id, templateType: result.hospital.templateType,
+    patientName: result.hospital.patientName ?? null, hospitalName: result.hospital.hospitalName ?? null,
+    hospitalAddress: result.hospital.hospitalAddress ?? null, doctorName: result.hospital.doctorName ?? null,
+    mdPosition: result.hospital.mdPosition ?? null, admissionDate: result.hospital.admissionDate?.toISOString().slice(0, 10) ?? null,
+    diagnosis: result.hospital.diagnosis ?? null, typeOfBill: result.hospital.typeOfBill ?? null,
+    conformeName: result.hospital.conformeName ?? null, conformeRelationship: result.hospital.conformeRelationship ?? null,
+    guaranteeLetterUrl: result.hospital.guaranteeLetterUrl ?? null, signedGlUrl: result.hospital.signedGlUrl ?? null, amount,
+    status: result.resetResult.status ?? caseData.status,
+    approvalsReset: result.resetResult.approvalsReset,
   })
 }
 
@@ -287,7 +347,7 @@ export async function updateMedical(req: Request, res: Response) {
   const caseId = paramId(req.params.id)
   const body = updateMedicalSchema.parse(req.body)
 
-  const caseData = await prisma.case.findUnique({ where: { id: caseId }, include: { client: true } })
+  const caseData = await prisma.case.findUnique({ where: { id: caseId }, include: { client: true, medicalDetails: true } })
   if (!caseData) throw new HttpError(404, 'Case not found')
   assertEditableCase(caseData, req.user, 'Medical details')
   if (caseData.assistanceType !== 'medical') throw new HttpError(400, 'Only medical cases can store medical details')
@@ -301,39 +361,66 @@ export async function updateMedical(req: Request, res: Response) {
   }
 
   const guaranteeLetterUrl = `${env.apiBaseUrl}/api/cases/${caseData.id}/guarantee-letter/pdf`
-  const medical = await prisma.medicalDetail.upsert({
-    where: { caseId: caseData.id },
-    update: {
-      templateType: body.templateType, clinicName: body.clinicName, clinicAddress: body.clinicAddress,
-      doctorName: body.doctorName, mdPosition: body.mdPosition,
-      consultationDate: body.consultationDate ? new Date(body.consultationDate) : body.consultationDate === null ? null : undefined,
-      medicalType: body.medicalType, diagnosedType: body.diagnosedType, operationType: body.operationType,
-      diagnosis: body.diagnosis, typeOfBill: body.typeOfBill, conformeName: body.conformeName,
-      conformeRelationship: body.conformeRelationship, guaranteeLetterUrl,
-    },
-    create: {
-      caseId: caseData.id, templateType: body.templateType ?? 'personal',
-      clinicName: body.clinicName ?? null, clinicAddress: body.clinicAddress ?? null,
-      doctorName: body.doctorName ?? null, mdPosition: body.mdPosition ?? null,
-      consultationDate: body.consultationDate ? new Date(body.consultationDate) : null,
-      medicalType: body.medicalType ?? null, diagnosedType: body.diagnosedType ?? null,
-      operationType: body.operationType ?? null, diagnosis: body.diagnosis ?? null,
-      typeOfBill: body.typeOfBill ?? null, conformeName: body.conformeName ?? null,
-      conformeRelationship: body.conformeRelationship ?? null, guaranteeLetterUrl,
-    },
+  const nextConsultationDate = body.consultationDate ? new Date(body.consultationDate) : body.consultationDate === null ? null : caseData.medicalDetails?.consultationDate ?? null
+  const medicalChangedFields: string[] = []
+  addChangedField(medicalChangedFields, 'templateType', caseData.medicalDetails?.templateType ?? 'personal', body.templateType ?? 'personal')
+  addChangedField(medicalChangedFields, 'clinicName', caseData.medicalDetails?.clinicName ?? null, body.clinicName ?? null)
+  addChangedField(medicalChangedFields, 'clinicAddress', caseData.medicalDetails?.clinicAddress ?? null, body.clinicAddress ?? null)
+  addChangedField(medicalChangedFields, 'doctorName', caseData.medicalDetails?.doctorName ?? null, body.doctorName ?? null)
+  addChangedField(medicalChangedFields, 'mdPosition', caseData.medicalDetails?.mdPosition ?? null, body.mdPosition ?? null)
+  addChangedField(medicalChangedFields, 'consultationDate', caseData.medicalDetails?.consultationDate?.toISOString().slice(0, 10) ?? null, nextConsultationDate?.toISOString().slice(0, 10) ?? null)
+  addChangedField(medicalChangedFields, 'medicalType', caseData.medicalDetails?.medicalType ?? null, body.medicalType ?? null)
+  addChangedField(medicalChangedFields, 'diagnosedType', caseData.medicalDetails?.diagnosedType ?? null, body.diagnosedType ?? null)
+  addChangedField(medicalChangedFields, 'operationType', caseData.medicalDetails?.operationType ?? null, body.operationType ?? null)
+  addChangedField(medicalChangedFields, 'diagnosis', caseData.medicalDetails?.diagnosis ?? null, body.diagnosis ?? null)
+  addChangedField(medicalChangedFields, 'typeOfBill', caseData.medicalDetails?.typeOfBill ?? null, body.typeOfBill ?? null)
+  addChangedField(medicalChangedFields, 'conformeName', caseData.medicalDetails?.conformeName ?? null, body.conformeName ?? null)
+  addChangedField(medicalChangedFields, 'conformeRelationship', caseData.medicalDetails?.conformeRelationship ?? null, body.conformeRelationship ?? null)
+  addChangedField(medicalChangedFields, 'amount', currencyFromDb(caseData.amount), amount)
+
+  const medicalResult = await prisma.$transaction(async (tx) => {
+    const medical = await tx.medicalDetail.upsert({
+      where: { caseId: caseData.id },
+      update: {
+        templateType: body.templateType, clinicName: body.clinicName, clinicAddress: body.clinicAddress,
+        doctorName: body.doctorName, mdPosition: body.mdPosition,
+        consultationDate: body.consultationDate ? new Date(body.consultationDate) : body.consultationDate === null ? null : undefined,
+        medicalType: body.medicalType, diagnosedType: body.diagnosedType, operationType: body.operationType,
+        diagnosis: body.diagnosis, typeOfBill: body.typeOfBill, conformeName: body.conformeName,
+        conformeRelationship: body.conformeRelationship, guaranteeLetterUrl,
+      },
+      create: {
+        caseId: caseData.id, templateType: body.templateType ?? 'personal',
+        clinicName: body.clinicName ?? null, clinicAddress: body.clinicAddress ?? null,
+        doctorName: body.doctorName ?? null, mdPosition: body.mdPosition ?? null,
+        consultationDate: body.consultationDate ? new Date(body.consultationDate) : null,
+        medicalType: body.medicalType ?? null, diagnosedType: body.diagnosedType ?? null,
+        operationType: body.operationType ?? null, diagnosis: body.diagnosis ?? null,
+        typeOfBill: body.typeOfBill ?? null, conformeName: body.conformeName ?? null,
+        conformeRelationship: body.conformeRelationship ?? null, guaranteeLetterUrl,
+      },
+    })
+    await tx.case.update({ where: { id: caseData.id }, data: { amount } })
+    const resetResult = await resetApprovalsAfterMaterialEdit(tx, {
+      caseId: caseData.id,
+      changedById: req.user?.id,
+      changedFields: medicalChangedFields,
+    })
+    return { medical, resetResult }
   })
-  await prisma.case.update({ where: { id: caseData.id }, data: { amount } })
 
   res.json({
-    id: medical.id, caseId: caseData.id, templateType: medical.templateType,
-    clinicName: medical.clinicName ?? null, clinicAddress: medical.clinicAddress ?? null,
-    doctorName: medical.doctorName ?? null, mdPosition: medical.mdPosition ?? null,
-    consultationDate: medical.consultationDate?.toISOString().slice(0, 10) ?? null,
-    medicalType: medical.medicalType ?? null, diagnosedType: medical.diagnosedType ?? null,
-    operationType: medical.operationType ?? null, diagnosis: medical.diagnosis ?? null,
-    typeOfBill: medical.typeOfBill ?? null, conformeName: medical.conformeName ?? null,
-    conformeRelationship: medical.conformeRelationship ?? null,
-    guaranteeLetterUrl: medical.guaranteeLetterUrl ?? null, signedGlUrl: medical.signedGlUrl ?? null, amount,
+    id: medicalResult.medical.id, caseId: caseData.id, templateType: medicalResult.medical.templateType,
+    clinicName: medicalResult.medical.clinicName ?? null, clinicAddress: medicalResult.medical.clinicAddress ?? null,
+    doctorName: medicalResult.medical.doctorName ?? null, mdPosition: medicalResult.medical.mdPosition ?? null,
+    consultationDate: medicalResult.medical.consultationDate?.toISOString().slice(0, 10) ?? null,
+    medicalType: medicalResult.medical.medicalType ?? null, diagnosedType: medicalResult.medical.diagnosedType ?? null,
+    operationType: medicalResult.medical.operationType ?? null, diagnosis: medicalResult.medical.diagnosis ?? null,
+    typeOfBill: medicalResult.medical.typeOfBill ?? null, conformeName: medicalResult.medical.conformeName ?? null,
+    conformeRelationship: medicalResult.medical.conformeRelationship ?? null,
+    guaranteeLetterUrl: medicalResult.medical.guaranteeLetterUrl ?? null, signedGlUrl: medicalResult.medical.signedGlUrl ?? null, amount,
+    status: medicalResult.resetResult.status ?? caseData.status,
+    approvalsReset: medicalResult.resetResult.approvalsReset,
   })
 }
 
@@ -371,7 +458,7 @@ export async function updateEyeglass(req: Request, res: Response) {
   const caseId = paramId(req.params.id)
   const body = updateEyeglassSchema.parse(req.body)
 
-  const caseData = await prisma.case.findUnique({ where: { id: caseId }, include: { client: true } })
+  const caseData = await prisma.case.findUnique({ where: { id: caseId }, include: { client: true, eyeglassDetails: true } })
   if (!caseData) throw new HttpError(404, 'Case not found')
   assertEditableCase(caseData, req.user, 'Eyeglass details')
   if (caseData.assistanceType !== 'eyeglass') throw new HttpError(400, 'Only eyeglass cases can store eyeglass details')
@@ -385,14 +472,30 @@ export async function updateEyeglass(req: Request, res: Response) {
   }
 
   const guaranteeLetterUrl = `${env.apiBaseUrl}/api/cases/${caseData.id}/guarantee-letter/pdf`
-  const eyeglass = await prisma.eyeglassDetail.upsert({
-    where: { caseId: caseData.id },
-    update: { doctorName: body.doctorName, clinicName: body.clinicName, clinicAddress: body.clinicAddress, conformeName: body.conformeName, conformeRelationship: body.conformeRelationship, guaranteeLetterUrl },
-    create: { caseId: caseData.id, doctorName: body.doctorName ?? null, clinicName: body.clinicName ?? null, clinicAddress: body.clinicAddress ?? null, conformeName: body.conformeName ?? null, conformeRelationship: body.conformeRelationship ?? null, guaranteeLetterUrl },
-  })
-  await prisma.case.update({ where: { id: caseData.id }, data: { amount } })
+  const eyeglassChangedFields: string[] = []
+  addChangedField(eyeglassChangedFields, 'doctorName', caseData.eyeglassDetails?.doctorName ?? null, body.doctorName ?? null)
+  addChangedField(eyeglassChangedFields, 'clinicName', caseData.eyeglassDetails?.clinicName ?? null, body.clinicName ?? null)
+  addChangedField(eyeglassChangedFields, 'clinicAddress', caseData.eyeglassDetails?.clinicAddress ?? null, body.clinicAddress ?? null)
+  addChangedField(eyeglassChangedFields, 'conformeName', caseData.eyeglassDetails?.conformeName ?? null, body.conformeName ?? null)
+  addChangedField(eyeglassChangedFields, 'conformeRelationship', caseData.eyeglassDetails?.conformeRelationship ?? null, body.conformeRelationship ?? null)
+  addChangedField(eyeglassChangedFields, 'amount', currencyFromDb(caseData.amount), amount)
 
-  res.json({ id: eyeglass.id, caseId: caseData.id, doctorName: eyeglass.doctorName ?? null, clinicName: eyeglass.clinicName ?? null, clinicAddress: eyeglass.clinicAddress ?? null, conformeName: eyeglass.conformeName ?? null, conformeRelationship: eyeglass.conformeRelationship ?? null, guaranteeLetterUrl: eyeglass.guaranteeLetterUrl ?? null, signedGlUrl: eyeglass.signedGlUrl ?? null, amount })
+  const eyeglassResult = await prisma.$transaction(async (tx) => {
+    const eyeglass = await tx.eyeglassDetail.upsert({
+      where: { caseId: caseData.id },
+      update: { doctorName: body.doctorName, clinicName: body.clinicName, clinicAddress: body.clinicAddress, conformeName: body.conformeName, conformeRelationship: body.conformeRelationship, guaranteeLetterUrl },
+      create: { caseId: caseData.id, doctorName: body.doctorName ?? null, clinicName: body.clinicName ?? null, clinicAddress: body.clinicAddress ?? null, conformeName: body.conformeName ?? null, conformeRelationship: body.conformeRelationship ?? null, guaranteeLetterUrl },
+    })
+    await tx.case.update({ where: { id: caseData.id }, data: { amount } })
+    const resetResult = await resetApprovalsAfterMaterialEdit(tx, {
+      caseId: caseData.id,
+      changedById: req.user?.id,
+      changedFields: eyeglassChangedFields,
+    })
+    return { eyeglass, resetResult }
+  })
+
+  res.json({ id: eyeglassResult.eyeglass.id, caseId: caseData.id, doctorName: eyeglassResult.eyeglass.doctorName ?? null, clinicName: eyeglassResult.eyeglass.clinicName ?? null, clinicAddress: eyeglassResult.eyeglass.clinicAddress ?? null, conformeName: eyeglassResult.eyeglass.conformeName ?? null, conformeRelationship: eyeglassResult.eyeglass.conformeRelationship ?? null, guaranteeLetterUrl: eyeglassResult.eyeglass.guaranteeLetterUrl ?? null, signedGlUrl: eyeglassResult.eyeglass.signedGlUrl ?? null, amount, status: eyeglassResult.resetResult.status ?? caseData.status, approvalsReset: eyeglassResult.resetResult.approvalsReset })
 }
 
 // ── Plain ───────────────────────────────────────────────────────────────────
@@ -401,18 +504,32 @@ export async function updatePlain(req: Request, res: Response) {
   const caseId = paramId(req.params.id)
   const body = updatePlainSchema.parse(req.body)
 
-  const caseData = await prisma.case.findUnique({ where: { id: caseId } })
+  const caseData = await prisma.case.findUnique({ where: { id: caseId }, include: { plainDetails: true } })
   if (!caseData) throw new HttpError(404, 'Case not found')
   assertEditableCase(caseData, req.user, 'Plain details')
   if (caseData.assistanceType !== 'plain') throw new HttpError(400, 'Only plain cases can store plain details')
 
-  await prisma.plainDetail.upsert({
-    where: { caseId: caseData.id },
-    create: { caseId: caseData.id, natureOfAssistance: body.natureOfAssistance },
-    update: { natureOfAssistance: body.natureOfAssistance },
-  })
+  const plainChangedFields: string[] = []
+  addChangedField(plainChangedFields, 'natureOfAssistance', caseData.plainDetails?.natureOfAssistance ?? null, body.natureOfAssistance ?? null)
   if (body.amount !== undefined) {
-    await prisma.case.update({ where: { id: caseData.id }, data: { amount: body.amount } })
+    addChangedField(plainChangedFields, 'amount', currencyFromDb(caseData.amount), body.amount)
   }
-  res.json({ ok: true, amount: body.amount })
+  const plainResult = await prisma.$transaction(async (tx) => {
+    await tx.plainDetail.upsert({
+      where: { caseId: caseData.id },
+      create: { caseId: caseData.id, natureOfAssistance: body.natureOfAssistance },
+      update: { natureOfAssistance: body.natureOfAssistance },
+    })
+    if (body.amount !== undefined) {
+      await tx.case.update({ where: { id: caseData.id }, data: { amount: body.amount } })
+    }
+    const resetResult = await resetApprovalsAfterMaterialEdit(tx, {
+      caseId: caseData.id,
+      changedById: req.user?.id,
+      changedFields: plainChangedFields,
+    })
+    return { resetResult }
+  })
+  res.json({ ok: true, amount: body.amount, status: plainResult.resetResult.status ?? caseData.status, approvalsReset: plainResult.resetResult.approvalsReset })
 }
+

@@ -1,16 +1,20 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
 import api from '../../lib/api'
-import { ChevronLeftIcon } from '../../components/ui/Icons'
+import { ChevronLeftIcon, PlusIcon, TrashIcon } from '../../components/ui/Icons'
 import { VIGAN_BARANGAYS } from '../../lib/constants'
 import DuplicateReviewModal from '../../components/clients/DuplicateReviewModal'
 
 
+const defaultFamilyMember = { name: '', age: '', relationship: '', occupation: '' }
+const RELATIONSHIP_OPTIONS = ['Spouse', 'Son', 'Daughter', 'Father', 'Mother', 'Brother', 'Sister', 'Grandson', 'Granddaughter', 'Grandfather', 'Grandmother', 'Uncle', 'Aunt', 'Nephew', 'Niece', 'Son-in-Law', 'Daughter-in-Law', 'Father-in-Law', 'Mother-in-Law', 'Other']
+
 export default function ClientForm() {
   const navigate = useNavigate()
   const [saving, setSaving] = useState(false)
+  const [family, setFamily] = useState([])
   const [duplicateModal, setDuplicateModal] = useState(null)
   const { register, handleSubmit } = useForm({
     defaultValues: {
@@ -20,29 +24,45 @@ export default function ClientForm() {
   })
 
 
+  const addFamilyMember = () => setFamily((current) => [...current, { ...defaultFamilyMember }])
+  const removeFamilyMember = (index) => setFamily((current) => current.filter((_, idx) => idx !== index))
+  const updateFamilyMember = (index, field, value) => {
+    setFamily((current) => current.map((member, idx) => (idx === index ? { ...member, [field]: value } : member)))
+  }
+
+  const cleanFamily = () => family
+    .map((member) => ({
+      name: String(member.name || '').trim(),
+      age: member.age === '' ? null : member.age,
+      relationship: String(member.relationship || '').trim(),
+      occupation: String(member.occupation || '').trim(),
+    }))
+    .filter((member) => member.name || member.relationship || member.occupation || member.age !== null)
+
   const onSubmit = async (data) => {
+    const payload = { ...data, familyComposition: cleanFamily() }
     setSaving(true)
     try {
-      const duplicateCheck = await api.post('/clients/duplicate-check', data)
+      const duplicateCheck = await api.post('/clients/duplicate-check', payload)
       if (duplicateCheck.data?.duplicateStatus && duplicateCheck.data.duplicateStatus !== 'no_match') {
         setDuplicateModal({
-          payload: data,
+          payload,
           ...duplicateCheck.data,
         })
         return
       }
 
-      const res = await api.post('/clients', data)
+      const res = await api.post('/clients', payload)
       toast.success('Client profile created')
       navigate(`/clients/${res.data.id}`)
     } catch (err) {
       if (err.response?.status === 409 && err.response?.data?.matches) {
         setDuplicateModal({
-          payload: data,
+          payload,
           ...err.response.data,
         })
       } else {
-        toast.success('Client created (demo mode)')
+        toast.error(err.response?.data?.message || 'Failed to create client profile')
         navigate('/clients')
       }
     } finally {
@@ -217,6 +237,49 @@ export default function ClientForm() {
           </div>
         </div>
 
+
+        {/* Family Composition */}
+        <div className="card">
+          <div className="form-section-title flex items-center justify-between">
+            <span>Family Composition</span>
+            <button type="button" onClick={addFamilyMember} className="portal-button-secondary text-xs">
+              <PlusIcon className="h-4 w-4" /> Add Member
+            </button>
+          </div>
+          <div className="overflow-x-auto rounded-lg border border-slate-200">
+            <table className="w-full min-w-[640px] text-xs">
+              <thead className="bg-slate-50 text-slate-500">
+                <tr>
+                  <th className="px-3 py-2 text-left">Name</th>
+                  <th className="px-3 py-2 text-left">Age</th>
+                  <th className="px-3 py-2 text-left">Relationship</th>
+                  <th className="px-3 py-2 text-left">Occupation</th>
+                  <th className="w-12 px-3 py-2" />
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {family.length === 0 ? (
+                  <tr>
+                    <td colSpan="5" className="px-3 py-4 text-center text-slate-400">No household members added.</td>
+                  </tr>
+                ) : family.map((member, index) => (
+                  <tr key={index}>
+                    <td className="px-3 py-2"><input value={member.name} onChange={(event) => updateFamilyMember(index, 'name', event.target.value)} className="portal-input" placeholder="Full name" /></td>
+                    <td className="px-3 py-2"><input type="number" min="0" value={member.age} onChange={(event) => updateFamilyMember(index, 'age', event.target.value)} className="portal-input" placeholder="Age" /></td>
+                    <td className="px-3 py-2"><select value={member.relationship} onChange={(event) => updateFamilyMember(index, 'relationship', event.target.value)} className="portal-input"><option value="">Select</option>{RELATIONSHIP_OPTIONS.map((relationship) => <option key={relationship} value={relationship}>{relationship}</option>)}</select></td>
+                    <td className="px-3 py-2"><input value={member.occupation} onChange={(event) => updateFamilyMember(index, 'occupation', event.target.value)} className="portal-input" placeholder="Occupation" /></td>
+                    <td className="px-3 py-2 text-center">
+                      <button type="button" onClick={() => removeFamilyMember(index)} className="rounded border border-rose-200 p-2 text-rose-600 hover:bg-rose-50" title="Remove member">
+                        <TrashIcon className="h-4 w-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
         <div className="flex justify-end gap-3">
           <button type="button" onClick={() => navigate('/clients')} className="portal-button-secondary">
             Cancel
@@ -241,3 +304,5 @@ export default function ClientForm() {
     </div>
   )
 }
+
+

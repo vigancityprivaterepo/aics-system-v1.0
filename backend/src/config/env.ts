@@ -59,13 +59,13 @@ export const env = {
   corsOrigin,
   databaseUrl,
   jwtSecret,
-  jwtExpiresIn: process.env.JWT_EXPIRES_IN ?? '7d',
+  jwtExpiresIn: process.env.JWT_EXPIRES_IN ?? '12h',
   burialGlMaxAmount: Number(process.env.BURIAL_GL_MAX_AMOUNT ?? 10000),
   hospitalGlMaxAmount: Number(process.env.HOSPITAL_GL_MAX_AMOUNT ?? 10000),
   uploadsRoot: process.env.UPLOAD_ROOT ?? 'uploads',
   backupsRoot: process.env.BACKUPS_ROOT ?? 'backups',
   portalJwtSecret,
-  portalJwtExpiresIn: process.env.PORTAL_JWT_EXPIRES_IN ?? '30d',
+  portalJwtExpiresIn: process.env.PORTAL_JWT_EXPIRES_IN ?? '7d',
   documentVerifySecret,
   libreOfficePath: process.env.LIBREOFFICE_PATH ?? '',
   portalEmailNotificationStatuses: parseCsv(process.env.PORTAL_EMAIL_NOTIFICATION_STATUSES ?? 'approved,released,rejected'),
@@ -80,6 +80,12 @@ export const env = {
   anthropicModel: process.env.ANTHROPIC_MODEL ?? 'claude-sonnet-4-6',
   trustProxy: parseTrustProxy(process.env.TRUST_PROXY ?? (isProduction ? 'true' : 'false')),
   rateLimitMode: process.env.RATE_LIMIT_MODE ?? 'memory',
+  openSignBaseUrl: process.env.OPENSIGN_BASE_URL ?? '',
+  openSignApiToken: process.env.OPENSIGN_API_TOKEN ?? '',
+  openSignCreateDocumentPath: process.env.OPENSIGN_CREATE_DOCUMENT_PATH ?? '/api/v1/createdocument',
+  openSignWebhookSecret: process.env.OPENSIGN_WEBHOOK_SECRET ?? '',
+  openSignWebhookUrl: process.env.OPENSIGN_WEBHOOK_URL ?? '',
+  googleClientId: process.env.GOOGLE_CLIENT_ID ?? '',
 }
 
 export function hasSmtpConfig() {
@@ -113,3 +119,5 @@ export function getProductionConfigErrors() {
 export function getRuntimeReadinessIssues() {
   return getProductionConfigErrors()
 }
+
+

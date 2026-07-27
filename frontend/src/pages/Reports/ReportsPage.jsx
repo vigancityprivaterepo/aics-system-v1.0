@@ -1,10 +1,19 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import dayjs from 'dayjs'
 import toast from 'react-hot-toast'
 import api from '../../lib/api'
-import { DocumentIcon, UsersIcon, ChartIcon, ChevronLeftIcon, ChevronRightIcon, CheckCircleIcon, DownloadIcon } from '../../components/ui/Icons'
+import {
+  DocumentIcon,
+  UsersIcon,
+  ChartIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  CheckCircleIcon,
+  DownloadIcon,
+} from '../../components/ui/Icons'
 
-const peso = (n) => `₱${Number(n).toLocaleString('en-PH', { minimumFractionDigits: 2 })}`
+const peso = (n) => `PHP ${Number(n).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
 const STATUS_LABEL = {
   intake: 'Intake',
@@ -28,7 +37,14 @@ const STATUS_COLOR = {
   rejected: 'bg-red-100 text-red-600',
 }
 
-const REPORT_TYPE_ORDER = ['medicine', 'medical', 'hospital', 'burial', 'eyeglass']
+const REPORT_TYPE_ORDER = ['medicine', 'medical', 'hospital', 'burial', 'eyeglass', 'plain']
+const REPORT_BASIS_OPTIONS = [
+  { value: 'created', label: 'Created Date' },
+  { value: 'assessment', label: 'Assessment Date' },
+  { value: 'approved', label: 'Approved Date' },
+  { value: 'released', label: 'Released Date' },
+]
+const CASES_PAGE_LIMIT = 10
 
 const TYPE_META = {
   medicine: { label: 'Medicine', color: 'bg-emerald-100 text-emerald-700' },
@@ -36,15 +52,16 @@ const TYPE_META = {
   hospital: { label: 'Hospital', color: 'bg-violet-100 text-violet-700' },
   burial: { label: 'Burial', color: 'bg-slate-100 text-slate-600' },
   eyeglass: { label: 'Eyeglass', color: 'bg-amber-100 text-amber-700' },
+  plain: { label: 'Plain AICS', color: 'bg-rose-100 text-rose-700' },
 }
 
 const TABS = [
   { key: 'summary', label: 'Summary', Icon: ChartIcon },
   { key: 'cases', label: 'Case Listing', Icon: DocumentIcon },
   { key: 'barangay', label: 'By Barangay', Icon: UsersIcon },
+  { key: 'operations', label: 'Operations', Icon: CheckCircleIcon },
   { key: 'guarantee-letters', label: 'Guarantee Letters', Icon: CheckCircleIcon },
 ]
-const CASES_PAGE_LIMIT = 10
 
 function getTypeMeta(type) {
   return TYPE_META[type] ?? { label: type || 'Unknown', color: 'bg-slate-100 text-slate-600' }
@@ -61,9 +78,31 @@ function downloadBlobFile(blob, filename) {
   URL.revokeObjectURL(url)
 }
 
-function PeriodPicker({ from, to, onChange }) {
+async function downloadApiFile(endpoint, fallbackFilename) {
+  const response = await api.get(endpoint, { responseType: 'blob' })
+  const blob = response.data instanceof Blob ? response.data : new Blob([response.data], { type: 'application/octet-stream' })
+  const disposition = String(response.headers?.['content-disposition'] ?? '')
+  const filenameMatch = disposition.match(/filename="?([^"]+)"?/)
+  downloadBlobFile(blob, filenameMatch?.[1] ?? fallbackFilename)
+}
+
+function PeriodPicker({ from, to, basis, onChange, onBasisChange }) {
   return (
     <div className="flex flex-wrap items-end gap-3 lg:gap-4">
+      <div className="flex min-w-[190px] flex-col gap-2">
+        <label className="text-xs font-medium uppercase tracking-wide text-slate-500">Report Basis</label>
+        <select
+          value={basis}
+          onChange={(e) => onBasisChange(e.target.value)}
+          className="portal-input py-2.5 text-sm"
+        >
+          {REPORT_BASIS_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </div>
       <div className="flex min-w-[190px] flex-col gap-2">
         <label className="text-xs font-medium uppercase tracking-wide text-slate-500">From</label>
         <input
@@ -89,13 +128,14 @@ function PeriodPicker({ from, to, onChange }) {
           { label: 'This Month', from: dayjs().startOf('month').format('YYYY-MM-DD'), to: dayjs().endOf('month').format('YYYY-MM-DD') },
           { label: 'Last Month', from: dayjs().subtract(1, 'month').startOf('month').format('YYYY-MM-DD'), to: dayjs().subtract(1, 'month').endOf('month').format('YYYY-MM-DD') },
           { label: 'This Year', from: dayjs().startOf('year').format('YYYY-MM-DD'), to: dayjs().endOf('year').format('YYYY-MM-DD') },
-        ].map((p) => (
+        ].map((preset) => (
           <button
-            key={p.label}
-            onClick={() => onChange(p.from, p.to)}
+            key={preset.label}
+            type="button"
+            onClick={() => onChange(preset.from, preset.to)}
             className="rounded-lg border border-slate-200 px-4 py-2 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50"
           >
-            {p.label}
+            {preset.label}
           </button>
         ))}
       </div>
@@ -103,19 +143,19 @@ function PeriodPicker({ from, to, onChange }) {
   )
 }
 
-function SummaryTab({ data }) {
+function SummaryTab({ data, onTypeDrilldown, onStatusDrilldown }) {
   if (!data) return <div className="py-16 text-center text-sm text-slate-400">No data for selected period.</div>
 
   const allStatuses = ['intake', 'encoding', 'for_review', 'recommending_approval', 'for_approval', 'approved', 'released', 'rejected']
 
   return (
-    <div className="space-y-6 print:space-y-4">
+    <div className="space-y-6">
       <div className="grid grid-cols-2 gap-4 lg:gap-5 sm:grid-cols-4">
         {[
-          { label: 'Total Cases', value: data.totalCases, sub: 'cases opened' },
-          { label: 'Total Disbursed', value: peso(data.totalAmount), sub: 'amount released' },
-          { label: 'New Clients', value: data.newClients, sub: 'registered this period' },
-          { label: 'Avg per Case', value: data.totalCases ? peso(data.totalAmount / data.totalCases) : '—', sub: 'average assistance' },
+          { label: 'Total Cases', value: data.totalCases, sub: data.basisLabel },
+          { label: 'Total Amount', value: peso(data.totalAmount), sub: 'matching cases' },
+          { label: 'Distinct Clients', value: data.distinctClients, sub: 'beneficiaries in report' },
+          { label: 'Avg per Case', value: data.totalCases ? peso(data.totalAmount / data.totalCases) : '-', sub: 'average assistance' },
         ].map(({ label, value, sub }) => (
           <div key={label} className="card py-5 text-center">
             <p className="text-2xl font-bold text-brand-dark">{value}</p>
@@ -125,9 +165,30 @@ function SummaryTab({ data }) {
         ))}
       </div>
 
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        {[
+          { label: '4Ps', value: data.demographics?.is4ps ?? 0, color: 'bg-emerald-100 text-emerald-700' },
+          { label: 'PWD', value: data.demographics?.isPwd ?? 0, color: 'bg-blue-100 text-blue-700' },
+          { label: 'Senior Citizens', value: data.demographics?.isSenior ?? 0, color: 'bg-amber-100 text-amber-700' },
+        ].map((item) => (
+          <div key={item.label} className="card flex items-center justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{item.label}</p>
+              <p className="mt-2 text-2xl font-bold text-slate-900">{item.value}</p>
+            </div>
+            <span className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${item.color}`}>
+              Beneficiaries
+            </span>
+          </div>
+        ))}
+      </div>
+
       <div className="grid gap-5 xl:grid-cols-2">
         <div className="card">
-          <p className="form-section-title mb-4">By Assistance Type</p>
+          <div className="mb-4 flex items-center justify-between">
+            <p className="form-section-title">By Assistance Type</p>
+            <span className="text-xs text-slate-400">Click a row to open the matching cases</span>
+          </div>
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-100">
@@ -137,29 +198,35 @@ function SummaryTab({ data }) {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {data.byType.map((r) => {
-                const meta = getTypeMeta(r.type)
+              {data.byType.map((row) => {
+                const meta = getTypeMeta(row.type)
                 return (
-                  <tr key={r.type}>
+                  <tr key={row.type} className="hover:bg-slate-50">
                     <td className="py-2.5">
-                      <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${meta.color}`}>
-                        {meta.label}
-                      </span>
+                      <button
+                        type="button"
+                        onClick={() => onTypeDrilldown(row.type)}
+                        className="flex items-center gap-2 text-left"
+                      >
+                        <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${meta.color}`}>
+                          {meta.label}
+                        </span>
+                      </button>
                     </td>
-                    <td className="py-2.5 text-right font-medium">{r.count}</td>
-                    <td className="py-2.5 text-right text-slate-600">{peso(r.amount)}</td>
+                    <td className="py-2.5 text-right font-medium">{row.count}</td>
+                    <td className="py-2.5 text-right text-slate-600">{peso(row.amount)}</td>
                   </tr>
                 )
               })}
-              {data.byType.length === 0 && (
-                <tr><td colSpan={3} className="py-4 text-center text-xs text-slate-400">No cases</td></tr>
-              )}
             </tbody>
           </table>
         </div>
 
         <div className="card">
-          <p className="form-section-title mb-4">By Case Status</p>
+          <div className="mb-4 flex items-center justify-between">
+            <p className="form-section-title">By Current Case Status</p>
+            <span className="text-xs text-slate-400">Click a row to open the matching cases</span>
+          </div>
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-100">
@@ -169,14 +236,20 @@ function SummaryTab({ data }) {
             </thead>
             <tbody className="divide-y divide-slate-50">
               {allStatuses.map((status) => {
-                const row = data.byStatus.find((r) => r.status === status)
+                const row = data.byStatus.find((item) => item.status === status)
                 const count = row?.count ?? 0
                 return (
-                  <tr key={status}>
+                  <tr key={status} className="hover:bg-slate-50">
                     <td className="py-2">
-                      <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_COLOR[status]}`}>
-                        {STATUS_LABEL[status]}
-                      </span>
+                      <button
+                        type="button"
+                        onClick={() => onStatusDrilldown(status)}
+                        className="text-left"
+                      >
+                        <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_COLOR[status]}`}>
+                          {STATUS_LABEL[status]}
+                        </span>
+                      </button>
                     </td>
                     <td className="py-2 text-right font-medium">{count}</td>
                   </tr>
@@ -190,7 +263,7 @@ function SummaryTab({ data }) {
   )
 }
 
-function CasesTab({ data, filters, onFilterChange, page, totalPages, onPageChange }) {
+function CasesTab({ data, filters, basisLabel, onFilterChange, onResetFilters, page, totalPages, onPageChange }) {
   return (
     <div className="space-y-4">
       <div className="card space-y-4">
@@ -198,6 +271,7 @@ function CasesTab({ data, filters, onFilterChange, page, totalPages, onPageChang
           <div>
             <p className="portal-kicker">Case Filters</p>
             <h3 className="mt-1 text-base font-semibold text-slate-800">Review and narrow report entries</h3>
+            <p className="mt-1 text-xs text-slate-400">Listing sorted by {basisLabel.toLowerCase()}.</p>
           </div>
           {data && (
             <div className="rounded-lg bg-slate-50 px-3 py-2 text-xs font-medium text-slate-500">
@@ -205,7 +279,7 @@ function CasesTab({ data, filters, onFilterChange, page, totalPages, onPageChang
             </div>
           )}
         </div>
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[220px_240px]">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           <select
             value={filters.type}
             onChange={(e) => onFilterChange({ ...filters, type: e.target.value })}
@@ -224,117 +298,129 @@ function CasesTab({ data, filters, onFilterChange, page, totalPages, onPageChang
             className="portal-input py-2.5 text-sm"
           >
             <option value="">All Statuses</option>
-            {Object.entries(STATUS_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+            {Object.entries(STATUS_LABEL).map(([key, value]) => (
+              <option key={key} value={key}>
+                {value}
+              </option>
+            ))}
           </select>
+          <input
+            value={filters.barangay}
+            onChange={(e) => onFilterChange({ ...filters, barangay: e.target.value })}
+            placeholder="Barangay"
+            className="portal-input py-2.5 text-sm"
+          />
+          <input
+            value={filters.municipality}
+            onChange={(e) => onFilterChange({ ...filters, municipality: e.target.value })}
+            placeholder="Municipality"
+            className="portal-input py-2.5 text-sm"
+          />
         </div>
-        {data && data.total > 0 && (
-          <div className="flex items-center justify-between border-t border-slate-100 pt-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4">
+          {data && data.total > 0 ? (
             <p className="text-xs text-slate-400">
-              Showing {(page - 1) * CASES_PAGE_LIMIT + 1}-
-              {Math.min(page * CASES_PAGE_LIMIT, data.total)} of {data.total}
+              Showing {(page - 1) * CASES_PAGE_LIMIT + 1}-{Math.min(page * CASES_PAGE_LIMIT, data.total)} of {data.total}
             </p>
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-500">Page {page} of {totalPages}</span>
-              <button
-                type="button"
-                onClick={() => onPageChange(Math.max(1, page - 1))}
-                disabled={page <= 1}
-                className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-300 text-slate-600 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
-                aria-label="Previous page"
-              >
-                <ChevronLeftIcon className="h-4 w-4" />
-              </button>
-              <button
-                type="button"
-                onClick={() => onPageChange(Math.min(totalPages, page + 1))}
-                disabled={page >= totalPages}
-                className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-300 text-slate-600 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
-                aria-label="Next page"
-              >
-                <ChevronRightIcon className="h-4 w-4" />
-              </button>
-            </div>
+          ) : <span className="text-xs text-slate-400">No results yet</span>}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onResetFilters}
+              className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50"
+            >
+              Reset Filters
+            </button>
+            <span className="text-xs text-slate-500">Page {page} of {totalPages}</span>
+            <button
+              type="button"
+              onClick={() => onPageChange(Math.max(1, page - 1))}
+              disabled={page <= 1}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-300 text-slate-600 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
+              aria-label="Previous page"
+            >
+              <ChevronLeftIcon className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => onPageChange(Math.min(totalPages, page + 1))}
+              disabled={page >= totalPages}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-300 text-slate-600 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
+              aria-label="Next page"
+            >
+              <ChevronRightIcon className="h-4 w-4" />
+            </button>
           </div>
-        )}
+        </div>
       </div>
 
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-        <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
-          <div>
-            <p className="portal-kicker">Results</p>
-            <h3 className="mt-1 text-base font-semibold text-slate-800">Case listing</h3>
-          </div>
-        </div>
         <div className="overflow-x-auto">
-        <table className="table-base w-full min-w-full">
-          <thead>
-            <tr>
-              <th className="table-th px-5 py-4 text-left">Case No.</th>
-              <th className="table-th px-5 py-4 text-left">Client ID</th>
-              <th className="table-th px-5 py-4 text-left">Client</th>
-              <th className="table-th px-5 py-4 text-left">Barangay</th>
-              <th className="table-th px-5 py-4 text-left">Type</th>
-              <th className="table-th px-5 py-4 text-left">Status</th>
-              <th className="table-th px-5 py-4 text-left">Social Worker</th>
-              <th className="table-th px-5 py-4 text-right">Amount</th>
-              <th className="table-th px-5 py-4 text-left">Date</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {data?.cases.map((c) => {
-              const meta = getTypeMeta(c.assistanceType)
-              return (
-                <tr key={c.id} className="hover:bg-slate-50">
-                  <td className="table-td px-5 py-4 align-top font-mono text-xs">{c.caseNumber || <span className="font-sans text-slate-400">—</span>}</td>
-                  <td className="table-td px-5 py-4 align-top font-mono text-xs text-slate-500">{c.clientId || '—'}</td>
-                  <td className="table-td px-5 py-4 align-top font-medium text-slate-800">
-                    {c.clientName}
-                    <div className="mt-2 flex flex-wrap gap-1">
-                      {c.is4ps && <span className="badge badge-green px-1 py-0 text-[9px]">4Ps</span>}
-                      {c.isPwd && <span className="badge badge-blue px-1 py-0 text-[9px]">PWD</span>}
-                      {c.isSenior && <span className="badge badge-amber px-1 py-0 text-[9px]">SC</span>}
-                    </div>
-                  </td>
-                  <td className="table-td px-5 py-4 align-top text-xs leading-relaxed text-slate-600">{c.barangay}</td>
-                  <td className="table-td px-5 py-4 align-top">
-                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${meta.color}`}>
-                      {meta.label}
-                    </span>
-                  </td>
-                  <td className="table-td px-5 py-4 align-top">
-                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLOR[c.status]}`}>
-                      {STATUS_LABEL[c.status]}
-                    </span>
-                  </td>
-                  <td className="table-td px-5 py-4 align-top text-xs leading-relaxed text-slate-500">{c.socialWorkerName}</td>
-                  <td className="table-td px-5 py-4 align-top text-right font-mono text-sm">{c.amount ? peso(c.amount) : '—'}</td>
-                  <td className="table-td px-5 py-4 align-top text-xs text-slate-500">{c.createdAt}</td>
-                </tr>
-              )
-            })}
-            {(!data || data.cases.length === 0) && (
-              <tr><td colSpan={8} className="table-td px-5 py-10 text-center text-slate-400">No cases found.</td></tr>
-            )}
-          </tbody>
-          {data && data.cases.length > 0 && (
-            <tfoot>
-              <tr className="border-t-2 border-slate-200 bg-slate-50">
-                <td colSpan={7} className="table-td px-5 py-4 text-xs font-semibold text-slate-500">TOTAL ({data.total} cases)</td>
-                <td className="table-td px-5 py-4 text-right font-mono font-bold">
-                  {peso(data.cases.reduce((s, c) => s + c.amount, 0))}
-                </td>
-                <td />
+          <table className="table-base w-full min-w-full">
+            <thead>
+              <tr>
+                <th className="table-th px-5 py-4 text-left">Case No.</th>
+                <th className="table-th px-5 py-4 text-left">Client</th>
+                <th className="table-th px-5 py-4 text-left">Barangay</th>
+                <th className="table-th px-5 py-4 text-left">Type</th>
+                <th className="table-th px-5 py-4 text-left">Status</th>
+                <th className="table-th px-5 py-4 text-left">Social Worker</th>
+                <th className="table-th px-5 py-4 text-right">Amount</th>
+                <th className="table-th px-5 py-4 text-left">{basisLabel}</th>
               </tr>
-            </tfoot>
-          )}
-        </table>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {data?.cases.map((row) => {
+                const meta = getTypeMeta(row.assistanceType)
+                return (
+                  <tr key={row.id} className="hover:bg-slate-50">
+                    <td className="table-td px-5 py-4 align-top font-mono text-xs">
+                      <Link to={`/cases/${row.id}/reports`} className="text-brand-green hover:underline">
+                        {row.caseNumber || '-'}
+                      </Link>
+                    </td>
+                    <td className="table-td px-5 py-4 align-top font-medium text-slate-800">
+                      {row.clientName}
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {row.is4ps && <span className="badge badge-green px-1 py-0 text-[9px]">4Ps</span>}
+                        {row.isPwd && <span className="badge badge-blue px-1 py-0 text-[9px]">PWD</span>}
+                        {row.isSenior && <span className="badge badge-amber px-1 py-0 text-[9px]">SC</span>}
+                      </div>
+                    </td>
+                    <td className="table-td px-5 py-4 align-top text-xs leading-relaxed text-slate-600">
+                      {row.barangay}
+                      <div className="mt-1 text-[11px] text-slate-400">{row.municipality}</div>
+                    </td>
+                    <td className="table-td px-5 py-4 align-top">
+                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${meta.color}`}>
+                        {meta.label}
+                      </span>
+                    </td>
+                    <td className="table-td px-5 py-4 align-top">
+                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLOR[row.status]}`}>
+                        {STATUS_LABEL[row.status]}
+                      </span>
+                    </td>
+                    <td className="table-td px-5 py-4 align-top text-xs leading-relaxed text-slate-500">{row.socialWorkerName}</td>
+                    <td className="table-td px-5 py-4 align-top text-right font-mono text-sm">{row.amount ? peso(row.amount) : '-'}</td>
+                    <td className="table-td px-5 py-4 align-top text-xs text-slate-500">{row.basisDate || '-'}</td>
+                  </tr>
+                )
+              })}
+              {(!data || data.cases.length === 0) && (
+                <tr>
+                  <td colSpan={8} className="table-td px-5 py-10 text-center text-slate-400">No cases found.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
   )
 }
 
-function BarangayTab({ data }) {
+function BarangayTab({ data, onDrilldown }) {
   return (
     <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
       <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
@@ -342,59 +428,154 @@ function BarangayTab({ data }) {
           <p className="portal-kicker">Coverage</p>
           <h3 className="mt-1 text-base font-semibold text-slate-800">Barangay distribution</h3>
         </div>
+        <span className="text-xs text-slate-400">Click a row to open the matching cases</span>
       </div>
       <div className="overflow-x-auto">
-      <table className="table-base w-full min-w-full">
-        <thead>
-          <tr>
-            <th className="table-th px-5 py-4 text-left">#</th>
-            <th className="table-th px-5 py-4 text-left">Barangay</th>
-            <th className="table-th px-5 py-4 text-left">Municipality</th>
-            <th className="table-th px-5 py-4 text-right">Medicine</th>
-            <th className="table-th px-5 py-4 text-right">Medical</th>
-            <th className="table-th px-5 py-4 text-right">Hospital</th>
-            <th className="table-th px-5 py-4 text-right">Burial</th>
-            <th className="table-th px-5 py-4 text-right">Eyeglass</th>
-            <th className="table-th px-5 py-4 text-right">Total Cases</th>
-            <th className="table-th px-5 py-4 text-right">Amount</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-slate-100">
-          {data?.rows.map((r, i) => (
-            <tr key={i} className="hover:bg-slate-50">
-              <td className="table-td px-5 py-4 text-xs text-slate-400">{i + 1}</td>
-              <td className="table-td px-5 py-4 font-medium text-slate-800">{r.barangay}</td>
-              <td className="table-td px-5 py-4 text-xs text-slate-500">{r.municipality}</td>
-              <td className="table-td px-5 py-4 text-right">{r.medicine}</td>
-              <td className="table-td px-5 py-4 text-right">{r.medical}</td>
-              <td className="table-td px-5 py-4 text-right">{r.hospital}</td>
-              <td className="table-td px-5 py-4 text-right">{r.burial}</td>
-              <td className="table-td px-5 py-4 text-right">{r.eyeglass}</td>
-              <td className="table-td px-5 py-4 text-right font-bold">{r.total}</td>
-              <td className="table-td px-5 py-4 text-right font-mono text-sm">{peso(r.amount)}</td>
+        <table className="table-base w-full min-w-full">
+          <thead>
+            <tr>
+              <th className="table-th px-5 py-4 text-left">#</th>
+              <th className="table-th px-5 py-4 text-left">Barangay</th>
+              <th className="table-th px-5 py-4 text-left">Municipality</th>
+              <th className="table-th px-5 py-4 text-right">Medicine</th>
+              <th className="table-th px-5 py-4 text-right">Medical</th>
+              <th className="table-th px-5 py-4 text-right">Hospital</th>
+              <th className="table-th px-5 py-4 text-right">Burial</th>
+              <th className="table-th px-5 py-4 text-right">Eyeglass</th>
+              <th className="table-th px-5 py-4 text-right">Plain</th>
+              <th className="table-th px-5 py-4 text-right">Total Cases</th>
+              <th className="table-th px-5 py-4 text-right">Amount</th>
             </tr>
-          ))}
-          {(!data || data.rows.length === 0) && (
-            <tr><td colSpan={10} className="table-td px-5 py-10 text-center text-slate-400">No data.</td></tr>
-          )}
-        </tbody>
-        {data && data.rows.length > 0 && (
-          <tfoot>
-            <tr className="border-t-2 border-slate-200 bg-slate-50">
-              <td colSpan={3} className="table-td px-5 py-4 text-xs font-semibold text-slate-500">
-                TOTAL ({data.rows.length} barangays)
-              </td>
-              <td className="table-td px-5 py-4 text-right font-bold">{data.rows.reduce((s, r) => s + r.medicine, 0)}</td>
-              <td className="table-td px-5 py-4 text-right font-bold">{data.rows.reduce((s, r) => s + r.medical, 0)}</td>
-              <td className="table-td px-5 py-4 text-right font-bold">{data.rows.reduce((s, r) => s + r.hospital, 0)}</td>
-              <td className="table-td px-5 py-4 text-right font-bold">{data.rows.reduce((s, r) => s + r.burial, 0)}</td>
-              <td className="table-td px-5 py-4 text-right font-bold">{data.rows.reduce((s, r) => s + r.eyeglass, 0)}</td>
-              <td className="table-td px-5 py-4 text-right font-bold">{data.rows.reduce((s, r) => s + r.total, 0)}</td>
-              <td className="table-td px-5 py-4 text-right font-mono font-bold">{peso(data.rows.reduce((s, r) => s + r.amount, 0))}</td>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {data?.rows.map((row, index) => (
+              <tr
+                key={`${row.barangay}-${row.municipality}`}
+                className="cursor-pointer hover:bg-slate-50"
+                onClick={() => onDrilldown(row)}
+              >
+                <td className="table-td px-5 py-4 text-xs text-slate-400">{index + 1}</td>
+                <td className="table-td px-5 py-4 font-medium text-slate-800">{row.barangay}</td>
+                <td className="table-td px-5 py-4 text-xs text-slate-500">{row.municipality}</td>
+                <td className="table-td px-5 py-4 text-right">{row.medicine}</td>
+                <td className="table-td px-5 py-4 text-right">{row.medical}</td>
+                <td className="table-td px-5 py-4 text-right">{row.hospital}</td>
+                <td className="table-td px-5 py-4 text-right">{row.burial}</td>
+                <td className="table-td px-5 py-4 text-right">{row.eyeglass}</td>
+                <td className="table-td px-5 py-4 text-right">{row.plain}</td>
+                <td className="table-td px-5 py-4 text-right font-bold">{row.total}</td>
+                <td className="table-td px-5 py-4 text-right font-mono text-sm">{peso(row.amount)}</td>
+              </tr>
+            ))}
+            {(!data || data.rows.length === 0) && (
+              <tr>
+                <td colSpan={11} className="table-td px-5 py-10 text-center text-slate-400">No data.</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+function OperationsTab({ data }) {
+  if (!data) return <div className="py-16 text-center text-sm text-slate-400">No operations data.</div>
+
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        {[
+          { label: 'Approved Cases', value: data.throughput.approvedCount, sub: data.basisLabel },
+          { label: 'Released Cases', value: data.throughput.releasedCount, sub: data.basisLabel },
+          { label: 'Pending Cases', value: data.throughput.pendingCount, sub: 'current status in cohort' },
+        ].map((item) => (
+          <div key={item.label} className="card text-center">
+            <p className="text-2xl font-bold text-brand-dark">{item.value}</p>
+            <p className="mt-1 text-xs font-semibold text-slate-500">{item.label}</p>
+            <p className="mt-1 text-[11px] text-slate-400">{item.sub}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="grid gap-5 xl:grid-cols-2">
+        <div className="card">
+          <p className="form-section-title mb-4">Turnaround Time</p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="rounded-lg bg-slate-50 px-4 py-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Average Days to Approval</p>
+              <p className="mt-2 text-2xl font-bold text-slate-900">
+                {data.turnaround.approvalAverageDays ?? '-'}
+              </p>
+            </div>
+            <div className="rounded-lg bg-slate-50 px-4 py-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Average Days to Release</p>
+              <p className="mt-2 text-2xl font-bold text-slate-900">
+                {data.turnaround.releaseAverageDays ?? '-'}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="card">
+          <p className="form-section-title mb-4">Current Backlog by Stage</p>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-slate-100">
+                <th className="pb-2 text-left text-xs font-semibold text-slate-500">Stage</th>
+                <th className="pb-2 text-right text-xs font-semibold text-slate-500">Cases</th>
+                <th className="pb-2 text-right text-xs font-semibold text-slate-500">Avg Days</th>
+                <th className="pb-2 text-right text-xs font-semibold text-slate-500">Max Days</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50">
+              {data.backlog.map((row) => (
+                <tr key={row.status}>
+                  <td className="py-2">
+                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_COLOR[row.status] ?? 'bg-slate-100 text-slate-600'}`}>
+                      {STATUS_LABEL[row.status] ?? row.status}
+                    </span>
+                  </td>
+                  <td className="py-2 text-right font-medium">{row.count}</td>
+                  <td className="py-2 text-right">{row.avgDays}</td>
+                  <td className="py-2 text-right">{row.maxDays}</td>
+                </tr>
+              ))}
+              {data.backlog.length === 0 && (
+                <tr>
+                  <td colSpan={4} className="py-6 text-center text-xs text-slate-400">No pending backlog in the selected cohort.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="card">
+        <p className="form-section-title mb-4">Staff Workload</p>
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-slate-100">
+              <th className="pb-2 text-left text-xs font-semibold text-slate-500">Social Worker</th>
+              <th className="pb-2 text-right text-xs font-semibold text-slate-500">Cases</th>
+              <th className="pb-2 text-right text-xs font-semibold text-slate-500">Amount</th>
             </tr>
-          </tfoot>
-        )}
-      </table>
+          </thead>
+          <tbody className="divide-y divide-slate-50">
+            {data.workerLoad.slice(0, 10).map((row) => (
+              <tr key={row.worker}>
+                <td className="py-2 text-slate-800">{row.worker}</td>
+                <td className="py-2 text-right font-medium">{row.cases}</td>
+                <td className="py-2 text-right">{peso(row.amount)}</td>
+              </tr>
+            ))}
+            {data.workerLoad.length === 0 && (
+              <tr>
+                <td colSpan={3} className="py-6 text-center text-xs text-slate-400">No assigned workload for this cohort.</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
     </div>
   )
@@ -404,23 +585,18 @@ function GuaranteeLettersTab({ data }) {
   const [search, setSearch] = useState('')
   if (!data) return <div className="py-8 text-center text-sm text-slate-400">Loading...</div>
 
-  const GL_TYPE_LABELS = { burial: 'Burial', hospital: 'Hospital', medical: 'Medical' }
-  const GL_TYPE_COLORS = { burial: 'bg-slate-100 text-slate-600', hospital: 'bg-violet-100 text-violet-700', medical: 'bg-blue-100 text-blue-700' }
+  const typeLabels = { burial: 'Burial', hospital: 'Hospital', medical: 'Medical' }
+  const typeColors = { burial: 'bg-slate-100 text-slate-600', hospital: 'bg-violet-100 text-violet-700', medical: 'bg-blue-100 text-blue-700' }
   const searchTerm = search.trim().toLowerCase()
 
   const filteredItems = !searchTerm
     ? data.items
     : data.items.filter((item) => {
-      const typeLabel = GL_TYPE_LABELS[item.assistanceType] ?? item.assistanceType ?? ''
-      const haystack = [
-        item.caseNumber ?? '',
-        item.clientName ?? '',
-        typeLabel,
-      ].join(' ').toLowerCase()
-      return haystack.includes(searchTerm)
+      const typeLabel = typeLabels[item.assistanceType] ?? item.assistanceType ?? ''
+      return [item.caseNumber ?? '', item.clientName ?? '', typeLabel].join(' ').toLowerCase().includes(searchTerm)
     })
 
-  const signed = filteredItems.filter((i) => i.signedGlUrl).length
+  const signed = filteredItems.filter((item) => item.signedGlUrl).length
   const pending = filteredItems.length - signed
 
   return (
@@ -469,16 +645,18 @@ function GuaranteeLettersTab({ data }) {
               </tr>
             ) : filteredItems.map((item) => (
               <tr key={item.id} className="hover:bg-slate-50">
-                <td className="table-td px-5 py-4 font-mono text-xs">{item.caseNumber ?? '—'}</td>
+                <td className="table-td px-5 py-4 font-mono text-xs">
+                  <Link to={`/cases/${item.id}/reports`} className="text-brand-green hover:underline">
+                    {item.caseNumber ?? '-'}
+                  </Link>
+                </td>
                 <td className="table-td px-5 py-4 font-medium text-slate-800">{item.clientName}</td>
                 <td className="table-td px-5 py-4">
-                  <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${GL_TYPE_COLORS[item.assistanceType] ?? 'bg-slate-100 text-slate-600'}`}>
-                    {GL_TYPE_LABELS[item.assistanceType] ?? item.assistanceType}
+                  <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${typeColors[item.assistanceType] ?? 'bg-slate-100 text-slate-600'}`}>
+                    {typeLabels[item.assistanceType] ?? item.assistanceType}
                   </span>
                 </td>
-                <td className="table-td px-5 py-4 text-right font-mono text-sm">
-                  {item.amount > 0 ? peso(item.amount) : '—'}
-                </td>
+                <td className="table-td px-5 py-4 text-right font-mono text-sm">{item.amount > 0 ? peso(item.amount) : '-'}</td>
                 <td className="table-td px-5 py-4">
                   {item.signedGlUrl ? (
                     <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700">
@@ -489,7 +667,7 @@ function GuaranteeLettersTab({ data }) {
                   )}
                 </td>
                 <td className="table-td px-5 py-4 text-xs text-slate-500">
-                  {item.glUploadedAt ? dayjs(item.glUploadedAt).format('MMM D, YYYY') : '—'}
+                  {item.glUploadedAt ? dayjs(item.glUploadedAt).format('MMM D, YYYY') : '-'}
                 </td>
               </tr>
             ))}
@@ -505,14 +683,16 @@ function GuaranteeLettersTab({ data }) {
 
 export default function ReportsPage() {
   const [tab, setTab] = useState('summary')
+  const [basis, setBasis] = useState('created')
   const [from, setFrom] = useState(dayjs().startOf('month').format('YYYY-MM-DD'))
   const [to, setTo] = useState(dayjs().endOf('month').format('YYYY-MM-DD'))
-  const [caseFilters, setCaseFilters] = useState({ type: '', status: '' })
+  const [caseFilters, setCaseFilters] = useState({ type: '', status: '', barangay: '', municipality: '' })
   const [casePage, setCasePage] = useState(1)
 
   const [summary, setSummary] = useState(null)
   const [cases, setCases] = useState(null)
   const [barangay, setBarangay] = useState(null)
+  const [operations, setOperations] = useState(null)
   const [glData, setGlData] = useState(null)
   const [loading, setLoading] = useState(true)
 
@@ -520,17 +700,20 @@ export default function ReportsPage() {
     let active = true
     ;(async () => {
       try {
-        const [s, c, b, gl] = await Promise.all([
-          api.get(`/reports/summary?from=${from}&to=${to}`),
-          api.get(`/reports/cases?from=${from}&to=${to}&type=${caseFilters.type}&status=${caseFilters.status}&page=${casePage}&limit=${CASES_PAGE_LIMIT}`),
-          api.get(`/reports/barangay?from=${from}&to=${to}`),
-          api.get(`/reports/guarantee-letters?from=${from}&to=${to}`),
+        const params = `from=${from}&to=${to}&basis=${basis}`
+        const [summaryRes, casesRes, barangayRes, operationsRes, glRes] = await Promise.all([
+          api.get(`/reports/summary?${params}`),
+          api.get(`/reports/cases?${params}&type=${encodeURIComponent(caseFilters.type)}&status=${encodeURIComponent(caseFilters.status)}&barangay=${encodeURIComponent(caseFilters.barangay)}&municipality=${encodeURIComponent(caseFilters.municipality)}&page=${casePage}&limit=${CASES_PAGE_LIMIT}`),
+          api.get(`/reports/barangay?${params}`),
+          api.get(`/reports/operations?${params}`),
+          api.get(`/reports/guarantee-letters?${params}`),
         ])
         if (!active) return
-        setSummary(s.data)
-        setCases(c.data)
-        setBarangay(b.data)
-        setGlData(gl.data)
+        setSummary(summaryRes.data)
+        setCases(casesRes.data)
+        setBarangay(barangayRes.data)
+        setOperations(operationsRes.data)
+        setGlData(glRes.data)
       } catch {
         if (active) toast.error('Failed to load report data')
       } finally {
@@ -538,55 +721,106 @@ export default function ReportsPage() {
       }
     })()
     return () => { active = false }
-  }, [from, to, caseFilters, casePage])
+  }, [from, to, basis, caseFilters, casePage])
 
-  const handlePeriodChange = (f, t) => {
-    setLoading(true)
-    setFrom(f)
-    setTo(t)
-    setCasePage(1)
-  }
   const totalCasePages = Math.max(1, Math.ceil((cases?.total ?? 0) / CASES_PAGE_LIMIT))
 
-  const handleExport = async () => {
-    const stamp = `${from}_to_${to}`
+  const handlePeriodChange = (nextFrom, nextTo) => {
+    setLoading(true)
+    setFrom(nextFrom)
+    setTo(nextTo)
+    setCasePage(1)
+  }
+
+  const handleBasisChange = (nextBasis) => {
+    setLoading(true)
+    setBasis(nextBasis)
+    setCasePage(1)
+  }
+
+  const handleCasesFilterChange = (nextFilters) => {
+    setLoading(true)
+    setCaseFilters(nextFilters)
+    setCasePage(1)
+  }
+
+  const handleResetFilters = () => {
+    handleCasesFilterChange({ type: '', status: '', barangay: '', municipality: '' })
+  }
+
+  const openCaseDrilldown = (nextFilters) => {
+    setTab('cases')
+    setLoading(true)
+    setCaseFilters((current) => ({ ...current, ...nextFilters }))
+    setCasePage(1)
+  }
+
+  const handleExportSummaryDocx = async () => {
     try {
-      const res = await api.get(`/reports/summary/docx?from=${from}&to=${to}`, {
-        responseType: 'blob',
-      })
-      downloadBlobFile(res.data, `executive-summary-${stamp}.docx`)
+      await downloadApiFile(
+        `/reports/summary/docx?from=${from}&to=${to}&basis=${basis}`,
+        `executive-summary-${basis}-${from}_to_${to}.docx`,
+      )
     } catch {
-      toast.error('Failed to export the executive summary template')
+      toast.error('Failed to export the executive summary')
+    }
+  }
+
+  const handleExportCurrentCsv = async () => {
+    const baseParams = `from=${from}&to=${to}&basis=${basis}`
+    const endpoints = {
+      summary: `/reports/summary/csv?${baseParams}`,
+      cases: `/reports/cases/csv?${baseParams}&type=${encodeURIComponent(caseFilters.type)}&status=${encodeURIComponent(caseFilters.status)}&barangay=${encodeURIComponent(caseFilters.barangay)}&municipality=${encodeURIComponent(caseFilters.municipality)}`,
+      barangay: `/reports/barangay/csv?${baseParams}`,
+      operations: `/reports/operations/csv?${baseParams}`,
+      'guarantee-letters': `/reports/guarantee-letters/csv?${baseParams}`,
+    }
+    try {
+      await downloadApiFile(endpoints[tab], `report-${tab}-${basis}-${from}_to_${to}.csv`)
+    } catch {
+      toast.error('Failed to export the current report')
     }
   }
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-wrap items-start justify-between gap-5 print:hidden">
+      <div className="flex flex-wrap items-start justify-between gap-5">
         <div>
           <p className="portal-kicker">AICS</p>
           <h1 className="portal-page-title">Reports</h1>
-          <p className="portal-page-subtitle max-w-2xl">Generate and review case assistance reports.</p>
+          <p className="portal-page-subtitle max-w-3xl">
+            Generate executive, operational, geographic, and guarantee-letter reports with drill-down access to real case records.
+          </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <button onClick={handleExport} className="portal-button-secondary print:hidden flex items-center gap-2">
+          <button onClick={handleExportSummaryDocx} className="portal-button-secondary flex items-center gap-2">
             <DownloadIcon className="h-4 w-4" />
-            Export Executive Summary
+            Executive Summary (.docx)
+          </button>
+          <button onClick={handleExportCurrentCsv} className="portal-button-secondary flex items-center gap-2">
+            <DownloadIcon className="h-4 w-4" />
+            Current View (.csv)
           </button>
         </div>
       </div>
 
-      <div className="card print:hidden">
+      <div className="card">
         <div className="space-y-5">
           <div>
-            <p className="portal-kicker">Report Period</p>
-            <h2 className="mt-1 text-lg font-semibold text-slate-800">Select the coverage window</h2>
+            <p className="portal-kicker">Report Controls</p>
+            <h2 className="mt-1 text-lg font-semibold text-slate-800">Select the coverage window and business date basis</h2>
           </div>
-          <PeriodPicker from={from} to={to} onChange={handlePeriodChange} />
+          <PeriodPicker
+            from={from}
+            to={to}
+            basis={basis}
+            onChange={handlePeriodChange}
+            onBasisChange={handleBasisChange}
+          />
         </div>
       </div>
 
-      <div className="print:hidden flex flex-wrap gap-1 border-b border-slate-200 pb-1">
+      <div className="flex flex-wrap gap-1 border-b border-slate-200 pb-1">
         {TABS.map((tabItem) => (
           <button
             key={tabItem.key}
@@ -604,21 +838,25 @@ export default function ReportsPage() {
       </div>
 
       {loading && (
-        <div className="py-12 text-center text-sm text-slate-400">Loading report…</div>
+        <div className="py-12 text-center text-sm text-slate-400">Loading report...</div>
       )}
 
       {!loading && (
         <>
-          {tab === 'summary' && <SummaryTab data={summary} />}
+          {tab === 'summary' && (
+            <SummaryTab
+              data={summary}
+              onTypeDrilldown={(type) => openCaseDrilldown({ type, status: '', barangay: '', municipality: '' })}
+              onStatusDrilldown={(status) => openCaseDrilldown({ status, type: '', barangay: '', municipality: '' })}
+            />
+          )}
           {tab === 'cases' && (
             <CasesTab
               data={cases}
               filters={caseFilters}
-              onFilterChange={(f) => {
-                setLoading(true)
-                setCaseFilters(f)
-                setCasePage(1)
-              }}
+              basisLabel={cases?.basisLabel ?? 'Report Date'}
+              onFilterChange={handleCasesFilterChange}
+              onResetFilters={handleResetFilters}
               page={casePage}
               totalPages={totalCasePages}
               onPageChange={(nextPage) => {
@@ -627,7 +865,13 @@ export default function ReportsPage() {
               }}
             />
           )}
-          {tab === 'barangay' && <BarangayTab data={barangay} />}
+          {tab === 'barangay' && (
+            <BarangayTab
+              data={barangay}
+              onDrilldown={(row) => openCaseDrilldown({ barangay: row.barangay, municipality: row.municipality, type: '', status: '' })}
+            />
+          )}
+          {tab === 'operations' && <OperationsTab data={operations} />}
           {tab === 'guarantee-letters' && <GuaranteeLettersTab data={glData} />}
         </>
       )}

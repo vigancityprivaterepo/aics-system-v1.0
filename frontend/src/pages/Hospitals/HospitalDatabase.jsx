@@ -6,6 +6,12 @@ import { ChevronLeftIcon, ChevronRightIcon } from '../../components/ui/Icons'
 
 const PAGE_SIZE = 20
 
+function displayOptional(value) {
+  const normalized = String(value ?? '').trim()
+  if (!normalized || ['\u00e2\u20ac\u201d', '\u2014', '\u2013'].includes(normalized)) return '-'
+  return normalized
+}
+
 export default function HospitalDatabase() {
   const [facilities, setFacilities] = useState([])
   const [total, setTotal] = useState(0)
@@ -392,7 +398,7 @@ export default function HospitalDatabase() {
                     <td className="table-cell">
                       <span className="badge badge-blue">{h.facilityType}</span>
                     </td>
-                    <td className="table-cell text-xs text-slate-400 max-w-xs truncate">{h.fullAddress || 'â€”'}</td>
+                    <td className="table-cell text-xs text-slate-400 max-w-xs truncate">{displayOptional(h.fullAddress)}</td>
                     <td className="table-cell text-center">
                       <div className="flex justify-center gap-2">
                         <button onClick={() => handleEdit(h)} className="text-brand-primary hover:text-brand-dark">

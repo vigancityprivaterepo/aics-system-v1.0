@@ -75,9 +75,8 @@ app.use(express.urlencoded({ extended: true }))
 app.use(morgan(env.nodeEnv === 'production' ? 'combined' : 'dev'))
 
 app.use('/uploads', (req, res, next) => {
-  // Display assets rendered in img tags cannot include auth headers.
+  // Profile photos are intended for staff UI display without per-request auth headers.
   if (req.path.startsWith('/profile-photos/')) return next()
-  if (req.path.startsWith('/e-signatures/')) return next()
 
   const authHeader = req.headers.authorization
   if (!authHeader?.startsWith('Bearer ')) return res.status(401).json({ message: 'Unauthorized' })

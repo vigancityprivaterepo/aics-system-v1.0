@@ -1,11 +1,10 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { PlusIcon, TrashIcon } from './ui/Icons'
-import { formatCurrency } from '../lib/utils'
 import api from '../lib/api'
 
 function SearchCell({ row, rowIndex, onSearch, onSelect, onManualEdit, suggestions, activeSuggestions, searching }) {
   const inputRef = useRef(null)
-  const showDrop = activeSuggestions && suggestions.length > 0
+  const showDrop = activeSuggestions && (suggestions.length > 0 || searching || (row.medicineName && row.medicineName.trim().length > 0))
 
   return (
     <div className="relative">
@@ -14,11 +13,14 @@ function SearchCell({ row, rowIndex, onSearch, onSelect, onManualEdit, suggestio
           ref={inputRef}
           type="text"
           value={row.medicineName}
+          onFocus={(e) => {
+            if (e.target.value) onSearch(rowIndex, e.target.value)
+          }}
           onChange={(e) => {
             onManualEdit(rowIndex, e.target.value)
             onSearch(rowIndex, e.target.value)
           }}
-          onBlur={() => setTimeout(() => onSearch(rowIndex, null), 200)}
+          onBlur={() => setTimeout(() => onSearch(rowIndex, null), 250)}
           placeholder="Type generic or brand name..."
           className="portal-input text-sm py-1.5 pr-8"
         />
@@ -33,27 +35,44 @@ function SearchCell({ row, rowIndex, onSearch, onSelect, onManualEdit, suggestio
       </div>
 
       {showDrop && (
-        <ul className="absolute z-50 mt-1 w-full rounded-lg border border-slate-200 bg-white shadow-xl max-h-52 overflow-y-auto">
-          {suggestions.map((m) => (
-            <li key={m.id}>
-              <button
-                type="button"
-                onMouseDown={() => onSelect(rowIndex, m)}
-                className="w-full px-3 py-2.5 text-left hover:bg-emerald-50 border-b border-slate-50 last:border-0"
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <div>
-                    <p className="font-medium text-slate-800 text-sm">{m.genericName}</p>
-                    {m.brandName && <p className="text-xs text-slate-400">{m.brandName}</p>}
-                  </div>
-                  <div className="text-right shrink-0">
-                    <p className="text-sm font-semibold text-brand-primary">{formatCurrency(m.unitPrice)}</p>
-                    {m.unit && <p className="text-xs text-slate-400">per {m.unit}</p>}
-                  </div>
-                </div>
-              </button>
-            </li>
-          ))}
+        <ul className="absolute z-50 mt-1 w-full rounded-lg border border-slate-200 bg-white shadow-xl max-h-60 overflow-y-auto">
+          {searching && suggestions.length === 0 ? (
+            <li className="px-4 py-3 text-xs text-slate-400 text-center font-medium">Searching medicine database...</li>
+          ) : suggestions.length === 0 && row.medicineName?.trim() ? (
+            <li className="px-4 py-3 text-xs text-slate-400 text-center">No medicines found matching "{row.medicineName}"</li>
+          ) : (
+            suggestions.map((m) => {
+              const isAvail = m.isAvailable !== false
+              return (
+                <li key={m.id}>
+                  <button
+                    type="button"
+                    onMouseDown={(e) => {
+                      e.preventDefault()
+                      onSelect(rowIndex, m)
+                    }}
+                    className="w-full px-3 py-2.5 text-left hover:bg-emerald-50 border-b border-slate-50 last:border-0 transition-colors"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div>
+                        <p className="font-medium text-slate-800 text-sm">{m.genericName}</p>
+                        {m.brandName && <p className="text-xs text-slate-500">{m.brandName}</p>}
+                        {m.unit && <p className="text-xs text-slate-400 font-mono">Form/Unit: {m.unit}</p>}
+                      </div>
+                      <div className="text-right shrink-0">
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                          isAvail ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
+                        }`}>
+                          <span className={`h-1.5 w-1.5 rounded-full ${isAvail ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                          {isAvail ? 'Available' : 'Not Available'}
+                        </span>
+                      </div>
+                    </div>
+                  </button>
+                </li>
+              )
+            })
+          )}
         </ul>
       )}
     </div>
@@ -66,17 +85,16 @@ export default function MedicineTable({ items = [], onChange, readOnly = false }
   const [searching, setSearching] = useState(false)
   const debounceRef = useRef(null)
 
-  const grandTotal = items.reduce((sum, i) => sum + (parseFloat(i.totalPrice) || 0), 0)
-
   const doSearch = useCallback(async (query) => {
-    if (!query || query.length < 2) {
+    const q = String(query ?? '').trim()
+    if (!q) {
       setSuggestions([])
       setSearching(false)
       return
     }
     setSearching(true)
     try {
-      const res = await api.get(`/medicines?search=${encodeURIComponent(query)}&limit=8`)
+      const res = await api.get(`/medicines?search=${encodeURIComponent(q)}&limit=10`)
       setSuggestions(res.data.medicines || [])
     } catch {
       setSuggestions([])
@@ -87,7 +105,6 @@ export default function MedicineTable({ items = [], onChange, readOnly = false }
 
   const handleSearch = (rowIndex, value) => {
     if (value === null) {
-      // blur — close dropdown
       clearTimeout(debounceRef.current)
       setActiveRow(null)
       setSuggestions([])
@@ -96,7 +113,7 @@ export default function MedicineTable({ items = [], onChange, readOnly = false }
     }
     setActiveRow(rowIndex)
     clearTimeout(debounceRef.current)
-    debounceRef.current = setTimeout(() => doSearch(value), 280)
+    debounceRef.current = setTimeout(() => doSearch(value), 200)
   }
 
   useEffect(() => () => clearTimeout(debounceRef.current), [])
@@ -110,7 +127,7 @@ export default function MedicineTable({ items = [], onChange, readOnly = false }
   }
 
   const addRow = () => {
-    onChange([...items, { medicineId: '', medicineName: '', quantity: 1, unit: '', unitPrice: 0, totalPrice: 0, _fromDb: false }])
+    onChange([...items, { medicineId: '', medicineName: '', quantity: 1, unit: '', isAvailable: true, _fromDb: false }])
   }
 
   const removeRow = (i) => onChange(items.filter((_, idx) => idx !== i))
@@ -118,13 +135,7 @@ export default function MedicineTable({ items = [], onChange, readOnly = false }
   const updateRow = (i, field, value) => {
     const updated = items.map((row, idx) => {
       if (idx !== i) return row
-      const newRow = { ...row, [field]: value }
-      if (field === 'quantity' || field === 'unitPrice') {
-        const qty = parseFloat(field === 'quantity' ? value : newRow.quantity) || 0
-        const price = parseFloat(field === 'unitPrice' ? value : newRow.unitPrice) || 0
-        newRow.totalPrice = qty * price
-      }
-      return newRow
+      return { ...row, [field]: value }
     })
     onChange(updated)
   }
@@ -132,15 +143,13 @@ export default function MedicineTable({ items = [], onChange, readOnly = false }
   const selectSuggestion = (i, medicine) => {
     const updated = items.map((row, idx) => {
       if (idx !== i) return row
-      const qty = parseFloat(row.quantity) || 1
-      const unitPrice = parseFloat(medicine.unitPrice) || 0
+      const isAvail = medicine.isAvailable !== false
       return {
         ...row,
         medicineId: medicine.id,
         medicineName: medicine.genericName,
         unit: medicine.unit || row.unit || '',
-        unitPrice,
-        totalPrice: qty * unitPrice,
+        isAvailable: isAvail,
         _fromDb: true,
       }
     })
@@ -151,28 +160,26 @@ export default function MedicineTable({ items = [], onChange, readOnly = false }
 
   return (
     <div>
-      <div className="overflow-x-auto rounded-lg border border-slate-200">
+      <div className="overflow-visible relative rounded-lg border border-slate-200 min-h-[160px]">
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
+            <tr className="bg-slate-50 text-xs uppercase tracking-wider text-slate-500 border-b border-slate-200">
               <th className="px-4 py-3 text-left">Medicine / Generic Name</th>
-              <th className="px-4 py-3 text-center w-24">Qty</th>
-              <th className="px-4 py-3 text-left w-28">Unit</th>
-              <th className="px-4 py-3 text-right w-36">Unit Price</th>
-              <th className="px-4 py-3 text-right w-36">Total</th>
+              <th className="px-4 py-3 text-left w-44">Unit / Form</th>
+              <th className="px-4 py-3 text-center w-36">Availability</th>
               {!readOnly && <th className="px-4 py-3 w-12" />}
             </tr>
           </thead>
           <tbody>
             {items.length === 0 ? (
               <tr>
-                <td colSpan={readOnly ? 5 : 6} className="px-4 py-10 text-center text-slate-400 text-sm">
+                <td colSpan={readOnly ? 3 : 4} className="px-4 py-10 text-center text-slate-400 text-sm">
                   No medicines added. Click "Add Medicine Row" to start.
                 </td>
               </tr>
             ) : (
               items.map((row, i) => (
-                <tr key={i} className={`border-t border-slate-100 ${row._fromDb ? 'bg-emerald-50/30' : ''}`}>
+                <tr key={i} className={`border-t border-slate-100 ${row._fromDb ? 'bg-emerald-50/20' : ''} ${activeRow === i ? 'relative z-30' : ''}`}>
                   {/* Medicine name / search */}
                   <td className="px-4 py-2">
                     {readOnly ? (
@@ -191,25 +198,11 @@ export default function MedicineTable({ items = [], onChange, readOnly = false }
                     )}
                   </td>
 
-                  {/* Quantity */}
-                  <td className="px-4 py-2">
-                    {readOnly ? (
-                      <span className="text-center block">{row.quantity}</span>
-                    ) : (
-                      <input
-                        type="number" min="0" step="0.5"
-                        value={row.quantity}
-                        onChange={(e) => updateRow(i, 'quantity', e.target.value)}
-                        className="portal-input text-center py-1.5 w-20"
-                      />
-                    )}
-                  </td>
-
                   {/* Unit */}
                   <td className="px-4 py-2">
-                    {readOnly ? <span>{row.unit}</span> : (
+                    {readOnly ? <span>{row.unit || '-'}</span> : (
                       <input
-                        type="text" value={row.unit}
+                        type="text" value={row.unit || ''}
                         onChange={(e) => updateRow(i, 'unit', e.target.value)}
                         placeholder="tab/cap/ml"
                         className="portal-input py-1.5"
@@ -217,39 +210,20 @@ export default function MedicineTable({ items = [], onChange, readOnly = false }
                     )}
                   </td>
 
-                  {/* Unit Price */}
-                  <td className="px-4 py-2">
-                    {readOnly ? (
-                      <span className="block text-right">{formatCurrency(row.unitPrice)}</span>
-                    ) : (
-                      <div className="relative">
-                        <input
-                          type="number" min="0" step="0.01"
-                          value={row.unitPrice}
-                          onChange={(e) => {
-                            updateRow(i, 'unitPrice', e.target.value)
-                            // clear fromDb flag if manually overriding price
-                            if (row._fromDb) {
-                              const updated = items.map((r, idx) => idx === i ? { ...r, _fromDb: false } : r)
-                              onChange(updated)
-                            }
-                          }}
-                          className={`portal-input text-right py-1.5 ${row._fromDb ? 'bg-emerald-50 text-emerald-800 font-semibold' : ''}`}
-                        />
-                        {row._fromDb && (
-                          <span className="absolute -top-1.5 right-1 text-[9px] font-bold uppercase tracking-wide text-emerald-600 bg-emerald-100 px-1 rounded">DB</span>
-                        )}
-                      </div>
-                    )}
-                  </td>
-
-                  {/* Total */}
-                  <td className="px-4 py-2 text-right font-semibold text-brand-primary">
-                    {formatCurrency(parseFloat(row.totalPrice) || 0)}
+                  {/* Status / Availability */}
+                  <td className="px-4 py-2 text-center">
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${
+                      row.isAvailable !== false
+                        ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                        : 'bg-rose-100 text-rose-800 border border-rose-200'
+                    }`}>
+                      <span className={`h-1.5 w-1.5 rounded-full ${row.isAvailable !== false ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                      {row.isAvailable !== false ? 'Available' : 'Not Available'}
+                    </span>
                   </td>
 
                   {!readOnly && (
-                    <td className="px-4 py-2">
+                    <td className="px-4 py-2 text-center">
                       <button type="button" onClick={() => removeRow(i)} className="text-slate-300 hover:text-red-500 transition-colors">
                         <TrashIcon className="h-4 w-4" />
                       </button>
@@ -259,17 +233,6 @@ export default function MedicineTable({ items = [], onChange, readOnly = false }
               ))
             )}
           </tbody>
-          <tfoot>
-            <tr className="border-t-2 border-slate-200 bg-brand-bg">
-              <td colSpan={readOnly ? 4 : 5} className="px-4 py-3 text-right text-sm font-bold text-brand-primary">
-                Grand Total:
-              </td>
-              <td className="px-4 py-3 text-right text-base font-bold text-brand-primary">
-                {formatCurrency(grandTotal)}
-              </td>
-              {!readOnly && <td />}
-            </tr>
-          </tfoot>
         </table>
       </div>
 

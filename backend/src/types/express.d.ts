@@ -8,6 +8,7 @@ declare global {
       email: string
       employeeId: string
       role: UserRole
+      approvalLevel: string[]
     }
 
     interface PortalApplicant {

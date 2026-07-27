@@ -4,14 +4,16 @@ import { z } from 'zod'
 import { prisma } from '../utils/prisma.js'
 import { asyncHandler } from '../utils/asyncHandler.js'
 import { HttpError } from '../utils/httpError.js'
+import { requireRole } from '../middleware/auth.js'
 
 const router = Router()
+const adminOnly = requireRole(['admin'])
 
 const csvUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } })
 
 // Minimal RFC-4180-compatible CSV parser (shared pattern)
 function parseCsv(raw: string): string[][] {
-  const text = raw.replace(/^﻿/, '')
+  const text = raw.replace(/^\uFEFF/, '')
   const rows: string[][] = []
   let row: string[] = []
   let field = ''
@@ -53,7 +55,7 @@ const hospitalSchema = z.object({
 })
 
 // POST /hospitals/bulk-import
-router.post('/bulk-import', csvUpload.single('file'), asyncHandler(async (req, res) => {
+router.post('/bulk-import', adminOnly, csvUpload.single('file'), asyncHandler(async (req, res) => {
   if (!req.file) throw new HttpError(400, 'No file uploaded')
 
   const text = req.file.buffer.toString('utf-8')
@@ -117,7 +119,7 @@ router.post('/bulk-import', csvUpload.single('file'), asyncHandler(async (req, r
   const duplicates = toInsert.length - newRows.length
 
   if (newRows.length === 0) {
-    return res.status(200).json({ imported: 0, skipped, duplicates, message: 'All rows already exist — nothing new to import.' })
+    return res.status(200).json({ imported: 0, skipped, duplicates, message: 'All rows already exist - nothing new to import.' })
   }
 
   const result = await prisma.hospitalFacility.createMany({ data: newRows })
@@ -184,14 +186,14 @@ router.get('/', asyncHandler(async (req, res) => {
 }))
 
 // POST /hospitals
-router.post('/', asyncHandler(async (req, res) => {
+router.post('/', adminOnly, asyncHandler(async (req, res) => {
   const body = hospitalSchema.parse(req.body)
   const created = await prisma.hospitalFacility.create({ data: body })
   res.status(201).json(created)
 }))
 
 // PUT /hospitals/:id
-router.put('/:id', asyncHandler(async (req, res) => {
+router.put('/:id', adminOnly, asyncHandler(async (req, res) => {
   const id = paramId(req.params.id)
   const body = hospitalSchema.parse(req.body)
   const existing = await prisma.hospitalFacility.findUnique({ where: { id } })
@@ -201,13 +203,13 @@ router.put('/:id', asyncHandler(async (req, res) => {
 }))
 
 // DELETE /hospitals  (delete all)
-router.delete('/', asyncHandler(async (req, res) => {
+router.delete('/', adminOnly, asyncHandler(async (req, res) => {
   const result = await prisma.hospitalFacility.deleteMany({})
   res.json({ deleted: result.count })
 }))
 
 // DELETE /hospitals/:id
-router.delete('/:id', asyncHandler(async (req, res) => {
+router.delete('/:id', adminOnly, asyncHandler(async (req, res) => {
   const id = paramId(req.params.id)
   const existing = await prisma.hospitalFacility.findUnique({ where: { id } })
   if (!existing) throw new HttpError(404, 'Hospital facility not found')

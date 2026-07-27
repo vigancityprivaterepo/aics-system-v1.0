@@ -19,15 +19,15 @@ export default function StepEyeglassDetails({ caseData, onUpdate }) {
     setSaving(true)
     try {
       const res = await api.put(`/cases/${caseData.id}/eyeglass`, data)
-      onUpdate({ eyeglassDetails: res.data, amount: res.data?.amount ?? data.amount })
-      toast.success('Eyeglass details saved')
+      onUpdate({ eyeglassDetails: res.data, amount: res.data?.amount ?? data.amount, status: res.data?.status ?? caseData.status })
+      toast.success(res.data?.approvalsReset ? 'Eyeglass details saved. Case returned to encoding for re-review.' : 'Eyeglass details saved')
     } catch (err) {
       if (err.response) {
         toast.error(err.response?.data?.message || 'Failed to save eyeglass details')
         return
       }
       onUpdate({ eyeglassDetails: data, amount: data.amount })
-      toast.success('Saved (demo mode)')
+      toast.error(err.response?.data?.message || 'Failed to save changes')
     } finally {
       setSaving(false)
     }
@@ -88,3 +88,4 @@ export default function StepEyeglassDetails({ caseData, onUpdate }) {
     </div>
   )
 }
+

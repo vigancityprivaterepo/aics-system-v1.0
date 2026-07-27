@@ -1,0 +1,58 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-aics_db}
+    volumes:
+      - aics_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - ./.env.production
+    volumes:
+      - aics_uploads:/app/backend/uploads
+      - aics_backups:/app/backend/backups
+    ports:
+      - "${BACKEND_BIND_HOST:-127.0.0.1}:${BACKEND_PORT:-5101}:5001"
+
+  frontend:
+    build:
+      context: ./frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "${FRONTEND_BIND_HOST:-127.0.0.1}:${FRONTEND_PORT:-8081}:80"
+
+  portal:
+    build:
+      context: ./portal
+      args:
+        VITE_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "${PORTAL_BIND_HOST:-127.0.0.1}:${PORTAL_PORT:-8082}:80"
+
+volumes:
+  aics_pg_data:
+  aics_uploads:
+  aics_backups:

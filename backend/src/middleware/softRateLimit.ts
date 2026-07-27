@@ -29,13 +29,17 @@ function normalizeKeyPart(value: string | null | undefined) {
     .toLowerCase()
 }
 
-export function buildEmailKey(field = 'email'): KeyBuilder {
+export function buildBodyFieldKey(field: string): KeyBuilder {
   return (req) => {
     const body = req.body as Record<string, unknown> | undefined
     const value = typeof body?.[field] === 'string' ? body[field] : null
     const normalized = normalizeKeyPart(value)
     return normalized || null
   }
+}
+
+export function buildEmailKey(field = 'email'): KeyBuilder {
+  return buildBodyFieldKey(field)
 }
 
 export function softRateLimit(options: SoftRateLimitOptions) {

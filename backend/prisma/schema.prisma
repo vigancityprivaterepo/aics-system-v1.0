@@ -74,6 +74,7 @@ model User {
   cases        Case[]
   statusLogs   CaseStatusLog[] @relation("changed_by_user")
   caseApprovals CaseApproval[] @relation("case_approval_actor")
+  adminAuditLogs AdminAuditLog[] @relation("admin_audit_actor")
   reviewedBySettings SystemSettings[] @relation("settings_reviewed_by_user")
   recommendingSettings SystemSettings[] @relation("settings_recommending_user")
   approvedBySettings SystemSettings[] @relation("settings_approved_by_user")
@@ -106,7 +107,9 @@ model Client {
   isSenior       Boolean        @default(false) @map("is_senior")
   clientCategory ClientCategory @default(walk_in) @map("client_category")
   referralSource String?        @map("referral_source") @db.VarChar(200)
+  familyComposition Json?       @map("family_composition")
   photoUrl       String?        @map("photo_url")
+  rfidUid        String?        @unique @map("rfid_uid") @db.VarChar(64)
   createdAt      DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt      DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
   applicant      Applicant?     @relation(fields: [applicantId], references: [id], onDelete: SetNull)
@@ -116,6 +119,7 @@ model Client {
 
   @@index([lastName, firstName, dateOfBirth])
   @@index([mergedIntoClientId])
+  @@index([rfidUid])
   @@map("clients")
 }
 
@@ -182,7 +186,8 @@ model MedicineItem {
   unit        String?       @db.VarChar(50)
   strength    String?       @db.VarChar(50)
   category    String?       @db.VarChar(100)
-  unitPrice   Decimal       @map("unit_price") @db.Decimal(10, 2)
+  unitPrice   Decimal       @default(0.00) @map("unit_price") @db.Decimal(10, 2)
+  isAvailable Boolean       @default(true) @map("is_available")
   createdAt   DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt   DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
   caseMedicines CaseMedicine[]
@@ -245,6 +250,11 @@ model BurialDetail {
   guaranteeLetterUrl   String?  @map("guarantee_letter_url")
   signedGlUrl          String?  @map("signed_gl_url")
   glUploadedAt         DateTime? @map("gl_uploaded_at") @db.Timestamptz(6)
+  openSignDocumentId   String?  @map("opensign_document_id") @db.VarChar(120)
+  openSignStatus       String?  @map("opensign_status") @db.VarChar(40)
+  openSignSignUrl      String?  @map("opensign_sign_url")
+  openSignSentAt       DateTime? @map("opensign_sent_at") @db.Timestamptz(6)
+  openSignSignedAt     DateTime? @map("opensign_signed_at") @db.Timestamptz(6)
   createdAt            DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt            DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
@@ -281,6 +291,11 @@ model HospitalDetail {
   guaranteeLetterUrl   String?   @map("guarantee_letter_url")
   signedGlUrl          String?   @map("signed_gl_url")
   glUploadedAt         DateTime? @map("gl_uploaded_at") @db.Timestamptz(6)
+  openSignDocumentId   String?   @map("opensign_document_id") @db.VarChar(120)
+  openSignStatus       String?   @map("opensign_status") @db.VarChar(40)
+  openSignSignUrl      String?   @map("opensign_sign_url")
+  openSignSentAt       DateTime? @map("opensign_sent_at") @db.Timestamptz(6)
+  openSignSignedAt     DateTime? @map("opensign_signed_at") @db.Timestamptz(6)
   createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt            DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
 
@@ -308,6 +323,11 @@ model MedicalDetail {
   guaranteeLetterUrl   String?   @map("guarantee_letter_url")
   signedGlUrl          String?   @map("signed_gl_url")
   glUploadedAt         DateTime? @map("gl_uploaded_at") @db.Timestamptz(6)
+  openSignDocumentId   String?   @map("opensign_document_id") @db.VarChar(120)
+  openSignStatus       String?   @map("opensign_status") @db.VarChar(40)
+  openSignSignUrl      String?   @map("opensign_sign_url")
+  openSignSentAt       DateTime? @map("opensign_sent_at") @db.Timestamptz(6)
+  openSignSignedAt     DateTime? @map("opensign_signed_at") @db.Timestamptz(6)
   createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt            DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
 
@@ -327,6 +347,11 @@ model EyeglassDetail {
   guaranteeLetterUrl   String?   @map("guarantee_letter_url")
   signedGlUrl          String?   @map("signed_gl_url")
   glUploadedAt         DateTime? @map("gl_uploaded_at") @db.Timestamptz(6)
+  openSignDocumentId   String?   @map("opensign_document_id") @db.VarChar(120)
+  openSignStatus       String?   @map("opensign_status") @db.VarChar(40)
+  openSignSignUrl      String?   @map("opensign_sign_url")
+  openSignSentAt       DateTime? @map("opensign_sent_at") @db.Timestamptz(6)
+  openSignSignedAt     DateTime? @map("opensign_signed_at") @db.Timestamptz(6)
   createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt            DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
 
@@ -512,6 +537,23 @@ model ClientDedupEvent {
   @@map("client_dedup_events")
 }
 
+model AdminAuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  actorId    String?  @map("actor_id") @db.Uuid
+  action     String   @db.VarChar(80)
+  targetType String   @map("target_type") @db.VarChar(80)
+  targetId   String?  @map("target_id") @db.VarChar(120)
+  summary    String   @db.VarChar(255)
+  details    Json?
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  actor      User?    @relation("admin_audit_actor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([actorId, createdAt])
+  @@index([action, createdAt])
+  @@map("admin_audit_logs")
+}
+
 model CaseStatusLog {
   id         String     @id @default(uuid()) @db.Uuid
   caseId      String     @map("case_id") @db.Uuid
@@ -527,3 +569,4 @@ model CaseStatusLog {
   @@index([caseId, changedAt])
   @@map("case_status_logs")
 }
+

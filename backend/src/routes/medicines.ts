@@ -1,11 +1,13 @@
-﻿import { Router } from 'express'
+import { Router } from 'express'
 import multer from 'multer'
 import { z } from 'zod'
 import { prisma } from '../utils/prisma.js'
 import { asyncHandler } from '../utils/asyncHandler.js'
 import { HttpError } from '../utils/httpError.js'
+import { requireRole } from '../middleware/auth.js'
 
 const router = Router()
+const adminOrCho = requireRole(['admin', 'city_health_office'])
 
 const csvUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } })
 
@@ -39,6 +41,14 @@ function parseCsv(raw: string): string[][] {
   return rows
 }
 
+
+function cleanOptionalText(value: string | null | undefined, maxLength: number) {
+  const normalized = value?.trim() ?? ''
+  if (!normalized) return null
+  if (['\u00e2\u20ac\u201d', '\u00e2\u20ac\u201c', '\u2014', '\u2013'].includes(normalized)) return null
+  return normalized.slice(0, maxLength)
+}
+
 function paramId(value: string | string[] | undefined): string {
   if (Array.isArray(value)) return value[0] ?? ''
   return value ?? ''
@@ -50,10 +60,11 @@ const medicineSchema = z.object({
   unit: z.string().optional().nullable(),
   strength: z.string().optional().nullable(),
   category: z.string().optional().nullable(),
-  unitPrice: z.union([z.number(), z.string()]),
+  unitPrice: z.union([z.number(), z.string()]).optional().nullable(),
+  isAvailable: z.boolean().optional().default(true),
 })
 
-router.post('/bulk-import', csvUpload.single('file'), asyncHandler(async (req, res) => {
+router.post('/bulk-import', adminOrCho, csvUpload.single('file'), asyncHandler(async (req, res) => {
   if (!req.file) throw new HttpError(400, 'No file uploaded')
 
   const text = req.file.buffer.toString('utf-8')
@@ -87,7 +98,7 @@ router.post('/bulk-import', csvUpload.single('file'), asyncHandler(async (req, r
   const iStrength  = col(['strengthconcentration', 'strength', 'concentration']) >= 0
     ? col(['strengthconcentration', 'strength', 'concentration']) : 6
 
-  type MedicineRow = { genericName: string; brandName: string | null; unit: string | null; strength: string | null; category: string | null; unitPrice: number }
+  type MedicineRow = { genericName: string; brandName: string | null; unit: string | null; strength: string | null; category: string | null; unitPrice: number; isAvailable: boolean }
   const toInsert: MedicineRow[] = []
   let skipped = 0
 
@@ -97,12 +108,12 @@ router.post('/bulk-import', csvUpload.single('file'), asyncHandler(async (req, r
     // Skip blank rows, purely-numeric rows (row numbers), or header-like repeats
     if (!genericName || /^\d+$/.test(genericName)) { skipped++; continue }
 
-    const brandName  = (r[iBrand]?.trim()    || null)?.slice(0, 200) ?? null
-    const category   = (r[iCategory]?.trim() || null)?.slice(0, 100) ?? null
-    const unit       = (r[iStrength]?.trim() || null)?.slice(0, 50)  ?? null   // Strength / Concentration → unit
-    const strength   = (r[iDosage]?.trim()   || null)?.slice(0, 50)  ?? null   // Dosage Form → strength
+    const brandName  = cleanOptionalText(r[iBrand], 200)
+    const category   = cleanOptionalText(r[iCategory], 100)
+    const unit       = cleanOptionalText(r[iStrength], 50)   // Strength / Concentration -> unit
+    const strength   = cleanOptionalText(r[iDosage], 50)     // Dosage Form -> strength
 
-    toInsert.push({ genericName: genericName.slice(0, 200), brandName, unit, strength, category, unitPrice: 0 })
+    toInsert.push({ genericName: genericName.slice(0, 200), brandName, unit, strength, category, unitPrice: 0, isAvailable: true })
   }
 
   if (toInsert.length === 0) throw new HttpError(400, 'No valid medicine rows found in CSV')
@@ -145,19 +156,20 @@ router.get('/', asyncHandler(async (req, res) => {
   const limit = Math.min(Math.max(Number(req.query.limit ?? 20), 1), 100)
   const page = Math.max(Number(req.query.page ?? 1), 1)
 
-  const where = {
+  const buildWhere = (s: string) => ({
     ...(category ? { category: { equals: category, mode: 'insensitive' as const } } : {}),
-    ...(search
+    ...(s
       ? {
         OR: [
-          { genericName: { contains: search, mode: 'insensitive' as const } },
-          { brandName: { contains: search, mode: 'insensitive' as const } },
+          { genericName: { contains: s, mode: 'insensitive' as const } },
+          { brandName: { contains: s, mode: 'insensitive' as const } },
         ],
       }
       : {}),
-  }
+  })
 
-  const [total, medicines] = await Promise.all([
+  let where = buildWhere(search)
+  let [total, medicines] = await Promise.all([
     prisma.medicineItem.count({ where }),
     prisma.medicineItem.findMany({
       where,
@@ -166,6 +178,24 @@ router.get('/', asyncHandler(async (req, res) => {
       take: limit,
     }),
   ])
+
+  if (total === 0 && search.length > 4) {
+    const fallbackSearch = search.slice(0, Math.min(6, search.length - 1))
+    where = buildWhere(fallbackSearch)
+    const [fbTotal, fbMedicines] = await Promise.all([
+      prisma.medicineItem.count({ where }),
+      prisma.medicineItem.findMany({
+        where,
+        orderBy: [{ genericName: 'asc' }, { brandName: 'asc' }],
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+    ])
+    if (fbTotal > 0) {
+      total = fbTotal
+      medicines = fbMedicines
+    }
+  }
 
   res.json({
     total,
@@ -180,22 +210,24 @@ router.get('/', asyncHandler(async (req, res) => {
       strength: m.strength,
       category: m.category,
       unitPrice: Number(m.unitPrice),
+      isAvailable: (m as any).isAvailable ?? true,
       createdAt: m.createdAt,
     })),
   })
 }))
 
-router.post('/', asyncHandler(async (req, res) => {
+router.post('/', adminOrCho, asyncHandler(async (req, res) => {
   const body = medicineSchema.parse(req.body)
 
   const created = await prisma.medicineItem.create({
     data: {
       genericName: body.genericName,
-      brandName: body.brandName ?? null,
-      unit: body.unit ?? null,
-      strength: body.strength ?? null,
-      category: body.category ?? null,
-      unitPrice: Number(body.unitPrice),
+      brandName: cleanOptionalText(body.brandName, 200),
+      unit: cleanOptionalText(body.unit, 50),
+      strength: cleanOptionalText(body.strength, 50),
+      category: cleanOptionalText(body.category, 100),
+      unitPrice: Number(body.unitPrice ?? 0),
+      isAvailable: body.isAvailable ?? true,
     },
   })
 
@@ -207,10 +239,11 @@ router.post('/', asyncHandler(async (req, res) => {
     strength: created.strength,
     category: created.category,
     unitPrice: Number(created.unitPrice),
+    isAvailable: (created as any).isAvailable ?? true,
   })
 }))
 
-router.put('/:id', asyncHandler(async (req, res) => {
+router.put('/:id', adminOrCho, asyncHandler(async (req, res) => {
   const medicineId = paramId(req.params.id)
   const body = medicineSchema.parse(req.body)
 
@@ -221,11 +254,12 @@ router.put('/:id', asyncHandler(async (req, res) => {
     where: { id: medicineId },
     data: {
       genericName: body.genericName,
-      brandName: body.brandName ?? null,
-      unit: body.unit ?? null,
-      strength: body.strength ?? null,
-      category: body.category ?? null,
-      unitPrice: Number(body.unitPrice),
+      brandName: cleanOptionalText(body.brandName, 200),
+      unit: cleanOptionalText(body.unit, 50),
+      strength: cleanOptionalText(body.strength, 50),
+      category: cleanOptionalText(body.category, 100),
+      unitPrice: Number(body.unitPrice ?? existing.unitPrice),
+      isAvailable: body.isAvailable ?? (existing as any).isAvailable ?? true,
     },
   })
 
@@ -237,15 +271,36 @@ router.put('/:id', asyncHandler(async (req, res) => {
     strength: updated.strength,
     category: updated.category,
     unitPrice: Number(updated.unitPrice),
+    isAvailable: (updated as any).isAvailable ?? true,
   })
 }))
 
-router.delete('/', asyncHandler(async (req, res) => {
+router.patch('/:id/availability', adminOrCho, asyncHandler(async (req, res) => {
+  const medicineId = paramId(req.params.id)
+  const schema = z.object({ isAvailable: z.boolean() })
+  const { isAvailable } = schema.parse(req.body)
+
+  const existing = await prisma.medicineItem.findUnique({ where: { id: medicineId } })
+  if (!existing) throw new HttpError(404, 'Medicine not found')
+
+  const updated = await prisma.medicineItem.update({
+    where: { id: medicineId },
+    data: { isAvailable },
+  })
+
+  res.json({
+    id: updated.id,
+    genericName: updated.genericName,
+    isAvailable: (updated as any).isAvailable ?? true,
+  })
+}))
+
+router.delete('/', adminOrCho, asyncHandler(async (req, res) => {
   const result = await prisma.medicineItem.deleteMany({})
   res.json({ deleted: result.count })
 }))
 
-router.delete('/:id', asyncHandler(async (req, res) => {
+router.delete('/:id', adminOrCho, asyncHandler(async (req, res) => {
   const medicineId = paramId(req.params.id)
   const existing = await prisma.medicineItem.findUnique({ where: { id: medicineId } })
   if (!existing) throw new HttpError(404, 'Medicine not found')

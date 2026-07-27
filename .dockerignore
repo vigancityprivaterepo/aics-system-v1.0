@@ -1,0 +1,16 @@
+.git
+.gitignore
+.env
+.env.*
+!.env.production.example
+node_modules
+backend/node_modules
+frontend/node_modules
+portal/node_modules
+backend/dist
+frontend/dist
+portal/dist
+backend/uploads
+backend/backups
+tmp
+npm-debug.log*

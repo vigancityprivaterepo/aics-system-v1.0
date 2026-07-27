@@ -5,6 +5,7 @@ import { REQUIREMENT_DEFINITIONS } from '../utils/requirements.js'
 import { assertCaseReadable, assertEditableCase, ensureRequirementRows, mapRequirements, paramId } from '../services/caseService.js'
 import { updateRequirementsSchema, patchRequirementSchema } from '../schemas/caseSchemas.js'
 import { auditLog, auditLogMany } from '../utils/auditLog.js'
+import { resetApprovalsAfterMaterialEdit } from '../services/workflowIntegrityService.js'
 
 export async function getRequirements(req: Request, res: Response) {
   const caseId = paramId(req.params.id)
@@ -37,30 +38,36 @@ export async function updateRequirements(req: Request, res: Response) {
     .filter(([key]) => allowedKeys.has(key))
     .filter(([key, isSubmitted]) => existingMap.get(key) !== isSubmitted)
 
-  await prisma.$transaction(
-    Object.entries(requirements)
-      .filter(([key]) => allowedKeys.has(key))
-      .map(([key, isSubmitted]) =>
-        prisma.caseRequirement.upsert({
-          where: { caseId_requirementName: { caseId: caseData.id, requirementName: key } },
-          update: { isSubmitted, submittedAt: isSubmitted ? new Date() : null },
-          create: { caseId: caseData.id, requirementName: key, isSubmitted, submittedAt: isSubmitted ? new Date() : null },
-        }),
-      ),
-  )
-
-  if (changedEntries.length > 0) {
-    await auditLogMany(prisma, changedEntries.map(([key, isSubmitted]) => ({
+  const resetResult = await prisma.$transaction(async (tx) => {
+    for (const [key, isSubmitted] of Object.entries(requirements).filter(([entryKey]) => allowedKeys.has(entryKey))) {
+      await tx.caseRequirement.upsert({
+        where: { caseId_requirementName: { caseId: caseData.id, requirementName: key } },
+        update: { isSubmitted, submittedAt: isSubmitted ? new Date() : null },
+        create: { caseId: caseData.id, requirementName: key, isSubmitted, submittedAt: isSubmitted ? new Date() : null },
+      })
+    }
+    if (changedEntries.length > 0) {
+      await auditLogMany(tx, changedEntries.map(([key, isSubmitted]) => ({
+        caseId: caseData.id,
+        changedById: req.user?.id,
+        fromStatus: caseData.status,
+        toStatus: caseData.status,
+        notes: `Requirement ${key} marked as ${isSubmitted ? 'submitted' : 'not submitted'}`,
+      })))
+    }
+    return resetApprovalsAfterMaterialEdit(tx, {
       caseId: caseData.id,
       changedById: req.user?.id,
-      fromStatus: caseData.status,
-      toStatus: caseData.status,
-      notes: `Requirement ${key} marked as ${isSubmitted ? 'submitted' : 'not submitted'}`,
-    })))
-  }
+      changedFields: changedEntries.map(([key]) => `requirement:${key}`),
+    })
+  })
 
   const rows = await prisma.caseRequirement.findMany({ where: { caseId: caseData.id } })
-  res.json({ requirements: mapRequirements(rows, caseData.assistanceType) })
+  res.json({
+    requirements: mapRequirements(rows, caseData.assistanceType),
+    status: resetResult.status ?? caseData.status,
+    approvalsReset: resetResult.approvalsReset,
+  })
 }
 
 export async function patchRequirement(req: Request, res: Response) {
@@ -75,20 +82,41 @@ export async function patchRequirement(req: Request, res: Response) {
   const reqRow = await prisma.caseRequirement.findFirst({ where: { id: reqId, caseId } })
   if (!reqRow) throw new HttpError(404, 'Requirement not found')
 
+  if (reqRow.isSubmitted !== payload.isSubmitted || (reqRow.notes ?? null) !== (payload.notes ?? null)) {
+    const result = await prisma.$transaction(async (tx) => {
+      const updated = await tx.caseRequirement.update({
+        where: { id: reqRow.id },
+        data: { isSubmitted: payload.isSubmitted, notes: payload.notes ?? null, submittedAt: payload.isSubmitted ? new Date() : null },
+      })
+      await auditLog(tx, {
+        caseId: caseData.id,
+        changedById: req.user?.id,
+        fromStatus: caseData.status,
+        toStatus: caseData.status,
+        notes: `Requirement ${updated.requirementName} updated (${payload.isSubmitted ? 'submitted' : 'not submitted'})`,
+      })
+      const resetResult = await resetApprovalsAfterMaterialEdit(tx, {
+        caseId: caseData.id,
+        changedById: req.user?.id,
+        changedFields: [`requirement:${updated.requirementName}`],
+      })
+      return { updated, resetResult }
+    })
+    return res.json({
+      id: result.updated.id,
+      key: result.updated.requirementName,
+      isSubmitted: result.updated.isSubmitted,
+      notes: result.updated.notes,
+      submittedAt: result.updated.submittedAt,
+      status: result.resetResult.status ?? caseData.status,
+      approvalsReset: result.resetResult.approvalsReset,
+    })
+  }
+
   const updated = await prisma.caseRequirement.update({
     where: { id: reqRow.id },
     data: { isSubmitted: payload.isSubmitted, notes: payload.notes ?? null, submittedAt: payload.isSubmitted ? new Date() : null },
   })
-
-  if (reqRow.isSubmitted !== payload.isSubmitted || (reqRow.notes ?? null) !== (payload.notes ?? null)) {
-    await auditLog(prisma, {
-      caseId: caseData.id,
-      changedById: req.user?.id,
-      fromStatus: caseData.status,
-      toStatus: caseData.status,
-      notes: `Requirement ${updated.requirementName} updated (${payload.isSubmitted ? 'submitted' : 'not submitted'})`,
-    })
-  }
 
   res.json({ id: updated.id, key: updated.requirementName, isSubmitted: updated.isSubmitted, notes: updated.notes, submittedAt: updated.submittedAt })
 }

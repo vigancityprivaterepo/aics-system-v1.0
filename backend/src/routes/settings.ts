@@ -5,6 +5,7 @@ import { asyncHandler } from '../utils/asyncHandler.js'
 import { requireRole } from '../middleware/auth.js'
 import { HttpError } from '../utils/httpError.js'
 import { createBackup, getBackupFile, listBackups, restoreBackup } from '../services/backupService.js'
+import { logAdminAudit } from '../services/adminAuditService.js'
 
 const router = Router()
 const APPROVAL_LEVEL_VALUES = ['reviewer', 'recommender', 'approver'] as const
@@ -94,6 +95,21 @@ router.put('/', requireRole(['admin']), asyncHandler(async (req, res) => {
       approvedByUser: { select: { id: true, name: true, approvalLevel: true } },
     },
   })
+  await logAdminAudit(prisma, {
+    actorId: req.user?.id,
+    action: 'settings.update',
+    targetType: 'system_settings',
+    targetId: settings.id,
+    summary: 'Updated system settings and approval hierarchy assignments',
+    details: {
+      locationCode: settings.locationCode,
+      agencyCode: settings.agencyCode,
+      reviewedByUserId: settings.reviewedByUserId,
+      recommendingUserId: settings.recommendingUserId,
+      approvedByUserId: settings.approvedByUserId,
+      sequenceDigits: settings.sequenceDigits,
+    },
+  })
   res.json(settings)
 }))
 
@@ -105,17 +121,42 @@ router.get('/backups', adminOnly, asyncHandler(async (_req, res) => {
 
 router.post('/backups', adminOnly, asyncHandler(async (_req, res) => {
   const backup = await createBackup()
+  await logAdminAudit(prisma, {
+    actorId: _req.user?.id,
+    action: 'backup.create',
+    targetType: 'backup',
+    targetId: backup.filename,
+    summary: `Created system backup ${backup.filename}`,
+    details: backup,
+  })
   res.status(201).json(backup)
 }))
 
 router.get('/backups/:filename/download', adminOnly, asyncHandler(async (req, res) => {
   const filename = paramValue(req.params.filename)
   const filePath = await getBackupFile(filename)
+  await logAdminAudit(prisma, {
+    actorId: req.user?.id,
+    action: 'backup.download',
+    targetType: 'backup',
+    targetId: filename,
+    summary: `Downloaded system backup ${filename}`,
+    details: { filename },
+  })
   res.download(filePath, filename)
 }))
 
 router.post('/backups/:filename/restore', adminOnly, asyncHandler(async (req, res) => {
-  await restoreBackup(paramValue(req.params.filename))
+  const filename = paramValue(req.params.filename)
+  await restoreBackup(filename)
+  await logAdminAudit(prisma, {
+    actorId: req.user?.id,
+    action: 'backup.restore',
+    targetType: 'backup',
+    targetId: filename,
+    summary: `Restored system backup ${filename}`,
+    details: { filename },
+  })
   res.json({ ok: true })
 }))
 

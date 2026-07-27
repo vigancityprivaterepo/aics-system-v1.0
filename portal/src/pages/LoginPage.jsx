@@ -1,10 +1,11 @@
-﻿import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { useAuthStore } from '../store/authStore'
 import logo from '../assets/logo.png'
 import api from '../lib/api'
 import { isApplicantProfileComplete } from '../lib/profileCompletion'
+import GoogleSignInButton from '../components/GoogleSignInButton'
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const staffEmailPattern = /@aics\.dswd\.gov\.ph$/i
@@ -236,6 +237,14 @@ export default function LoginPage() {
                 Register
               </Link>
             </p>
+
+            <div className="my-6 flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+              <span className="h-px flex-1 bg-slate-200" />
+              <span>Or Continue With</span>
+              <span className="h-px flex-1 bg-slate-200" />
+            </div>
+
+            <GoogleSignInButton text="signin_with" disabled={loading} />
             </div>
         </div>
 

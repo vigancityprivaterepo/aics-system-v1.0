@@ -1,5 +1,5 @@
 import type { CaseStatus } from '@prisma/client'
-import { requirementLabelsByKey } from '../utils/requirements.js'
+import { REQUIREMENT_DEFINITIONS } from '../utils/requirements.js'
 import type { ApprovalAssigneeByStage } from '../types/caseTypes.js'
 import { normalizeWorkflowStatus } from '../services/caseService.js'
 import { richTextHasVisibleText } from '../utils/richText.js'
@@ -57,14 +57,12 @@ function isPortalOriginCase(caseRow: any) {
 }
 
 function missingRequirementLabels(caseRow: any) {
-  const labels = requirementLabelsByKey(caseRow.assistanceType)
+  const definitions = REQUIREMENT_DEFINITIONS[caseRow.assistanceType as keyof typeof REQUIREMENT_DEFINITIONS] ?? []
   const rows = Array.isArray(caseRow.requirements) ? caseRow.requirements : []
-  if (rows.length === 0) {
-    return Object.values(labels)
-  }
-  return rows
-    .filter((row: any) => !row.isSubmitted)
-    .map((row: any) => labels[row.requirementName] ?? row.requirementName)
+  const submittedByKey = new Map(rows.map((row: any) => [row.requirementName, Boolean(row.isSubmitted)]))
+  return definitions
+    .filter((requirement) => submittedByKey.get(requirement.key) !== true)
+    .map((requirement) => requirement.label)
 }
 
 export function assessCaseWorkflow(caseRow: any, assigneesByStage?: ApprovalAssigneeByStage) {

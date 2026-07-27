@@ -1,5 +1,5 @@
 import { sendMail, statusUpdateEmailHtml, approvedEmailHtml, guaranteeLetterEmailHtml } from './mailer.js'
-import { sendSms, statusSmsMessage } from './sms.js'
+import { sendSms } from './sms.js'
 import { env } from '../config/env.js'
 import {
   buildGuaranteeLetterAssets,
@@ -76,13 +76,12 @@ export async function sendPortalStatusNotifications(application: ApplicationLike
     })())
   }
 
-  if (applicant.mobileNumber) {
-    const msg = status === 'approved'
-      ? hasLinkedCase
-        ? `AICS Vigan: Your application ${referenceNumber} is APPROVED by the office. Log in to the portal for the latest case update.`
-        : `AICS Vigan: Your application ${referenceNumber} is APPROVED. You may come to the municipal hall admin office at any convenient time for document passing and case creation`
-      : statusSmsMessage(referenceNumber, status)
-    jobs.push(sendSms(applicant.mobileNumber, msg))
+  const shouldSendSms = applicant.mobileNumber && status === 'approved' && hasLinkedCase
+  if (shouldSendSms) {
+    jobs.push(sendSms(
+      applicant.mobileNumber!,
+      `AICS Vigan: Your application ${referenceNumber} is READY FOR RELEASE. Log in to the portal for the latest case update.`,
+    ))
   }
 
   if (jobs.length === 0) return

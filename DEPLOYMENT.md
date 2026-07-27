@@ -1,96 +1,150 @@
-# AICS Production Deployment
+# AICS Windows Server Production Deployment
 
-This repository is prepared for a first production deployment on a single server using Docker images, with Dokploy managing service startup, domains, SSL, and secrets.
+This project is ready to deploy on a single Windows Server using Docker Desktop or Docker Engine with Linux containers.
 
-## Services
+## 1. Server prerequisites
 
-- `backend`
-  - Container port: `5001`
-  - Persistent volume: `/app/uploads`
-  - Health endpoints:
-    - `/api/health/live`
-    - `/api/health/ready`
-- `frontend`
-  - Container port: `80`
-  - Serves the staff UI and proxies `/api` and `/uploads` to the backend service
-- `portal`
-  - Container port: `80`
-  - Serves the applicant portal and proxies `/api` and `/uploads` to the backend service
-- `postgres`
-  - Use Dokploy-managed Postgres for production
-  - Keep regular backups enabled in Dokploy or your hosting layer
+Install these on the Windows Server:
 
-## Recommended domains
+- Git
+- Docker Desktop or Docker Engine configured for Linux containers
+- A domain or fixed server IP for staff, portal, and API access
+- Existing server Nginx can keep public `80/443`. AICS should bind to localhost-only ports: backend `127.0.0.1:5101`, staff `127.0.0.1:8081`, portal `127.0.0.1:8082`.
 
-- Staff frontend: `https://aics-admin.example.gov.ph`
-- Portal frontend: `https://aics-portal.example.gov.ph`
-- Backend/API: `https://aics-api.example.gov.ph`
+## 2. Copy the project
 
-If you deploy the frontend and portal separately, keep `CORS_ORIGIN` aligned with the real frontend and portal domains. `API_BASE_URL` must point to the real backend public URL.
+On the server, clone or copy this repository, then open PowerShell in the `aics-system` folder.
 
-## Backend environment variables
+## 3. Create production environment file
 
-Set these in Dokploy secrets/environment:
+Copy the template:
+
+```powershell
+Copy-Item .env.production.example .env.production
+```
+
+Edit `.env.production` and replace every `CHANGE_ME` value.
+
+Important values:
 
 - `NODE_ENV=production`
-- `PORT=5001`
-- `DATABASE_URL`
-- `API_BASE_URL`
-- `CORS_ORIGIN`
-- `JWT_SECRET`
-- `JWT_EXPIRES_IN`
-- `PORTAL_JWT_SECRET`
-- `PORTAL_JWT_EXPIRES_IN`
-- `DOCUMENT_VERIFY_SECRET`
-- `SMTP_HOST`
-- `SMTP_PORT`
-- `SMTP_USER`
-- `SMTP_PASS`
-- `SMTP_FROM`
-- `SEMAPHORE_API_KEY`
-- `SEMAPHORE_SENDER_ID`
-- `TRUST_PROXY=true`
-- `RATE_LIMIT_MODE=memory`
-- Optional:
-  - `LIBREOFFICE_PATH`
-  - `PORTAL_EMAIL_NOTIFICATION_STATUSES`
-  - `ANTHROPIC_API_KEY`
-  - `ANTHROPIC_MODEL`
+- `POSTGRES_PASSWORD` must be strong
+- `DATABASE_URL` password must match `POSTGRES_PASSWORD`
+- `JWT_SECRET`, `PORTAL_JWT_SECRET`, and `DOCUMENT_VERIFY_SECRET` must all be different and at least 32 characters
+- `API_BASE_URL` must be the real backend URL, not localhost
+- `CORS_ORIGIN` must contain the staff and portal origins
+- SMTP and Semaphore SMS values are required in production because the backend intentionally fails fast without them
 
-## Dokploy setup
+Generate secrets in PowerShell:
 
-### Backend
+```powershell
+[Convert]::ToBase64String((1..48 | ForEach-Object { Get-Random -Maximum 256 }))
+```
 
-- Build context: `backend`
-- Dockerfile: `backend/Dockerfile`
-- Mount a persistent volume to `/app/uploads`
-- Expose port `5001`
-- Health check path: `/api/health/ready`
-- The container command already runs `npx prisma migrate deploy && node dist/server.js`
+Run that command separately for each secret.
 
-### Frontend
+## 4. Build and start
 
-- Build context: `frontend`
-- Dockerfile: `frontend/Dockerfile`
-- Expose port `80`
-- Route the staff domain to this service
+```powershell
+docker compose --env-file .env.production -f docker-compose.production.yml build
+docker compose --env-file .env.production -f docker-compose.production.yml up -d
+```
 
-### Portal
+Check status:
 
-- Build context: `portal`
-- Dockerfile: `portal/Dockerfile`
-- Expose port `80`
-- Route the portal domain to this service
+```powershell
+docker compose --env-file .env.production -f docker-compose.production.yml ps
+docker compose --env-file .env.production -f docker-compose.production.yml logs --tail=100 backend
+```
 
-### Postgres
+The backend should show `AICS backend listening` and no production configuration errors.
 
-- Use Dokploy-managed Postgres
-- Point `DATABASE_URL` at that Postgres instance
-- Enable scheduled backups before go-live
+## 5. Smoke test
 
-## Operational notes
+Open these URLs using your configured server/domain:
 
-- The backend will fail fast in production if SMTP or SMS configuration is missing.
-- Uploads and generated documents live on the backend volume and must be included in backup strategy.
-- Prisma migrations are committed and should be applied with `prisma migrate deploy`.
-- Do not run the backend with multiple instances while `RATE_LIMIT_MODE=memory`.
+- Staff UI: `http://SERVER:8081` or your staff domain
+- Portal UI: `http://SERVER` or your portal domain
+- Backend readiness: `http://SERVER:5101/api/health/ready`
+
+Test before go-live:
+
+- Staff login
+- Create/edit client
+- Create case
+- Save case study details
+- Generate DOCX preview/download
+- Portal registration/login/application submission
+- Admin backup creation
+
+
+## Existing Nginx reverse proxy example
+
+Your current server already uses Nginx on public `80/443`. Keep AICS containers bound to `127.0.0.1`, then add Nginx virtual hosts similar to this:
+
+```nginx
+server {
+  server_name aics-admin.example.gov.ph;
+
+  location / {
+    proxy_pass http://127.0.0.1:8081;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+  }
+}
+
+server {
+  server_name aics-portal.example.gov.ph;
+
+  location / {
+    proxy_pass http://127.0.0.1:8082;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+  }
+}
+
+server {
+  server_name aics-api.example.gov.ph;
+
+  location / {
+    proxy_pass http://127.0.0.1:5101;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+  }
+}
+```
+## 6. Backups
+
+Docker volumes used by production compose:
+
+- `aics_pg_data` for PostgreSQL data
+- `aics_uploads` for uploaded files/signatures/documents
+- `aics_backups` for app-generated backups
+
+Back up all three volumes. Database backups alone are not enough because uploads live separately.
+
+## 7. Updating later
+
+After copying new code to the server:
+
+```powershell
+docker compose --env-file .env.production -f docker-compose.production.yml build
+docker compose --env-file .env.production -f docker-compose.production.yml up -d
+```
+
+The backend container runs Prisma migrations automatically before starting.
+
+## Production notes
+
+- Do not deploy using `docker-compose.yml`; that file is for local/dev defaults.
+- If another app already uses a port, change `BACKEND_PORT`, `FRONTEND_PORT`, or `PORTAL_PORT` in `.env.production` before running compose.
+- Use `docker-compose.production.yml` with `.env.production`.
+- Do not commit `.env.production`.
+- Do not run multiple backend containers while `RATE_LIMIT_MODE=memory`.
+- If using HTTPS/reverse proxy, keep `TRUST_PROXY=true`.

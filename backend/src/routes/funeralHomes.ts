@@ -11,7 +11,7 @@ const adminOnly = requireRole(['admin'])
 const csvUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } })
 
 function parseCsv(raw: string): string[][] {
-  const text = raw.replace(/^﻿/, '')
+  const text = raw.replace(/^\uFEFF/, '')
   const rows: string[][] = []
   let row: string[] = []
   let field = ''
@@ -52,7 +52,7 @@ const funeralHomeSchema = z.object({
 function cleanOptionalText(value: string | null | undefined, maxLength: number) {
   const normalized = value?.trim() ?? ''
   if (!normalized) return null
-  if (['â€”', '—', '–'].includes(normalized)) return null
+  if (['\u00c3\u00a2\u00e2\u201a\u00ac\u00e2\u20ac\u009d', '\u00e2\u20ac\u201d', '\u00e2\u20ac\u201c', '\u2014', '\u2013'].includes(normalized)) return null
   return normalized.slice(0, maxLength)
 }
 
@@ -110,14 +110,14 @@ router.post('/bulk-import', adminOnly, csvUpload.single('file'), asyncHandler(as
   const duplicates = toInsert.length - newRows.length
 
   if (newRows.length === 0) {
-    return res.status(200).json({ imported: 0, skipped, duplicates, message: 'All rows already exist — nothing new to import.' })
+    return res.status(200).json({ imported: 0, skipped, duplicates, message: 'All rows already exist - nothing new to import.' })
   }
 
   const result = await prisma.funeralHome.createMany({ data: newRows })
   res.status(201).json({ imported: result.count, skipped, duplicates })
 }))
 
-// DELETE /funeral-homes  (delete all) — must be before /:id
+// DELETE /funeral-homes  (delete all) - must be before /:id
 router.delete('/', adminOnly, asyncHandler(async (_req, res) => {
   const result = await prisma.funeralHome.deleteMany({})
   res.json({ deleted: result.count })

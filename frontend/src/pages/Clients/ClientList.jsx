@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import api from '../../lib/api'
 import { formatDate } from '../../lib/utils'
 import { PlusIcon, SearchIcon, UsersIcon, ArrowRightIcon, ChevronLeftIcon, ChevronRightIcon } from '../../components/ui/Icons'
+import RfidScanButton from '../../components/RfidScanButton'
 
 export default function ClientList() {
   const [clients, setClients] = useState([])
@@ -62,15 +63,20 @@ export default function ClientList() {
       </div>
 
       <div className="card mb-4 p-3">
-        <div className="relative">
-          <SearchIcon className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Search by name, client number, or address..."
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            className="portal-input pl-9"
-            id="client-search-list"
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <SearchIcon className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search by name, client number, or address..."
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              className="portal-input pl-9"
+              id="client-search-list"
+            />
+          </div>
+          <RfidScanButton
+            onClientFound={(client) => navigate(`/clients/${client.id}`)}
           />
         </div>
       </div>

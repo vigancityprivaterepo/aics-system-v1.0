@@ -1,17 +1,20 @@
-import fs from 'node:fs'
+﻿import fs from 'node:fs'
 import path from 'node:path'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import PizZip from 'pizzip'
 import Docxtemplater from 'docxtemplater'
+import { DOMParser, XMLSerializer } from '@xmldom/xmldom'
 import { richTextToPlainText } from '../utils/richText.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const require = createRequire(import.meta.url)
 const ImageModule = require('../../vendor/docxtemplater-image-module-safe/index.cjs')
 const TEMPLATES_DIR = path.resolve(__dirname, '..', '..', '..', 'templates')
+const GLOBAL_CASE_STUDY_TEMPLATE = 'CGV AICS Template.fixed.docx'
 
 const CASE_STUDY_CANDIDATES = [
+  GLOBAL_CASE_STUDY_TEMPLATE,
   path.join('Burial Case Study and GL', 'Burial Case Study.fixed.docx'),
 ]
 
@@ -22,10 +25,12 @@ const GL_CANDIDATES = [
 ]
 
 const HOSPITAL_PERSONAL_CANDIDATES = [
+  GLOBAL_CASE_STUDY_TEMPLATE,
   path.join('Hospital Case Study and GL', 'Hospital Case Study-PersonalCame.fixed.docx'),
 ]
 
 const HOSPITAL_PROXY_CANDIDATES = [
+  GLOBAL_CASE_STUDY_TEMPLATE,
   path.join('Hospital Case Study and GL', 'Hospital Case Study-Proxy.fixed.docx'),
 ]
 
@@ -35,18 +40,11 @@ const HOSPITAL_GL_CANDIDATES = [
 ]
 
 const MEDICINE_PERSONAL_CANDIDATES = [
-  path.join('Medicine Case Study', 'Medicine Case Study-Personal.fixed.docx'),
-  path.join('Medicine Case Study', 'Medicine Case Study.fixed.docx'),
-  path.join('Medicine Case Study and GL', 'Medicine Case Study.fixed.docx'),
+  GLOBAL_CASE_STUDY_TEMPLATE,
 ]
 
 const MEDICINE_PROXY_CANDIDATES = [
-  path.join('Medicine Case Study', 'Medicine Case Study-Proxy.fixed.docx'),
-  path.join('Medicine Case Study', 'Medicine Case Study Proxy.fixed.docx'),
-  path.join('Medicine Case Study', 'Medicine Case Study-proxy.fixed.docx'),
-  path.join('Medicine Case Study and GL', 'Medicine Case Study-Proxy.fixed.docx'),
-  path.join('Medicine Case Study and GL', 'Medicine Case Study Proxy.fixed.docx'),
-  path.join('Medicine Case Study and GL', 'Medicine Case Study-proxy.fixed.docx'),
+  GLOBAL_CASE_STUDY_TEMPLATE,
 ]
 
 const MEDICINE_GL_CANDIDATES: string[] = [
@@ -57,10 +55,12 @@ const MEDICINE_GL_CANDIDATES: string[] = [
 ]
 
 const MEDICAL_PERSONAL_CANDIDATES = [
+  GLOBAL_CASE_STUDY_TEMPLATE,
   path.join('Medical Case Study and GL', 'Medical Case Study-personal.fixed.docx'),
 ]
 
 const MEDICAL_PROXY_CANDIDATES = [
+  GLOBAL_CASE_STUDY_TEMPLATE,
   path.join('Medical Case Study and GL', 'Medical Case Study-proxy.fixed.docx'),
 ]
 
@@ -70,10 +70,12 @@ const MEDICAL_GL_CANDIDATES = [
 ]
 
 const EYEGLASS_PERSONAL_CANDIDATES = [
+  GLOBAL_CASE_STUDY_TEMPLATE,
   path.join('Eyeglass Case Study and GL', 'Eyeglass case.fixed.docx'),
 ]
 
 const EYEGLASS_PROXY_CANDIDATES = [
+  GLOBAL_CASE_STUDY_TEMPLATE,
   path.join('Eyeglass Case Study and GL', 'Eyeglass case-proxy.fixed.docx'),
 ]
 
@@ -86,6 +88,7 @@ const EYEGLASS_ACKNOWLEDGEMENT_CANDIDATES = [
 ]
 
 const PLAIN_CASE_STUDY_CANDIDATES = [
+  GLOBAL_CASE_STUDY_TEMPLATE,
   path.join('Plain AICS', 'PLAIN AICS.fixed.docx'),
   path.join('Plain AICS', 'PLAIN AICS.fixed.docx.patching.tmp'),
 ]
@@ -285,7 +288,7 @@ function buildRenderData(caseData: any): Record<string, any> {
   const clientName = `${c.lastName}, ${[c.firstName, c.middleName].filter(Boolean).join(' ')}`
   const fullName   = [c.firstName, c.middleName, c.lastName].filter(Boolean).join(' ')
   const resolvedPatientName = fmt(textOrNull(hospital.patientName) ?? textOrNull(fullName))
-  const address    = [c.barangay, c.municipality, c.province, c.region].filter(Boolean).join(', ') || '-'
+  const address    = [c.barangay, c.municipality, c.province].filter(Boolean).join(', ') || '-'
   const resolvedDeceasedAddress = fmt(textOrNull((burial as any).deceasedAddress) ?? textOrNull(address))
   const resolvedAddress = caseData.assistanceType === 'burial' ? resolvedDeceasedAddress : address
   const resolvedDeceasedName = fmt(textOrNull((burial as any).deceasedName) ?? textOrNull(fullName))
@@ -358,13 +361,77 @@ function buildRenderData(caseData: any): Record<string, any> {
     FmOccupation: fmt(m.occupation),
     income:       m.monthlyIncome != null ? String(m.monthlyIncome) : fmt(m.income),
   }))
+  const checked = '\u2611'
+  const unchecked = '\u2610'
+  const checkbox = (value: boolean) => (value ? checked : unchecked)
+  const isAssistanceType = (type: string) => caseData.assistanceType === type
+  const clientCategory = String(c.clientCategory ?? '').trim().toLowerCase()
+  const hasCategory = (needle: string) => clientCategory.includes(needle)
+  const rawRequirements = caseData.requirements ?? []
+  const requirementMap = new Map<string, boolean>()
+  if (Array.isArray(rawRequirements)) {
+    for (const row of rawRequirements) {
+      requirementMap.set(String(row.requirementName ?? row.key ?? ''), Boolean(row.isSubmitted ?? row.submitted ?? false))
+    }
+  } else if (typeof rawRequirements === 'object') {
+    for (const [key, value] of Object.entries(rawRequirements)) {
+      requirementMap.set(key, Boolean(value))
+    }
+  }
+  const isReqSubmitted = (...keys: string[]) => keys.some((key) => requirementMap.get(key) === true)
+  const isMedicine = isAssistanceType('medicine')
+  const isMedical = isAssistanceType('medical')
+  const isBurial = isAssistanceType('burial')
+  const isHospital = isAssistanceType('hospital')
+  const isSubsequentAvailment = Boolean((caseData as any).isSubsequentAvailment)
+  const resolvedRequestingParty = resolvedConformeName
+  const resolvedRelationshipToBeneficiary = resolvedRelationship
+  const isSelfRequest = ['self', '-', ''].includes(String(resolvedRelationshipToBeneficiary).trim().toLowerCase())
+  const resolvedRequestingPartyPhrase = isSelfRequest
+    ? resolvedBeneficiaryName
+    : `${resolvedRequestingParty}, the ${resolvedRelationshipToBeneficiary} of the beneficiary,`
+  const resolvedServiceProviderName = fmt(
+    caseData.assistanceType === 'burial' ? textOrNull(burial.funeralHome)
+    : caseData.assistanceType === 'hospital' ? textOrNull(hospital.hospitalName)
+    : caseData.assistanceType === 'medical' ? textOrNull(medical.clinicName)
+    : caseData.assistanceType === 'eyeglass' ? textOrNull((eyeglass as any).clinicName)
+    : textOrNull((caseData as any).serviceProviderName)
+  )
+  const assistancePurposeByType: Record<string, string> = {
+    hospital: 'payment of hospitalization expenses',
+    medical: resolvedMedicalRequestedAssistance !== '-' ? resolvedMedicalRequestedAssistance : 'medical procedure/examination',
+    eyeglass: 'purchase of eyeglasses',
+    medicine: 'purchase of medicines',
+    burial: 'burial/funeral expenses',
+    plain: resolvedNatureOfAssistance !== '-' ? resolvedNatureOfAssistance : 'emergency assistance',
+  }
+  const resolvedAssistancePurpose = assistancePurposeByType[caseData.assistanceType] ?? 'emergency assistance'
+  const resolvedSpecificNeed = fmt(
+    caseData.assistanceType === 'hospital' && resolvedHospitalName !== '-'
+      ? `${resolvedAssistancePurpose} at ${resolvedHospitalName}`
+    : caseData.assistanceType === 'medical' && resolvedClinicName !== '-'
+      ? `${resolvedAssistancePurpose} at ${resolvedClinicName}`
+    : caseData.assistanceType === 'burial' && fmt(burial.funeralHome) !== '-'
+      ? `${resolvedAssistancePurpose} at ${fmt(burial.funeralHome)}`
+    : resolvedAssistancePurpose
+  )
+  const resolvedImmediateCircumstance = fmt(
+    resolvedDiagnosis !== '-' ? resolvedDiagnosis
+    : resolvedFindings !== '-' ? resolvedFindings
+    : textOrNull(caseData.presentingProblem)
+  )
+  const resolvedIncomeSituation = fmt(textOrNull((caseData as any).incomeSituation) ?? 'limited and irregular income')
+  const resolvedCaseSpecificFindings = resolvedFindings
+  const resolvedEvaluationRecommendation = caseData.assistanceType === 'medicine'
+    ? `In view of the above, the undersigned recommends that the beneficiary avail of financial assistance from the City Government through the Assistance to Individuals in Crisis Situation (AICS) Program, for ${resolvedAssistancePurpose}, in the amount of ${amountToWords(Number(amount))} (P${Number(amount).toFixed(2)}).`
+    : `In view of the above, the undersigned recommends that the beneficiary avail of financial assistance from the City Government through the Assistance to Individuals in Crisis Situation (AICS) Program, through a Guarantee Letter addressed to ${resolvedServiceProviderName}, for ${resolvedAssistancePurpose}, in the amount of ${amountToWords(Number(amount))} (P${Number(amount).toFixed(2)}).`
   const reviewedByName = fmt(textOrNull((caseData as any).reviewedByName))
   const reviewedByTitle = fmt(textOrNull((caseData as any).reviewedByTitle) ?? 'Social Welfare Officer II')
   const reviewedByDate = formatLongDate((caseData as any).reviewedByDate)
   const reviewedBySignature = textOrNull((caseData as any).reviewedBySignature)
 
   const recommendingByName = fmt(textOrNull((caseData as any).recommendingByName))
-  const recommendingByTitle = fmt(textOrNull((caseData as any).recommendingByTitle) ?? "City Social Welfare and Dev’t. Officer")
+  const recommendingByTitle = fmt(textOrNull((caseData as any).recommendingByTitle) ?? "City Social Welfare and Dev't. Officer")
   const recommendingByDate = formatLongDate((caseData as any).recommendingByDate)
   const recommendingBySignature = textOrNull((caseData as any).recommendingBySignature)
 
@@ -386,8 +453,8 @@ function buildRenderData(caseData: any): Record<string, any> {
       allSignatureParamKeys.push(signatureParam)
     }
   }
-  // Preparer (social worker) signature and position — always available from their profile
-  const preparedByPosition  = fmt(textOrNull((caseData as any).preparedByPosition))
+  // Preparer (social worker) signature and position - always available from their profile
+  const preparedByPosition  = fmt(textOrNull((caseData as any).preparedByPosition) ?? textOrNull((caseData as any).socialWorkerPosition))
   const preparedBySignature = textOrNull((caseData as any).preparedBySignature)
   const preparedBySignatureParam = textOrNull((caseData as any).preparedBySignatureParam)
   if (preparedBySignatureParam) {
@@ -404,6 +471,68 @@ function buildRenderData(caseData: any): Record<string, any> {
     // Header
     dateOfAssessment:    resolvedDateOfAssessment,
     caseNumber:          fmt(caseData.caseNumber),
+
+    // Global CGV AICS template checkboxes and labels
+    hospitalCheckBox:    checkbox(isAssistanceType('hospital')),
+    medicalCheckBox:     checkbox(isAssistanceType('medical')),
+    eyeglassCheckBox:    checkbox(isAssistanceType('eyeglass')),
+    medicineCheckBox:    checkbox(isAssistanceType('medicine')),
+    burialCheckBox:      checkbox(isAssistanceType('burial')),
+    otherAssistanceCheckBox: checkbox(isAssistanceType('plain')),
+    otherAssistanceText: isAssistanceType('plain') ? resolvedNatureOfAssistance : '',
+    fourPsCheckBox:      checkbox(Boolean(c.is4ps) || hasCategory('4ps')),
+    soloParentCheckBox:  checkbox(hasCategory('solo')),
+    seniorCitizenCheckBox: checkbox(Boolean(c.isSenior) || hasCategory('senior')),
+    pwdCheckBox:         checkbox(Boolean(c.isPwd) || hasCategory('pwd')),
+    otherCategoryCheckBox: checkbox(Boolean(clientCategory) && !hasCategory('4ps') && !hasCategory('solo') && !hasCategory('senior') && !hasCategory('pwd')),
+    otherCategoryText:   Boolean(clientCategory) && !hasCategory('4ps') && !hasCategory('solo') && !hasCategory('senior') && !hasCategory('pwd') ? fmt(c.clientCategory) : '',
+
+    // Global CGV AICS Documentary Requirements Submitted table ticks
+    medicineDocsCheckBox: checkbox(isMedicine),
+    medicalDocsCheckBox:  checkbox(isMedical),
+    burialDocsCheckBox:   checkbox(isBurial),
+    hospitalDocsCheckBox: checkbox(isHospital),
+    reqMedicineLetterRequest: checkbox(isMedicine && isReqSubmitted('personal_letter')),
+    reqMedicalRequestForm: checkbox(isMedical && isReqSubmitted('med_request')),
+    reqBurialClinicalAbstract: checkbox(isBurial && isReqSubmitted('clinical_abstract')),
+    reqHospitalDeathCertificate: checkbox(isHospital && isReqSubmitted('death_cert')),
+    reqMedicineMedicalCertificate: checkbox(isMedicine && isReqSubmitted('medical_cert')),
+    reqMedicalMedicalCertificate: checkbox(isMedical && isReqSubmitted('medical_cert')),
+    reqBurialFinalBill: checkbox(isBurial && isReqSubmitted('final_bill')),
+    reqHospitalBillingStatement: checkbox(isHospital && isReqSubmitted('billing_stmt', 'hospital_bill')),
+    reqMedicinePrescription: checkbox(isMedicine && isReqSubmitted('prescription')),
+    reqMedicalPriceQuotation: checkbox(isMedical && isReqSubmitted('price_quotation')),
+    reqBurialPromissoryNote: checkbox(isBurial && isReqSubmitted('promissory_note')),
+    reqHospitalCertificateIndigency: checkbox(isHospital && isReqSubmitted('indigency')),
+    reqMedicineCertificateIndigency: checkbox(isMedicine && isReqSubmitted('indigency')),
+    reqMedicalCertificateIndigency: checkbox(isMedical && isReqSubmitted('indigency')),
+    reqBurialCertificateIndigency: checkbox(isBurial && isReqSubmitted('indigency')),
+    reqHospitalPhotocopyId: checkbox(isHospital && isReqSubmitted('id_copy')),
+    reqMedicinePhotocopyId: checkbox(isMedicine && isReqSubmitted('id_copy')),
+    reqMedicalPhotocopyId: checkbox(isMedical && isReqSubmitted('id_copy')),
+    reqBurialPhotocopyId: checkbox(isBurial && isReqSubmitted('id_copy')),
+    reqMedicineCertificateNoAvailableMedicine: checkbox(isMedicine && isReqSubmitted('cho_cert')),
+
+    // Backward-compatible aliases for older templates.
+    reqLetterRequest:     checkbox(isAssistanceType('medicine') && isReqSubmitted('personal_letter')),
+    reqRequestForm:       checkbox(isAssistanceType('medical') && isReqSubmitted('med_request')),
+    reqClinicalAbstract:  checkbox(isAssistanceType('burial') && isReqSubmitted('clinical_abstract')),
+    reqDeathCertificate:  checkbox(isAssistanceType('hospital') && isReqSubmitted('death_cert')),
+    reqMedicalCertificate: checkbox(isAssistanceType('medicine') && isReqSubmitted('medical_cert')),
+    reqMedicalCertificateMedical: checkbox(isAssistanceType('medical') && isReqSubmitted('medical_cert')),
+    reqFinalBill:         checkbox(isAssistanceType('burial') && isReqSubmitted('final_bill')),
+    reqBillingStatement:  checkbox(isAssistanceType('hospital') && isReqSubmitted('billing_stmt', 'hospital_bill')),
+    reqPrescription:      checkbox(isAssistanceType('medicine') && isReqSubmitted('prescription')),
+    reqPriceQuotation:    checkbox(isAssistanceType('medical') && isReqSubmitted('price_quotation')),
+    reqPromissoryNote:    checkbox(isAssistanceType('burial') && isReqSubmitted('promissory_note')),
+    reqCertificateIndigency: checkbox(isAssistanceType('medicine') && isReqSubmitted('indigency')),
+    reqCertificateIndigencyMedical: checkbox(isAssistanceType('medical') && isReqSubmitted('indigency')),
+    reqCertificateIndigencyBurial: checkbox(isAssistanceType('burial') && isReqSubmitted('indigency')),
+    reqPhotocopyId:       checkbox(isAssistanceType('medicine') && isReqSubmitted('id_copy')),
+    reqPhotocopyIdMedical: checkbox(isAssistanceType('medical') && isReqSubmitted('id_copy')),
+    reqPhotocopyIdBurial: checkbox(isAssistanceType('burial') && isReqSubmitted('id_copy')),
+    reqPhotocopyIdHospital: checkbox(isAssistanceType('hospital') && isReqSubmitted('id_copy')),
+    reqCertificateNoAvailableMedicine: checkbox(isAssistanceType('medicine') && isReqSubmitted('cho_cert')),
 
     // Client
     clientName:          resolvedBeneficiaryNameList,
@@ -423,6 +552,9 @@ function buildRenderData(caseData: any): Record<string, any> {
     civilStatus:         caseData.assistanceType === 'burial' ? resolvedDeceasedCivilStatus : fmt(c.civilStatus),
     sex:                 caseData.assistanceType === 'burial' ? resolvedDeceasedSex : fmt(c.sex),
     contactNumber:       fmt(c.contactNumber),
+    requestingParty:     resolvedRequestingParty,
+    relationshipToBeneficiary: resolvedRelationshipToBeneficiary,
+    requestingPartyPhrase: resolvedRequestingPartyPhrase,
     clientCategory:      fmt(c.clientCategory),
     is4ps:               c.is4ps    ? 'Yes' : 'No',
     isPwd:               c.isPwd    ? 'Yes' : 'No',
@@ -436,8 +568,14 @@ function buildRenderData(caseData: any): Record<string, any> {
     backgroundOfProblem: fmt(caseData.backgroundOfProblem),
     assessment:          fmt(caseData.assessment),
     findings:            resolvedFindings,
+    problemPresented:    fmt(textOrNull(caseData.presentingProblem) ?? resolvedImmediateCircumstance),
+    specificNeed:        resolvedSpecificNeed,
+    immediateCircumstance: resolvedImmediateCircumstance,
+    incomeSituation:     resolvedIncomeSituation,
+    caseSpecificFindings: resolvedCaseSpecificFindings,
     natureOfAssistance:  resolvedNatureOfAssistance,
     recommendation:      fmt(caseData.recommendation),
+    evaluationRecommendation: resolvedEvaluationRecommendation,
     remarks:             fmt(caseData.remarks),
     medType:             resolvedMedType,
     sufferingType:       resolvedSufferingType,
@@ -445,11 +583,32 @@ function buildRenderData(caseData: any): Record<string, any> {
     // Social worker
     socialWorkerName:    fmt(caseData.socialWorkerName),
     Employee:            fmt(caseData.socialWorkerName),
+    employee:            fmt(caseData.socialWorkerName),
 
     // Financials
     amount:              Number(amount).toFixed(2),
+    amountInWords:       amountToWords(Number(amount)),
+    amountText:          Number(amount).toFixed(2),
+    cashAmount:          Number(amount).toFixed(2),
     amountWords:         amountToWords(Number(amount)),
     cash:                `${amountToWords(Number(amount))} (P${Number(amount).toFixed(2)})`,
+    serviceProviderName: resolvedServiceProviderName,
+    NameofServiceProvider: resolvedServiceProviderName,
+    NameOfServiceProvider: resolvedServiceProviderName,
+    providerName:        resolvedServiceProviderName,
+    recipientName:       resolvedServiceProviderName,
+    serviceProviderAddress: fmt(
+      caseData.assistanceType === 'burial' ? textOrNull(burial.funeralOwnerAddress)
+      : caseData.assistanceType === 'hospital' ? textOrNull(hospital.hospitalAddress)
+      : caseData.assistanceType === 'medical' ? textOrNull(medical.clinicAddress)
+      : caseData.assistanceType === 'eyeglass' ? textOrNull((eyeglass as any).clinicAddress)
+      : textOrNull((caseData as any).serviceProviderAddress)
+    ),
+    assistancePurpose:   resolvedAssistancePurpose,
+    requestedAssistance: resolvedAssistancePurpose,
+    typeOfAssistance:    resolvedAssistancePurpose,
+    firstAvailmentCheckBox: checkbox(!isSubsequentAvailment),
+    subsequentAvailmentCheckBox: checkbox(isSubsequentAvailment),
 
     // Burial fields
     deceasedName:        resolvedDeceasedName,
@@ -461,8 +620,11 @@ function buildRenderData(caseData: any): Record<string, any> {
     dateDied:            resolvedDateOfDeath,
     causeOfDeath:        resolvedCauseOfDeath,
     funeralHome:         fmt(burial.funeralHome),
+    funeralHomeName:     fmt(burial.funeralHome),
     funeralhomeOwner:    fmt(burial.funeralHomeOwner),
+    funeralOwner:        fmt(burial.funeralHomeOwner),
     funeralownerAddress: fmt(burial.funeralOwnerAddress),
+    funeralHomeAddress:  fmt(burial.funeralOwnerAddress),
     funeralHomeOwner:    fmt(burial.funeralHomeOwner),
     funeralOwnerAddress: fmt(burial.funeralOwnerAddress),
     typeOfBill:          resolvedTypeOfBill,
@@ -473,15 +635,22 @@ function buildRenderData(caseData: any): Record<string, any> {
     intermentPlace:      fmt(burial.intermentPlace),
     ConformeName:        resolvedConformeName,
     relationship:        resolvedRelationship,
+    Relationship:        resolvedRelationship,
     glDate:              new Date().toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' }),
+    dateToday:           new Date().toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' }),
+    date:                resolvedDateOfAssessment,
 
     // Hospital fields
     patientName:         resolvedPatientName,
+    PatientName:         resolvedPatientName,
     hospitalName:        resolvedHospitalName,
     hospital:            resolvedHospitalName,
     hospitalAddress:     resolvedHospitalAddress,
     doctorName:          resolvedDoctorName,
+    physicianName:       resolvedDoctorName,
+    attendingPhysician:  resolvedDoctorName,
     mdPosition:          resolvedMdPosition,
+    doctorPosition:      resolvedMdPosition,
     admissionDate:       resolvedAdmissionDate,
     dateAdmitted:        resolvedAdmissionDate,
     diagnosis:           resolvedDiagnosis,
@@ -489,6 +658,7 @@ function buildRenderData(caseData: any): Record<string, any> {
     hospitalizationType: resolvedHospitalizationType,
     hospitallBill:       resolvedHospitalBill,
     hospitalBill:        resolvedHospitalBill,
+    billingStatement:    resolvedHospitalBill,
 
     // Eyeglass fields
     optiFullnameDoctor:  fmt(textOrNull((eyeglass as any).doctorName)),
@@ -503,6 +673,8 @@ function buildRenderData(caseData: any): Record<string, any> {
     consultationDate:    resolvedConsultationDate,
     medicalBill:         resolvedMedicalBill,
     medicalType:         resolvedMedicalRequestedAssistance,
+    medicalProcedure:    resolvedMedicalRequestedAssistance,
+    procedureType:       resolvedMedicalRequestedAssistance,
     diagnosedType:       fmt(textOrNull(medical.diagnosedType)),
     operationType:       resolvedMedicalRequestedAssistance,
 
@@ -541,12 +713,16 @@ function buildRenderData(caseData: any): Record<string, any> {
 
     // Prepared by (social worker / case study maker)
     position:            preparedByPosition,
+    Position:            preparedByPosition,
+    employeePosition:    preparedByPosition,
     casestudyMaker:      preparedBySignature,
     preparedBySignature,
 
     // Approval hierarchy fields
     reviewedByName,
     reviewedBy:          reviewedByName,
+    Administrator:       fmt(textOrNull((caseData as any).officialAdministratorName) ?? reviewedByName),
+    administrator:       fmt(textOrNull((caseData as any).officialAdministratorName) ?? reviewedByName),
     reviewedByTitle,
     reviewedByPosition:  reviewedByTitle,
     reviewedByDate,
@@ -554,6 +730,8 @@ function buildRenderData(caseData: any): Record<string, any> {
 
     recommendingByName,
     recommendingBy:        recommendingByName,
+    CSWDO:                 fmt(textOrNull((caseData as any).officialCswdoName) ?? recommendingByName),
+    cswdo:                 fmt(textOrNull((caseData as any).officialCswdoName) ?? recommendingByName),
     recommendingByTitle,
     recommendingByPosition: recommendingByTitle,
     recommendingByDate,
@@ -561,6 +739,9 @@ function buildRenderData(caseData: any): Record<string, any> {
 
     approvedByName,
     approvedBy:          approvedByName,
+    cityMayor:           fmt(textOrNull((caseData as any).officialCityMayorName) ?? approvedByName),
+    CityMayor:           fmt(textOrNull((caseData as any).officialCityMayorName) ?? approvedByName),
+    mayor:               fmt(textOrNull((caseData as any).officialCityMayorName) ?? approvedByName),
     approvedByTitle,
     approvedByPosition:  approvedByTitle,
     approvedByDate,
@@ -608,7 +789,8 @@ function renderDocWithDelimiters(
   ;(doc as any).hideDeprecations = true
   doc.render(data)
   ;(doc as any).hideDeprecations = false
-  return doc.getZip().generate({ type: 'nodebuffer', compression: 'DEFLATE' }) as Buffer
+  const generated = doc.getZip().generate({ type: 'nodebuffer', compression: 'DEFLATE' }) as Buffer
+  return sanitizeGeneratedDocxBuffer(generated)
 }
 
 // docxtemplater-image-module-free requires {%tagName} for image tags.
@@ -623,6 +805,103 @@ const SIGNATURE_IMAGE_TAGS = [
   'documentQrCode',
 ]
 
+function addMissingXmlNamespaces(xml: string): string {
+  const namespaceDeclarations: Array<[RegExp, string, string]> = [
+    [/<wp:/, 'xmlns:wp', 'xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"'],
+    [/<a:/, 'xmlns:a', 'xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"'],
+    [/<pic:/, 'xmlns:pic', 'xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"'],
+    [/\sr:embed=/, 'xmlns:r', 'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"'],
+  ]
+
+  return xml.replace(/<([A-Za-z0-9_.:-]+)([^>]*)>/, (rootTag, name, attrs) => {
+    const missingDeclarations = namespaceDeclarations
+      .filter(([usesPrefix, namespaceName]) => usesPrefix.test(xml) && !rootTag.includes(namespaceName))
+      .map(([, , declaration]) => declaration)
+
+    if (missingDeclarations.length === 0) return rootTag
+    return `<${name}${attrs} ${missingDeclarations.join(' ')}>`
+  })
+}
+function sanitizeGeneratedDocxBuffer(buffer: Buffer): Buffer {
+  const zip = new PizZip(buffer)
+  let changed = false
+
+  for (const filename of Object.keys(zip.files)) {
+    if (!filename.endsWith('.xml')) continue
+    const entry = zip.file(filename)
+    if (!entry) continue
+
+    const original = entry.asText()
+    const cleaned = addMissingXmlNamespaces(original)
+    if (cleaned !== original) {
+      zip.file(filename, cleaned)
+      changed = true
+    }
+  }
+
+  if (!changed) return buffer
+  return zip.generate({ type: 'nodebuffer', compression: 'DEFLATE' }) as Buffer
+}
+
+function rewriteParagraphText(xml: string, transform: (text: string) => string): string {
+  const parser = new DOMParser()
+  const doc = parser.parseFromString(xml, 'application/xml')
+  const paragraphs = Array.from(doc.getElementsByTagName('w:p'))
+  let changed = false
+
+  for (const paragraph of paragraphs) {
+    const texts = Array.from(paragraph.getElementsByTagName('w:t'))
+    if (texts.length === 0) continue
+
+    const original = texts.map((node) => node.textContent ?? '').join('')
+    const updated = transform(original)
+    if (updated === original) continue
+
+    texts[0].textContent = updated
+    for (const node of texts.slice(1)) {
+      node.textContent = ''
+    }
+    changed = true
+  }
+
+  if (!changed) return xml
+
+  const serialized = new XMLSerializer().serializeToString(doc)
+  const xmlDeclMatch = xml.match(/^\s*<\?xml[\s\S]*?\?>/)
+  return xmlDeclMatch
+    ? `${xmlDeclMatch[0]}${serialized.replace(/^\s*<\?xml[\s\S]*?\?>\s*/, '')}`
+    : serialized
+}
+
+function removeMedicineGuaranteeLetterClause(buffer: Buffer): Buffer {
+  const zip = new PizZip(buffer)
+  let changed = false
+  const clausePattern = /,\s*through a Guarantee Letter addressed to\s+.*?,\s*for\s+/i
+
+  for (const filename of Object.keys(zip.files)) {
+    if (!filename.startsWith('word/') || !filename.endsWith('.xml')) continue
+    const entry = zip.file(filename)
+    if (!entry) continue
+
+    const original = entry.asText()
+    const updated = rewriteParagraphText(original, (text) => {
+      if (!text.includes('through a Guarantee Letter addressed to')) return text
+      return text
+        .replace(clausePattern, ', for ')
+        .replace(/\s{2,}/g, ' ')
+        .trim()
+    })
+
+    if (updated !== original) {
+      zip.file(filename, updated)
+      changed = true
+    }
+  }
+
+  if (!changed) return buffer
+  return zip.generate({ type: 'nodebuffer', compression: 'DEFLATE' }) as Buffer
+}
+
 function sanitizeTemplateContent(templateContent: string, extraImageTags: string[] = []): string {
   const zip = new PizZip(templateContent)
   let changed = false
@@ -635,10 +914,17 @@ function sanitizeTemplateContent(templateContent: string, extraImageTags: string
     const original = entry.asText()
 
     // 1. Strip Word spell-check markers that split template tags across runs.
-    let cleaned = original.replace(/<w:proofErr[^>]*\/>/g, '')
+    let cleaned = addMissingXmlNamespaces(original.replace(/<w:proofErr[^>]*\/>/g, ''))
 
-    // 1b. Normalize space-padded single-run tag names: { clientName } → {clientName}
-    //     Also handles loop tags: {# familyComposition} → {#familyComposition}
+    // Keep family-composition table rows compact in generated DOCX output.
+    cleaned = cleaned.replace(
+      /<w:tr\b(?=[\s\S]*?familyComposition)[\s\S]*?\/familyComposition[\s\S]*?<\/w:tr>/g,
+      (row) => row
+        .replace(/<w:sz w:val="\d+"\/>/g, '<w:sz w:val="18"/>')
+        .replace(/<w:szCs w:val="\d+"\/>/g, '<w:szCs w:val="18"/>')
+    )
+    // 1b. Normalize space-padded single-run tag names: { clientName } -> {clientName}
+    //     Also handles loop tags: {# familyComposition} -> {#familyComposition}
     cleaned = cleaned.replace(
       /(<w:t(?:[\s][^>]*)?>)([^<]*\{[\s#/]*\s+[a-zA-Z][^}<]*\}[^<]*)(<\/w:t>)/g,
       (_match, open, content, close) => {
@@ -761,7 +1047,7 @@ export async function generateMedicineCaseStudyDocx(
     ? [...MEDICINE_PROXY_CANDIDATES, ...MEDICINE_PERSONAL_CANDIDATES]
     : MEDICINE_PERSONAL_CANDIDATES
   const template = loadFirstAvailableTemplate(candidates)
-  return renderDoc(template, buildRenderData(caseData))
+  return removeMedicineGuaranteeLetterClause(renderDoc(template, buildRenderData(caseData)))
 }
 
 export async function generateMedicineGuaranteeLetterDocx(caseData: any): Promise<Buffer> {
@@ -810,3 +1096,11 @@ export async function generatePlainCaseStudyDocx(caseData: any): Promise<Buffer>
   const template = loadFirstAvailableTemplate(PLAIN_CASE_STUDY_CANDIDATES)
   return renderDoc(template, buildRenderData(caseData))
 }
+
+
+
+
+
+
+
+

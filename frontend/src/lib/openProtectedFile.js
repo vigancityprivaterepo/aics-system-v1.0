@@ -1,7 +1,7 @@
 import axios from 'axios'
 import api from './api'
 
-function getStoredAuthHeader() {
+export function getStoredAuthHeader() {
   const inMemory = api.defaults.headers.common?.Authorization
   if (inMemory) return inMemory
 
@@ -16,7 +16,7 @@ function getStoredAuthHeader() {
   }
 }
 
-function resolveProtectedFileUrl(fileUrl) {
+export function resolveProtectedFileUrl(fileUrl) {
   if (/^https?:\/\//i.test(fileUrl)) return fileUrl
 
   const normalizedPath = String(fileUrl).replace(/^\/?api\/uploads\//i, '/uploads/')

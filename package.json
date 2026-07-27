@@ -1,0 +1,9 @@
+{
+  "name": "aics-system",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "npm --prefix backend run build && npm --prefix frontend run build && npm --prefix portal run build",
+    "verify:production": "npm run build"
+  }
+}

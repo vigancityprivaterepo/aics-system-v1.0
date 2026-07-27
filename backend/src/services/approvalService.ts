@@ -66,36 +66,7 @@ export function approvalAssigneesByStage(settings: ApprovalSettings): ApprovalAs
 }
 
 export async function resolveApprovalAssignees(settings: ApprovalSettings): Promise<ApprovalAssigneeByStage> {
-  const assignees = approvalAssigneesByStage(settings)
-  const missingStages = APPROVAL_STAGE_ORDER.filter((stage) => !assignees[stage])
-  if (missingStages.length === 0) return assignees
-
-  const candidates = await prisma.user.findMany({
-    where: { isActive: true },
-    select: { id: true, name: true, approvalLevel: true, eSignatureUrl: true, signatureParam: true, isActive: true },
-    orderBy: [{ name: 'asc' }],
-  })
-
-  for (const stage of missingStages) {
-    const requiredLevel = requiredApprovalLevel(stage)
-    const ranked = candidates
-      .map((candidate) => ({ candidate, levels: parseApprovalLevels(candidate.approvalLevel) }))
-      .filter(({ levels }) => levels.includes(requiredLevel))
-      .sort((a, b) => {
-        const aDedicated = a.levels.length === 1 && a.levels[0] === requiredLevel ? 1 : 0
-        const bDedicated = b.levels.length === 1 && b.levels[0] === requiredLevel ? 1 : 0
-        if (aDedicated !== bDedicated) return bDedicated - aDedicated
-        const aHasParam = a.candidate.signatureParam ? 1 : 0
-        const bHasParam = b.candidate.signatureParam ? 1 : 0
-        if (aHasParam !== bHasParam) return bHasParam - aHasParam
-        return a.candidate.name.localeCompare(b.candidate.name)
-      })
-      .map(({ candidate }) => candidate)
-
-    assignees[stage] = mapApprovalAssignee(ranked[0] ?? null)
-  }
-
-  return assignees
+  return approvalAssigneesByStage(settings)
 }
 
 export function assertTransitionPermission(

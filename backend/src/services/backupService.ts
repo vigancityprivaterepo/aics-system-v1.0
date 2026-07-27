@@ -158,6 +158,7 @@ async function exportDatabase() {
     applicantApplications,
     applicantApplicationDocuments,
     clientDedupEvents,
+    adminAuditLogs,
     caseStatusLogs,
     idempotencyKeys,
   ] = await Promise.all([
@@ -180,6 +181,7 @@ async function exportDatabase() {
     prisma.applicantApplication.findMany(),
     prisma.applicantApplicationDocument.findMany(),
     prisma.clientDedupEvent.findMany(),
+    safeFindMany('admin audit logs', () => prisma.adminAuditLog.findMany(), 'public.admin_audit_logs'),
     prisma.caseStatusLog.findMany(),
     safeFindMany('idempotency keys', () => prisma.idempotencyKey.findMany(), 'public.idempotency_keys'),
   ])
@@ -204,6 +206,7 @@ async function exportDatabase() {
     applicantApplications,
     applicantApplicationDocuments,
     clientDedupEvents,
+    adminAuditLogs,
     caseStatusLogs,
     idempotencyKeys,
   }
@@ -230,8 +233,9 @@ async function truncateApplicationTables(tx: Prisma.TransactionClient) {
   const truncateOrder = [
     'applicant_application_documents',
     'applicant_applications',
-    'case_approvals',
-    'case_status_logs',
+      'case_approvals',
+      'admin_audit_logs',
+      'case_status_logs',
     'client_dedup_events',
     'case_medicines',
     'case_requirements',
@@ -265,7 +269,12 @@ async function importDatabase(payload: BackupDbPayload) {
 
     await tx.user.createMany({ data: payload.users })
     await tx.applicant.createMany({ data: payload.applicants })
-    await tx.client.createMany({ data: payload.clients })
+    await tx.client.createMany({
+      data: payload.clients.map((item) => ({
+        ...item,
+        familyComposition: (item as any).familyComposition === null ? Prisma.JsonNull : (item as any).familyComposition,
+      })),
+    })
     await tx.systemSettings.createMany({ data: payload.systemSettings })
     await tx.medicineItem.createMany({ data: payload.medicineItems })
     await tx.hospitalFacility.createMany({ data: payload.hospitalFacilities })
@@ -299,6 +308,12 @@ async function importDatabase(payload: BackupDbPayload) {
         payload: item.payload === null ? Prisma.JsonNull : item.payload,
       })),
     })
+    await safeCreateMany('admin audit logs', () => tx.adminAuditLog.createMany({
+      data: payload.adminAuditLogs.map((item) => ({
+        ...item,
+        details: item.details === null ? Prisma.JsonNull : item.details,
+      })),
+    }), 'public.admin_audit_logs')
     await tx.caseStatusLog.createMany({ data: payload.caseStatusLogs })
     await safeCreateMany('idempotency keys', () => tx.idempotencyKey.createMany({
       data: payload.idempotencyKeys.map((item) => ({

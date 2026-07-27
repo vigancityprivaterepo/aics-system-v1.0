@@ -1,5 +1,6 @@
 import { useOutletContext } from 'react-router-dom'
 import StepCaseStudy from './StepCaseStudy'
+import StepRequirements from './StepRequirements'
 import ApprovalHierarchy from './ApprovalHierarchy'
 
 const EDITABLE_STATUSES = ['encoding', 'for_review', 'recommending_approval', 'for_approval']
@@ -23,6 +24,11 @@ export default function TabCaseStudy() {
 
   return (
     <div className="space-y-4">
+      <StepRequirements
+        caseData={caseData}
+        onUpdate={onUpdate}
+        locked={['approved', 'released', 'rejected'].includes(status)}
+      />
       <StepCaseStudy caseData={caseData} onUpdate={onUpdate} readOnly={readOnly} />
       {showApprovalHierarchy && <ApprovalHierarchy reviewFlow={caseData.reviewFlow} />}
     </div>

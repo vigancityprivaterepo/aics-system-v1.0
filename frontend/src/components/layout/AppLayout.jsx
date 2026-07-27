@@ -147,9 +147,12 @@ function CasesGroup({ onNavigate, pendingByType = {} }) {
   )
 }
 
-function DatabaseGroup({ onNavigate }) {
+function DatabaseGroup({ onNavigate, isCHO = false }) {
   const location = useLocation()
-  const isDatabaseRoute = ['/medicines', '/hospitals', '/funeral-homes'].includes(location.pathname)
+  const databaseRoutes = isCHO
+    ? ['/medicines']
+    : ['/medicines', '/hospitals', '/funeral-homes']
+  const isDatabaseRoute = databaseRoutes.includes(location.pathname)
   const [open, setOpen] = useState(isDatabaseRoute)
 
   useEffect(() => {
@@ -195,36 +198,40 @@ function DatabaseGroup({ onNavigate }) {
               <PillIcon className="h-4 w-4 shrink-0" />
               <span>Medicines</span>
             </NavLink>
-            <NavLink
-              to="/hospitals"
-              onClick={onNavigate}
-              className={({ isActive }) =>
-                `flex items-center gap-2.5 rounded-lg py-2 pr-3 pl-8 text-sm font-medium transition-all duration-150 outline-none
-                focus-visible:ring-2 focus-visible:ring-emerald-400 ${
-                  isActive
-                    ? 'bg-emerald-400/15 text-white shadow-sm'
-                    : 'text-white/55 hover:bg-white/8 hover:text-white'
-                }`
-              }
-            >
-              <HospitalIcon className="h-4 w-4 shrink-0" />
-              <span>Hospitals</span>
-            </NavLink>
-            <NavLink
-              to="/funeral-homes"
-              onClick={onNavigate}
-              className={({ isActive }) =>
-                `flex items-center gap-2.5 rounded-lg py-2 pr-3 pl-8 text-sm font-medium transition-all duration-150 outline-none
-                focus-visible:ring-2 focus-visible:ring-emerald-400 ${
-                  isActive
-                    ? 'bg-emerald-400/15 text-white shadow-sm'
-                    : 'text-white/55 hover:bg-white/8 hover:text-white'
-                }`
-              }
-            >
-              <HeadstonIcon className="h-4 w-4 shrink-0" />
-              <span>Funeral Homes</span>
-            </NavLink>
+            {!isCHO && (
+              <>
+                <NavLink
+                  to="/hospitals"
+                  onClick={onNavigate}
+                  className={({ isActive }) =>
+                    `flex items-center gap-2.5 rounded-lg py-2 pr-3 pl-8 text-sm font-medium transition-all duration-150 outline-none
+                    focus-visible:ring-2 focus-visible:ring-emerald-400 ${
+                      isActive
+                        ? 'bg-emerald-400/15 text-white shadow-sm'
+                        : 'text-white/55 hover:bg-white/8 hover:text-white'
+                    }`
+                  }
+                >
+                  <HospitalIcon className="h-4 w-4 shrink-0" />
+                  <span>Hospitals</span>
+                </NavLink>
+                <NavLink
+                  to="/funeral-homes"
+                  onClick={onNavigate}
+                  className={({ isActive }) =>
+                    `flex items-center gap-2.5 rounded-lg py-2 pr-3 pl-8 text-sm font-medium transition-all duration-150 outline-none
+                    focus-visible:ring-2 focus-visible:ring-emerald-400 ${
+                      isActive
+                        ? 'bg-emerald-400/15 text-white shadow-sm'
+                        : 'text-white/55 hover:bg-white/8 hover:text-white'
+                    }`
+                  }
+                >
+                  <HeadstonIcon className="h-4 w-4 shrink-0" />
+                  <span>Funeral Homes</span>
+                </NavLink>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -243,7 +250,7 @@ function SidebarNav({ closeSidebar, isAdmin, isCityHealthOffice, pendingByType, 
       >
         <SectionLabel>Health Office</SectionLabel>
         <div className="space-y-0.5">
-          <DatabaseGroup onNavigate={closeSidebar} />
+          <DatabaseGroup onNavigate={closeSidebar} isCHO={true} />
         </div>
       </nav>
     )

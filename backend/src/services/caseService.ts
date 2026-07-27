@@ -1,7 +1,7 @@
 import type { AssistanceType, CaseStatus } from '@prisma/client'
 import { prisma } from '../utils/prisma.js'
 import { HttpError } from '../utils/httpError.js'
-import { EDIT_LOCKED_STATUSES, STATUS_FLOW } from '../types/caseTypes.js'
+import { ACTIVE_APPROVAL_STATUSES, EDIT_LOCKED_STATUSES, STATUS_FLOW } from '../types/caseTypes.js'
 import { REQUIREMENT_DEFINITIONS, emptyRequirementMap } from '../utils/requirements.js'
 
 export function paramId(value: string | string[] | undefined): string {
@@ -38,28 +38,49 @@ export async function ensureRequirementRows(caseId: string, type: AssistanceType
 }
 
 export function assertCaseReadable(
-  _caseData: { status: CaseStatus; socialWorkerId: string | null },
+  caseData: { status: CaseStatus; socialWorkerId: string | null; assistanceType?: AssistanceType; approvals?: Array<{ actedByUserId?: string | null }> },
   user: Express.AuthUser | undefined,
-  _scope: string,
+  scope: string,
 ) {
   if (!user) throw new HttpError(401, 'Unauthorized')
+  if (user.role === 'admin') return
+  if (caseData.socialWorkerId && caseData.socialWorkerId === user.id) return
+  if (user.role === 'city_health_office' && caseData.assistanceType === 'medicine') return
+  if (Array.isArray(caseData.approvals) && caseData.approvals.some((approval) => approval.actedByUserId === user.id)) return
+
+  const normalizedStatus = normalizeWorkflowStatus(caseData.status)
+  const approvalLevels = Array.isArray(user.approvalLevel) ? user.approvalLevel : []
+  if (normalizedStatus === 'for_review' && approvalLevels.includes('reviewer')) return
+  if (normalizedStatus === 'recommending_approval' && approvalLevels.includes('recommender')) return
+  if (normalizedStatus === 'for_approval' && approvalLevels.includes('approver')) return
+  if (
+    ['approved', 'released', 'rejected'].includes(normalizedStatus) &&
+    approvalLevels.some((level) => ['reviewer', 'recommender', 'approver'].includes(level))
+  ) {
+    return
+  }
+
+  throw new HttpError(403, `${scope} is not available for your account.`)
 }
 
 export function assertEditableCase(
-  caseData: { status: CaseStatus; socialWorkerId: string | null },
+  caseData: { status: CaseStatus; socialWorkerId: string | null; assistanceType?: AssistanceType; approvals?: Array<{ actedByUserId?: string | null }> },
   user: Express.AuthUser | undefined,
   scope: string,
 ) {
   assertCaseReadable(caseData, user, scope)
+  if (user?.role !== 'admin' && caseData.socialWorkerId !== user?.id) {
+    throw new HttpError(403, `${scope} can only be modified by the assigned case maker or an admin.`)
+  }
   if (EDIT_LOCKED_STATUSES.has(caseData.status)) {
     throw new HttpError(400, `${scope} cannot be modified once case is ${caseData.status.replace('_', ' ')}.`)
   }
 }
 
 export function assertReportAccess(
-  _caseData: { status: CaseStatus },
+  caseData: { status: CaseStatus; socialWorkerId: string | null; assistanceType?: AssistanceType; approvals?: Array<{ actedByUserId?: string | null }> },
   user: Express.AuthUser | undefined,
-  _scope: string,
+  scope: string,
 ) {
-  if (!user) throw new HttpError(401, 'Unauthorized')
+  assertCaseReadable(caseData, user, scope)
 }

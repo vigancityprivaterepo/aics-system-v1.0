@@ -1,6 +1,6 @@
 ﻿import { Router } from 'express'
 import { z } from 'zod'
-import { ClientCategory } from '@prisma/client'
+import { ClientCategory, Prisma } from '@prisma/client'
 import { prisma } from '../utils/prisma.js'
 import { asyncHandler } from '../utils/asyncHandler.js'
 import { generateClientCaseNumber } from '../utils/caseNumber.js'
@@ -34,6 +34,7 @@ const createClientSchema = z.object({
   isSenior: z.boolean().optional(),
   clientCategory: z.enum(['walk-in', 'referred', 'rescued']).optional(),
   referralSource: z.string().optional().nullable(),
+  familyComposition: z.array(z.record(z.any())).optional().nullable(),
   photoUrl: z.string().optional().nullable(),
   reuseClientId: z.string().uuid().optional().nullable(),
   overrideDuplicateReason: z.string().trim().min(3).max(500).optional().nullable(),
@@ -45,6 +46,11 @@ const mergeClientSchema = z.object({
   targetClientId: z.string().uuid(),
   notes: z.string().trim().min(3).max(500).optional().nullable(),
 })
+
+function normalizeRfidUid(value: string | null | undefined): string | null {
+  const uid = String(value ?? '').trim().toUpperCase().replace(/[^0-9A-Z]/g, '')
+  return uid.length > 0 ? uid : null
+}
 
 function toClientCategory(value?: string | null): ClientCategory {
   if (value === 'referred') return ClientCategory.referred
@@ -73,7 +79,9 @@ type ClientDTO = {
   isSenior: boolean
   clientCategory: ClientCategory
   referralSource: string | null
+  familyComposition?: unknown
   photoUrl: string | null
+  rfidUid?: string | null
   mergedIntoClientId?: string | null
   createdAt: Date
   updatedAt: Date
@@ -101,7 +109,9 @@ function serializeClient(client: ClientDTO) {
     isSenior: client.isSenior,
     clientCategory: client.clientCategory.replace('_', '-'),
     referralSource: client.referralSource,
+    familyComposition: Array.isArray((client as any).familyComposition) ? (client as any).familyComposition : [],
     photoUrl: client.photoUrl,
+    rfidUid: (client as any).rfidUid ?? null,
     mergedIntoClientId: (client as any).mergedIntoClientId ?? null,
     createdAt: client.createdAt,
     updatedAt: client.updatedAt,
@@ -236,6 +246,7 @@ router.post('/', asyncHandler(async (req, res) => {
       isSenior: body.isSenior ?? false,
       clientCategory: toClientCategory(body.clientCategory),
       referralSource: body.referralSource ?? null,
+      familyComposition: body.familyComposition ?? undefined,
       photoUrl: body.photoUrl ?? null,
     },
   })
@@ -255,6 +266,103 @@ router.post('/', asyncHandler(async (req, res) => {
 
   res.status(201).json(serializeClient(client))
 }))
+
+// RFID Lookup
+
+router.get('/rfid/:uid', asyncHandler(async (req, res) => {
+  res.set('Cache-Control', 'no-store, max-age=0')
+
+  const uid = normalizeRfidUid(paramId(req.params.uid))
+  if (!uid) throw new HttpError(400, 'RFID UID is required')
+
+  const client = await prisma.client.findFirst({
+    where: { rfidUid: uid, mergedIntoClientId: null },
+    include: {
+      cases: {
+        orderBy: { createdAt: 'desc' },
+        take: 5,
+        select: {
+          id: true,
+          caseNumber: true,
+          assistanceType: true,
+          status: true,
+          amount: true,
+          dateOfAssessment: true,
+          createdAt: true,
+          medicines: { select: { medicineName: true } },
+          burialDetails: { select: { funeralHome: true, typeOfBill: true, deceasedName: true } },
+          hospitalDetails: { select: { hospitalName: true, patientName: true } },
+          medicalDetails: { select: { clinicName: true, doctorName: true } },
+          eyeglassDetails: { select: { clinicName: true, doctorName: true } },
+          plainDetails: { select: { natureOfAssistance: true } },
+        },
+      },
+    },
+  })
+
+  if (!client) throw new HttpError(404, 'No client is enrolled with this RFID card')
+
+  res.json({
+    ...serializeClient(client),
+    history: client.cases.map((c) => ({
+      id: c.id,
+      caseNumber: (c as any).caseNumber ?? null,
+      assistanceType: c.assistanceType,
+      status: c.status,
+      amount: Number(c.amount ?? 0),
+      dateOfAssessment: c.dateOfAssessment?.toISOString().slice(0, 10) ?? null,
+      createdAt: c.createdAt,
+      detail: {
+        medicines: (c as any).medicines?.map((m: any) => m.medicineName) ?? [],
+        funeralHome: (c as any).burialDetails?.funeralHome ?? null,
+        typeOfBill: (c as any).burialDetails?.typeOfBill ?? null,
+        deceasedName: (c as any).burialDetails?.deceasedName ?? null,
+        hospitalName: (c as any).hospitalDetails?.hospitalName ?? null,
+        clinicName: (c as any).medicalDetails?.clinicName ?? (c as any).eyeglassDetails?.clinicName ?? null,
+        doctorName: (c as any).medicalDetails?.doctorName ?? (c as any).eyeglassDetails?.doctorName ?? null,
+        natureOfAssistance: (c as any).plainDetails?.natureOfAssistance ?? null,
+      },
+    })),
+  })
+}))
+
+// RFID Enroll / Remove
+
+const rfidUpdateSchema = z.object({
+  rfidUid: z.string().trim().min(4).max(96).nullable(),
+})
+
+router.patch('/:id/rfid', asyncHandler(async (req, res) => {
+  const clientId = paramId(req.params.id)
+  const parsed = rfidUpdateSchema.parse(req.body)
+  const rfidUid = normalizeRfidUid(parsed.rfidUid)
+
+  const client = await prisma.client.findUnique({ where: { id: clientId } })
+  if (!client) throw new HttpError(404, 'Client not found')
+
+  // If assigning a UID, check it isn't already used by another client
+  if (rfidUid !== null) {
+    const conflict = await prisma.client.findFirst({
+      where: { rfidUid, id: { not: clientId } },
+      select: { id: true, firstName: true, lastName: true, caseNumber: true },
+    })
+    if (conflict) {
+      throw new HttpError(
+        409,
+        `This RFID card is already enrolled to ${conflict.lastName}, ${conflict.firstName} (${conflict.caseNumber}). Remove it there first.`
+      )
+    }
+  }
+
+  const updated = await (prisma.client as any).update({
+    where: { id: clientId },
+    data: { rfidUid },
+  })
+
+  res.json(serializeClient(updated))
+}))
+
+// Get single client by ID
 
 router.get('/:id', asyncHandler(async (req, res) => {
   const clientId = paramId(req.params.id)
@@ -371,6 +479,7 @@ router.put('/:id', requireRole(['admin']), asyncHandler(async (req, res) => {
       isSenior: body.isSenior,
       clientCategory: body.clientCategory ? toClientCategory(body.clientCategory) : undefined,
       referralSource: body.referralSource,
+      familyComposition: body.familyComposition === null ? Prisma.JsonNull : body.familyComposition,
       photoUrl: body.photoUrl,
     },
   })

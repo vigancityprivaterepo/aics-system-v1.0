@@ -2,32 +2,32 @@ import { AssistanceType } from '@prisma/client'
 
 export const REQUIREMENT_DEFINITIONS: Record<AssistanceType, Array<{ key: string; label: string }>> = {
   medicine: [
-    { key: 'prescription', label: 'Prescription' },
+    { key: 'personal_letter', label: 'Letter Request' },
     { key: 'medical_cert', label: 'Medical Certificate' },
-    { key: 'cho_cert', label: 'Certificate of Unavailability (CHO)' },
+    { key: 'prescription', label: 'Prescription' },
     { key: 'indigency', label: 'Certificate of Indigency' },
     { key: 'id_copy', label: 'Photocopy of ID' },
-    { key: 'personal_letter', label: 'Personal Letter addressed to the LCE' },
-    { key: 'acknowledgement', label: 'Acknowledgement/Certification' },
+    { key: 'cho_cert', label: 'Certificate of No Available Medicine as Prescribed' },
   ],
   burial: [
-    { key: 'death_cert', label: 'Death Certificate' },
-    { key: 'billing_stmt', label: 'Billing Statement' },
+    { key: 'clinical_abstract', label: 'Clinical Abstract' },
+    { key: 'final_bill', label: 'Final Bill' },
+    { key: 'promissory_note', label: 'Promissory Note' },
     { key: 'indigency', label: 'Certificate of Indigency' },
     { key: 'id_copy', label: 'Photocopy of ID' },
   ],
   hospital: [
-    { key: 'hospital_bill', label: 'Hospital Billing Statement' },
-    { key: 'medical_cert', label: 'Medical Certificate' },
+    { key: 'death_cert', label: 'Certified True Copy of Death Certificate' },
+    { key: 'billing_stmt', label: 'Billing Statement/Statement of Account' },
     { key: 'indigency', label: 'Certificate of Indigency' },
     { key: 'id_copy', label: 'Photocopy of ID' },
   ],
   medical: [
-    { key: 'med_request', label: 'Medical/Lab Request' },
+    { key: 'med_request', label: 'Request Form' },
     { key: 'medical_cert', label: 'Medical Certificate' },
+    { key: 'price_quotation', label: 'Price Quotation' },
     { key: 'indigency', label: 'Certificate of Indigency' },
     { key: 'id_copy', label: 'Photocopy of ID' },
-    { key: 'personal_letter', label: 'Personal Letter addressed to the LCE' },
   ],
   eyeglass: [
     { key: 'prescription',    label: 'Eyeglass Prescription' },
@@ -55,14 +55,14 @@ const PORTAL_DOCUMENT_REQUIREMENT_MAP: Record<AssistanceType, Record<string, str
   },
   hospital: {
     'valid government id': 'id_copy',
-    'statement of account': 'hospital_bill',
-    'hospital bill or statement of account': 'hospital_bill',
-    'hospital admission papers': 'hospital_bill',
+    'statement of account': 'billing_stmt',
+    'hospital bill or statement of account': 'billing_stmt',
+    'hospital admission papers': 'billing_stmt',
   },
   burial: {
     'valid government id': 'id_copy',
     'death certificate': 'death_cert',
-    'funeral contract or statement of account': 'billing_stmt',
+    'funeral contract or statement of account': 'final_bill',
     'barangay indigency certification': 'indigency',
   },
   eyeglass: {

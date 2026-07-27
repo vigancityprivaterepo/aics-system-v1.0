@@ -49,8 +49,9 @@ export default function StepPlainDetails({ caseData, onUpdate, readOnly = false 
       onUpdate({
         ...casePayload,
         amount: plainRes.data?.amount ?? data.amount,
+        status: plainRes.data?.status ?? caseData.status,
       })
-      toast.success('Plain AICS details saved')
+      toast.success(plainRes.data?.approvalsReset ? 'Plain AICS details saved. Case returned to encoding for re-review.' : 'Plain AICS details saved')
     } catch (err) {
       if (err.response) {
         toast.error(err.response?.data?.message || 'Failed to save details')
@@ -64,7 +65,7 @@ export default function StepPlainDetails({ caseData, onUpdate, readOnly = false 
         familyComposition: family,
         amount: data.amount,
       })
-      toast.success('Saved (demo mode)')
+      toast.error(err.response?.data?.message || 'Failed to save changes')
     } finally {
       setSaving(false)
     }
@@ -164,7 +165,7 @@ export default function StepPlainDetails({ caseData, onUpdate, readOnly = false 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 mt-4">
           {/* Sub-section: Findings & Narrative */}
           <div className="sm:col-span-2 mt-2 mb-1 flex items-center gap-2 border-b border-slate-150 pb-2">
-            <span className="text-base">📝</span>
+            <span className="text-base">📌</span>
             <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Findings &amp; Narrative</p>
           </div>
 
@@ -237,3 +238,4 @@ export default function StepPlainDetails({ caseData, onUpdate, readOnly = false 
     </div>
   )
 }
+

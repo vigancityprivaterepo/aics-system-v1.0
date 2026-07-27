@@ -1,5 +1,16 @@
 import { useEffect, useMemo, useRef } from 'react'
 
+function normalizeTextArtifacts(value) {
+  return String(value ?? '')
+    .replace(/\u00e2\u20ac\u00a2/g, '-')
+    .replace(/\u00e2\u20ac\u2122/g, "'")
+    .replace(/\u00e2\u20ac[\u0153\u009d]/g, '"')
+    .replace(/\u00e2\u20ac[\u201c\u201d]/g, '-')
+    .replace(/\u00c2\u00b7/g, '-')
+    .replace(/\u00c2/g, '')
+    .replace(/\u00a0/g, ' ')
+}
+
 function escapeHtml(value) {
   return String(value)
     .replace(/&/g, '&amp;')
@@ -21,7 +32,7 @@ function plainTextToHtml(value) {
 
 function sanitizeNode(node, documentRef) {
   if (node.nodeType === Node.TEXT_NODE) {
-    return documentRef.createTextNode(node.textContent ?? '')
+    return documentRef.createTextNode(normalizeTextArtifacts(node.textContent ?? ''))
   }
 
   if (node.nodeType !== Node.ELEMENT_NODE) {
@@ -58,7 +69,7 @@ function sanitizeNode(node, documentRef) {
 }
 
 function normalizeEditorHtml(value) {
-  const raw = String(value ?? '').trim()
+  const raw = normalizeTextArtifacts(value).trim()
   if (!raw) return ''
 
   const looksLikeHtml = /<\/?[a-z][\s\S]*>/i.test(raw)

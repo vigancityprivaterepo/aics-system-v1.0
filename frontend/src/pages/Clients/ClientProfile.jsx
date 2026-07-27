@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import api from '../../lib/api'
@@ -8,6 +8,30 @@ import { ChevronLeftIcon, IdCardIcon, PhoneIcon, MapPinIcon, EditIcon, TrashIcon
 import StatusBadge from '../../components/ui/StatusBadge'
 import ClientSearchBar from '../../components/ClientSearchBar'
 import DuplicateReviewModal from '../../components/clients/DuplicateReviewModal'
+import { useRfidScanner } from '../../hooks/useRfidScanner'
+
+function normalizeRfidUid(value) {
+  return String(value ?? '').trim().toUpperCase().replace(/[^0-9A-Z]/g, '')
+}
+
+/** Masks a UID like "A1B2C3D4" → "A1••••D4" */
+function maskRfidUid(uid) {
+  if (!uid || uid.length <= 4) return uid
+  const show = 2
+  const masked = '•'.repeat(uid.length - show * 2)
+  return uid.slice(0, show) + masked + uid.slice(-show)
+}
+
+function RfidIcon() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+      <rect x="2" y="6" width="20" height="13" rx="2" strokeLinecap="round" />
+      <path strokeLinecap="round" d="M15.5 10.5a3 3 0 0 1 0 4" />
+      <path strokeLinecap="round" d="M17.5 8.5a6 6 0 0 1 0 8" />
+      <rect x="6" y="10" width="5" height="4" rx="0.5" />
+    </svg>
+  )
+}
 
 function buildCaseDescription(h) {
   const d = h.detail
@@ -49,6 +73,9 @@ function buildCaseDescription(h) {
   }
 }
 
+const defaultFamilyMember = { name: '', age: '', relationship: '', occupation: '' }
+const RELATIONSHIP_OPTIONS = ['Spouse', 'Son', 'Daughter', 'Father', 'Mother', 'Brother', 'Sister', 'Grandson', 'Granddaughter', 'Grandfather', 'Grandmother', 'Uncle', 'Aunt', 'Nephew', 'Niece', 'Son-in-Law', 'Daughter-in-Law', 'Father-in-Law', 'Mother-in-Law', 'Other']
+
 function toEditForm(client) {
   return {
     lastName: client.lastName ?? '',
@@ -61,6 +88,7 @@ function toEditForm(client) {
     contactNumber: client.contactNumber ?? '',
     occupation: client.occupation ?? '',
     religion: client.religion ?? '',
+    familyComposition: Array.isArray(client.familyComposition) ? client.familyComposition : [],
   }
 }
 
@@ -82,6 +110,10 @@ export default function ClientProfile() {
   const [mergeTarget, setMergeTarget] = useState(null)
   const [mergeNotes, setMergeNotes] = useState('')
   const [merging, setMerging] = useState(false)
+  // RFID enrollment state
+  const [rfidEnrollMode, setRfidEnrollMode] = useState(false)
+  const [rfidSaving, setRfidSaving] = useState(false)
+  const [manualRfidUid, setManualRfidUid] = useState('')
   const [form, setForm] = useState({
     lastName: '',
     firstName: '',
@@ -93,6 +125,7 @@ export default function ClientProfile() {
     contactNumber: '',
     occupation: '',
     religion: '',
+    familyComposition: [],
   })
 
   useEffect(() => {
@@ -122,6 +155,30 @@ export default function ClientProfile() {
     if (!client) return
     setForm(toEditForm(client))
     setEditMode(false)
+  }
+
+
+  const addFamilyMember = () => {
+    setForm((prev) => ({
+      ...prev,
+      familyComposition: [...(prev.familyComposition || []), { ...defaultFamilyMember }],
+    }))
+  }
+
+  const updateFamilyMember = (index, field, value) => {
+    setForm((prev) => ({
+      ...prev,
+      familyComposition: (prev.familyComposition || []).map((member, idx) => (
+        idx === index ? { ...member, [field]: value } : member
+      )),
+    }))
+  }
+
+  const removeFamilyMember = (index) => {
+    setForm((prev) => ({
+      ...prev,
+      familyComposition: (prev.familyComposition || []).filter((_, idx) => idx !== index),
+    }))
   }
 
   const handleDelete = async () => {
@@ -157,6 +214,14 @@ export default function ClientProfile() {
       contactNumber: form.contactNumber.trim() || null,
       occupation: form.occupation.trim() || null,
       religion: form.religion.trim() || null,
+      familyComposition: (form.familyComposition || [])
+        .map((member) => ({
+          name: String(member.name || '').trim(),
+          age: member.age === '' ? null : member.age,
+          relationship: String(member.relationship || '').trim(),
+          occupation: String(member.occupation || '').trim(),
+        }))
+        .filter((member) => member.name || member.relationship || member.occupation || member.age !== null),
     }
 
     setSaving(true)
@@ -222,6 +287,49 @@ export default function ClientProfile() {
     }
   }
 
+  // RFID enrollment — called when scanner fires while rfidEnrollMode is ON
+  const handleRfidEnrollScan = useCallback(
+    async (rawUid) => {
+      const uid = normalizeRfidUid(rawUid)
+      if (rfidSaving || !client || uid.length < 4) return
+      setRfidSaving(true)
+      try {
+        const res = await api.patch(`/clients/${client.id}/rfid`, { rfidUid: uid })
+        setClient(res.data)
+        setRfidEnrollMode(false)
+        setManualRfidUid('')
+        toast.success(`RFID card enrolled successfully (UID: ${uid})`)
+      } catch (err) {
+        toast.error(err.response?.data?.message ?? 'Failed to enroll RFID card.')
+      } finally {
+        setRfidSaving(false)
+      }
+    },
+    [client, rfidSaving]
+  )
+
+  const handleManualRfidEnroll = (event) => {
+    event.preventDefault()
+    handleRfidEnrollScan(manualRfidUid)
+  }
+
+  const handleRfidRemove = async () => {
+    if (!client) return
+    if (!window.confirm('Remove the RFID card from this client? They will need to be re-enrolled.')) return
+    setRfidSaving(true)
+    try {
+      const res = await api.patch(`/clients/${client.id}/rfid`, { rfidUid: null })
+      setClient(res.data)
+      toast.success('RFID card removed.')
+    } catch (err) {
+      toast.error(err.response?.data?.message ?? 'Failed to remove RFID card.')
+    } finally {
+      setRfidSaving(false)
+    }
+  }
+
+  useRfidScanner({ onScan: handleRfidEnrollScan, enabled: rfidEnrollMode })
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-32">
@@ -239,13 +347,13 @@ export default function ClientProfile() {
   }
 
   return (
-    <div className="animate-fade-in mx-auto max-w-4xl">
+    <div className="animate-fade-in mx-auto w-full max-w-[1440px] px-3 sm:px-5 lg:px-8">
       <button onClick={() => navigate('/clients')} className="btn-ghost mb-4 text-sm">
         <ChevronLeftIcon className="h-4 w-4" />
         Back to Clients
       </button>
 
-      <div className="mb-6 flex items-end justify-between gap-3">
+      <div className="mb-4 flex items-end justify-between gap-3">
         <div>
           <p className="portal-kicker">Client Record</p>
           <h1 className="portal-page-title">{client.lastName}, {client.firstName} {client.middleName || ''}</h1>
@@ -292,7 +400,7 @@ export default function ClientProfile() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="card">
           <div className="form-section-title flex items-center gap-2">
             <IdCardIcon className="h-4 w-4" />
@@ -425,7 +533,7 @@ export default function ClientProfile() {
           )}
         </div>
 
-        <div className="card md:col-span-2">
+        <div className="card lg:col-span-1">
           <div className="form-section-title flex items-center gap-2">
             <MapPinIcon className="h-4 w-4" />
             Address
@@ -441,8 +549,187 @@ export default function ClientProfile() {
         </div>
       </div>
 
+
+      <div className="card mt-4">
+        <div className="form-section-title flex items-center justify-between">
+          <span>Family Composition</span>
+          {editMode && (
+            <button type="button" onClick={addFamilyMember} className="portal-button-secondary text-xs">
+              Add Member
+            </button>
+          )}
+        </div>
+
+        {!editMode ? (
+          <div className="overflow-x-auto rounded-lg border border-slate-200">
+            <table className="w-full min-w-[640px] text-xs">
+              <thead className="bg-slate-50 text-slate-500">
+                <tr>
+                  <th className="px-3 py-2 text-left">Name</th>
+                  <th className="px-3 py-2 text-left">Age</th>
+                  <th className="px-3 py-2 text-left">Relationship</th>
+                  <th className="px-3 py-2 text-left">Occupation</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {client.familyComposition?.length ? client.familyComposition.map((member, index) => (
+                  <tr key={`${member.name || 'member'}-${index}`}>
+                    <td className="px-3 py-2 font-medium text-slate-800">{member.name || '-'}</td>
+                    <td className="px-3 py-2 text-slate-600">{member.age ?? '-'}</td>
+                    <td className="px-3 py-2 text-slate-600">{member.relationship || '-'}</td>
+                    <td className="px-3 py-2 text-slate-600">{member.occupation || '-'}</td>
+                  </tr>
+                )) : (
+                  <tr>
+                    <td colSpan="4" className="px-3 py-4 text-center text-slate-400">No household members saved.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="overflow-x-auto rounded-lg border border-slate-200">
+            <table className="w-full min-w-[640px] text-xs">
+              <thead className="bg-slate-50 text-slate-500">
+                <tr>
+                  <th className="px-3 py-2 text-left">Name</th>
+                  <th className="px-3 py-2 text-left">Age</th>
+                  <th className="px-3 py-2 text-left">Relationship</th>
+                  <th className="px-3 py-2 text-left">Occupation</th>
+                  <th className="w-12 px-3 py-2" />
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {(form.familyComposition || []).length ? form.familyComposition.map((member, index) => (
+                  <tr key={index}>
+                    <td className="px-3 py-2"><input value={member.name || ''} onChange={(e) => updateFamilyMember(index, 'name', e.target.value)} className="portal-input" /></td>
+                    <td className="px-3 py-2"><input type="number" min="0" value={member.age ?? ''} onChange={(e) => updateFamilyMember(index, 'age', e.target.value)} className="portal-input" /></td>
+                    <td className="px-3 py-2"><select value={member.relationship || ''} onChange={(e) => updateFamilyMember(index, 'relationship', e.target.value)} className="portal-input"><option value="">Select</option>{RELATIONSHIP_OPTIONS.map((relationship) => <option key={relationship} value={relationship}>{relationship}</option>)}</select></td>
+                    <td className="px-3 py-2"><input value={member.occupation || ''} onChange={(e) => updateFamilyMember(index, 'occupation', e.target.value)} className="portal-input" /></td>
+                    <td className="px-3 py-2 text-center">
+                      <button type="button" onClick={() => removeFamilyMember(index)} className="rounded border border-rose-200 p-2 text-rose-600 hover:bg-rose-50" title="Remove member">
+                        <TrashIcon className="h-4 w-4" />
+                      </button>
+                    </td>
+                  </tr>
+                )) : (
+                  <tr>
+                    <td colSpan="5" className="px-3 py-4 text-center text-slate-400">No household members added.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
+      {/* ── RFID Card Panel ─────────────────────────────────────────── */}
+      {!editMode && !client.mergedIntoClient && (
+        <div className="card lg:col-span-1">
+          <div className="form-section-title flex items-center gap-2 mb-3">
+            <RfidIcon />
+            RFID Card
+          </div>
+
+          {client.rfidUid ? (
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm text-slate-700">
+                  <span className="font-semibold">Enrolled UID:</span>{' '}
+                  <span className="font-mono bg-slate-100 rounded px-2 py-0.5 text-xs tracking-widest">
+                    {maskRfidUid(client.rfidUid)}
+                  </span>
+                </p>
+                <p className="mt-1 text-xs text-slate-400">Card is active. Tapping this card will instantly find this client.</p>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => { setManualRfidUid(''); setRfidEnrollMode(true) }}
+                  disabled={rfidSaving}
+                  className="portal-button-secondary text-sm"
+                >
+                  Replace Card
+                </button>
+                <button
+                  type="button"
+                  onClick={handleRfidRemove}
+                  disabled={rfidSaving}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-600 transition hover:bg-red-100 disabled:opacity-50"
+                >
+                  Remove
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm font-medium text-slate-800">No RFID card enrolled</p>
+                <p className="mt-1 text-xs text-slate-500">Enroll a card so this client can be found instantly by tapping at the front desk.</p>
+              </div>
+              {!rfidEnrollMode && (
+                <button
+                  type="button"
+                  onClick={() => { setManualRfidUid(''); setRfidEnrollMode(true) }}
+                  disabled={rfidSaving}
+                  className="portal-button-green text-sm"
+                >
+                  Enroll RFID Card
+                </button>
+              )}
+            </div>
+          )}
+
+          {rfidEnrollMode && (
+            <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <span className="relative flex h-3 w-3">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500" />
+                  </span>
+                  <div>
+                    <p className="text-sm font-semibold text-emerald-800">
+                      {rfidSaving ? 'Saving card...' : 'Ready — tap the RFID card now'}
+                    </p>
+                    <p className="text-xs text-emerald-600 mt-0.5">
+                      Tap the card, or paste/type the UID from the ACS reader utility below.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setRfidEnrollMode(false)}
+                  className="text-slate-400 hover:text-slate-600 text-xs font-medium"
+                >
+                  Cancel
+                </button>
+              </div>
+              <form onSubmit={handleManualRfidEnroll} className="mt-3 flex flex-col gap-2 sm:flex-row">
+                <input
+                  type="text"
+                  value={manualRfidUid}
+                  onChange={(event) => setManualRfidUid(event.target.value)}
+                  placeholder="ACS UID, e.g. 04A1B2C3"
+                  className="portal-input font-mono uppercase"
+                  autoComplete="off"
+                />
+                <button
+                  type="submit"
+                  disabled={rfidSaving || normalizeRfidUid(manualRfidUid).length < 4}
+                  className="portal-button-green text-sm disabled:opacity-50"
+                >
+                  Enroll
+                </button>
+              </form>
+            </div>
+          )}
+        </div>
+      )}
+
       {!editMode && (
-        <div className="card mt-4 p-0 overflow-hidden">
+        <div className="card p-0 overflow-hidden lg:col-span-2">
           <div className="form-section-title flex items-center gap-2 px-4 pt-4 pb-3 border-b border-slate-100">
             <ClipboardIcon className="h-4 w-4" />
             Case History
@@ -509,7 +796,7 @@ export default function ClientProfile() {
       )}
 
       {isAdmin && !editMode && !client.mergedIntoClient && (
-        <div className="card mt-4">
+        <div className="card lg:col-span-3">
           <div className="form-section-title">Duplicate Management</div>
           {!mergeMode ? (
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -526,7 +813,9 @@ export default function ClientProfile() {
               <ClientSearchBar
                 onSelect={(selected) => setMergeTarget(selected)}
                 placeholder="Search the surviving client profile..."
+                showRfid={false}
               />
+
 
               {mergeTarget && (
                 <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
@@ -574,6 +863,8 @@ export default function ClientProfile() {
         </div>
       )}
 
+      </div>
+
       {isAdmin && editMode && (
         <div className="mt-4 flex justify-end gap-3">
           <button type="button" onClick={cancelEdit} className="portal-button-secondary" disabled={saving}>
@@ -600,3 +891,4 @@ export default function ClientProfile() {
     </div>
   )
 }
+

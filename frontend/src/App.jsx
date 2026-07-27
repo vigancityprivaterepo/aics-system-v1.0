@@ -74,6 +74,9 @@ function AppRoutes() {
 
           <Route element={<ProtectedRoute roles={['admin', 'employee', 'city_health_office']} redirectTo="/medicines" />}>
             <Route path="/medicines" element={<MedicineDatabase />} />
+          </Route>
+
+          <Route element={<ProtectedRoute roles={['admin', 'employee']} redirectTo="/medicines" />}>
             <Route path="/hospitals" element={<HospitalDatabase />} />
             <Route path="/funeral-homes" element={<FuneralHomeDatabase />} />
           </Route>
