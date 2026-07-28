@@ -1,9 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
 import api from '../../../lib/api'
 import { FileTextIcon, PlusIcon, TrashIcon } from '../../../components/ui/Icons'
-import RichTextEditor from '../../../components/RichTextEditor'
+import NarrativePresetField from '../../../components/NarrativePresetField'
 import { formatCurrency } from '../../../lib/utils'
 
 const defaultMember = { name: '', age: '', relationship: '', civilStatus: '', occupation: '', monthlyIncome: '' }
@@ -13,6 +13,7 @@ const RELATIONSHIP_OPTIONS = ['Spouse', 'Son', 'Daughter', 'Father', 'Mother', '
 export default function StepPlainDetails({ caseData, onUpdate, readOnly = false }) {
   const [saving, setSaving] = useState(false)
   const [family, setFamily] = useState(caseData.familyComposition || [])
+  const [narrativeOptions, setNarrativeOptions] = useState([])
 
   const { control, register, handleSubmit, watch } = useForm({
     defaultValues: {
@@ -23,6 +24,14 @@ export default function StepPlainDetails({ caseData, onUpdate, readOnly = false 
     },
   })
 
+
+  useEffect(() => {
+    let active = true
+    api.get('/settings/narrative-options', { params: { assistanceType: caseData.assistanceType } })
+      .then(({ data }) => { if (active) setNarrativeOptions(data.options || []) })
+      .catch(() => {})
+    return () => { active = false }
+  }, [caseData.assistanceType])
   const amount = watch('amount')
   const parsedAmount = Number(amount)
   const isOverCap = Number.isFinite(parsedAmount) && parsedAmount > 35000
@@ -170,36 +179,14 @@ export default function StepPlainDetails({ caseData, onUpdate, readOnly = false 
           </div>
 
           <div className="sm:col-span-2">
-            <label className="portal-label">Presenting Problem *</label>
-            <Controller
-              name="presentingProblem"
-              control={control}
-              render={({ field }) => (
-                <RichTextEditor
-                  value={field.value}
-                  onChange={field.onChange}
-                  readOnly={readOnly}
-                  minHeightClass="min-h-[7rem]"
-                  placeholder="State the client's concern or reason for seeking Plain AICS assistance."
-                />
-              )}
-            />
+            <Controller name="presentingProblem" control={control} render={({ field }) => (
+              <NarrativePresetField label="Presenting Problem *" value={field.value} onChange={field.onChange} options={narrativeOptions.filter((item) => item.field === 'presenting_problem')} readOnly={readOnly} minHeightClass="min-h-[7rem]" placeholder="State the client's concern or reason for seeking Plain AICS assistance." />
+            )} />
           </div>
           <div className="sm:col-span-2">
-            <label className="portal-label">Findings *</label>
-            <Controller
-              name="findings"
-              control={control}
-              render={({ field }) => (
-                <RichTextEditor
-                  value={field.value}
-                  onChange={field.onChange}
-                  readOnly={readOnly}
-                  minHeightClass="min-h-[10rem]"
-                  placeholder="Enter the findings that should be bridged directly to the template."
-                />
-              )}
-            />
+            <Controller name="findings" control={control} render={({ field }) => (
+              <NarrativePresetField label="Findings *" value={field.value} onChange={field.onChange} options={narrativeOptions.filter((item) => item.field === 'findings')} readOnly={readOnly} minHeightClass="min-h-[10rem]" placeholder="Enter the findings that should be bridged directly to the template." />
+            )} />
           </div>
 
           {/* Sub-section: Financial Assistance */}

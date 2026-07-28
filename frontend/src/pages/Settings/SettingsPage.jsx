@@ -5,11 +5,13 @@ import { useAuthStore } from '../../store/authStore'
 import { ChevronLeftIcon, ChevronRightIcon } from '../../components/ui/Icons'
 import ProtectedImage from '../../components/shared/ProtectedImage'
 import ApplicantAccountsPage from '../Applicants/ApplicantAccountsPage'
+import NarrativeOptionsSettings from './NarrativeOptionsSettings'
 
 const TABS = [
   { key: 'users',  label: 'User Access Control' },
   { key: 'audit',  label: 'Audit Trail' },
   { key: 'format', label: 'Case Number Format' },
+  { key: 'narratives', label: 'Narrative Options' },
   { key: 'backup', label: 'Backup & Restore' },
   { key: 'applicants', label: 'Applicant Accounts' },
 ]
@@ -28,11 +30,24 @@ const APPROVAL_LEVELS = [
 ]
 
 const POSITION_OPTIONS = [
+  'Administrative Aide I',
+  'Administrative Aide II',
   'Administrative Aide III',
+  'Administrative Aide IV',
+  'Administrative Aide V',
+  'Administrative Aide VI',
+  'Administrative Assistant I',
+  'Administrative Assistant II',
+  'Administrative Assistant III',
+  'Administrative Assistant IV',
+  'Administrative Assistant V',
+  'Administrative Assistant VI',
   'Social Welfare Assistant',
   'Social Welfare Officer I',
   'Social Welfare Officer II',
   'Social Welfare Officer III',
+  'Social Welfare Officer IV',
+  'Social Welfare Officer V',
   'City Administrator',
   'City Social Welfare and Development Officer',
   "City Social Welfare and Dev't. Officer",
@@ -924,6 +939,10 @@ export default function SettingsPage() {
         </div>
       )}
 
+      {activeTab === 'narratives' && (
+        <NarrativeOptionsSettings />
+      )}
+
       {activeTab === 'backup' && (
         <div className="space-y-4">
           <div className="card">
@@ -1169,6 +1188,7 @@ export default function SettingsPage() {
     </div>
   )
 }
+
 
 
 

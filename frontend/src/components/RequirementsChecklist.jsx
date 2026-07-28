@@ -192,7 +192,7 @@ export default function RequirementsChecklist({ assistanceType, requirements = {
                 onClick={() => handleToggle(req.key)}
                 disabled={readOnly}
                 className={cn(
-                  'w-full flex items-center gap-3 rounded-lg border px-4 py-3 text-left transition-all duration-200',
+                  'w-full flex items-center gap-3 rounded-lg border px-4 py-3 min-h-[44px] text-left transition-all duration-200',
                   checked
                     ? 'border-brand-green/30 bg-emerald-50 text-brand-dark'
                     : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50',

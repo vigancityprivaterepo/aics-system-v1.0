@@ -42,7 +42,7 @@ function NavItem({ to, Icon, label, onClick, end = false }) {
       end={end}
       onClick={onClick}
       className={({ isActive }) =>
-        `flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150 outline-none
+        `flex items-center gap-2.5 rounded-lg px-3 py-2 min-h-[44px] text-sm font-medium transition-all duration-150 outline-none
         focus-visible:ring-2 focus-visible:ring-emerald-400 ${
           isActive
             ? 'bg-emerald-400/15 text-white shadow-sm'
@@ -63,7 +63,7 @@ function NavItemWithBadge({ to, Icon, label, onClick, badge = 0, end = false }) 
       end={end}
       onClick={onClick}
       className={({ isActive }) =>
-        `flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150 outline-none
+        `flex items-center gap-2.5 rounded-lg px-3 py-2 min-h-[44px] text-sm font-medium transition-all duration-150 outline-none
         focus-visible:ring-2 focus-visible:ring-emerald-400 ${
           isActive
             ? 'bg-emerald-400/15 text-white shadow-sm'
@@ -420,7 +420,7 @@ export default function AppLayout() {
       <MyProfileModal isOpen={profileOpen} onClose={() => setProfileOpen(false)} />
 
       {/* ── Main area ── */}
-      <div className="flex flex-1 flex-col" style={{ marginLeft: '15rem' }}>
+      <div className="flex flex-1 flex-col md:ml-60">
 
         {/* Desktop sticky top bar */}
         <header className="sticky top-0 z-30 hidden md:flex items-center justify-between gap-4
@@ -447,7 +447,7 @@ export default function AppLayout() {
           bg-white px-4 py-3 shadow-sm md:hidden">
           <button
             onClick={() => setSidebarOpen(true)}
-            className="rounded-md p-1.5 text-slate-600 hover:bg-slate-100"
+            className="rounded-md p-2.5 text-slate-600 hover:bg-slate-100 min-h-[44px] min-w-[44px] flex items-center justify-center"
             aria-label="Open navigation menu"
           >
             <MenuIcon className="h-5 w-5" />

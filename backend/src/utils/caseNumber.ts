@@ -27,8 +27,11 @@ async function getSettings() {
   })
 }
 
-function nextSequence(latestNumber: string | null | undefined, digits: number, startSequence: number) {
-  const latestSequence = latestNumber ? Number(latestNumber.slice(-digits)) : 0
+function nextSequence(latestNumber: string | null | undefined, prefix: string, startSequence: number) {
+  const sequenceText = latestNumber?.startsWith(prefix)
+    ? latestNumber.slice(prefix.length).match(/^\d+/)?.[0]
+    : latestNumber?.match(/(\d+)$/)?.[1]
+  const latestSequence = sequenceText ? Number(sequenceText) : 0
   const safeLatestSequence = Number.isFinite(latestSequence) ? latestSequence : 0
   return Math.max(startSequence, safeLatestSequence + 1)
 }
@@ -41,7 +44,7 @@ export async function generateClientCaseNumber(): Promise<string> {
     orderBy: { caseNumber: 'desc' },
     select: { caseNumber: true },
   })
-  const nextSeq = nextSequence(latest?.caseNumber, s.sequenceDigits, s.clientStartSequence)
+  const nextSeq = nextSequence(latest?.caseNumber, prefix, s.clientStartSequence)
   return `${prefix}${String(nextSeq).padStart(s.sequenceDigits, '0')}`
 }
 
@@ -65,7 +68,9 @@ export async function generateCaseCaseNumber(assistanceType: 'medicine' | 'buria
     orderBy: { caseNumber: 'desc' },
     select: { caseNumber: true },
   })
-  const nextSeq = nextSequence(latest?.caseNumber, s.sequenceDigits, startSequence)
+  const nextSeq = nextSequence(latest?.caseNumber, prefix, startSequence)
   return `${prefix}${String(nextSeq).padStart(s.sequenceDigits, '0')}`
 }
+
+
 

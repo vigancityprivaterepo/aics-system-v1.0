@@ -10,6 +10,8 @@ import { logAdminAudit } from '../services/adminAuditService.js'
 const router = Router()
 const APPROVAL_LEVEL_VALUES = ['reviewer', 'recommender', 'approver'] as const
 const adminOnly = requireRole(['admin'])
+const ASSISTANCE_TYPES = ['medicine', 'burial', 'hospital', 'medical', 'eyeglass', 'plain'] as const
+const NARRATIVE_FIELDS = ['presenting_problem', 'findings'] as const
 
 function paramValue(value: string | string[] | undefined) {
   return Array.isArray(value) ? (value[0] ?? '') : (value ?? '')
@@ -40,6 +42,49 @@ router.get('/', asyncHandler(async (_req, res) => {
   res.json(await getOrCreate())
 }))
 
+router.get('/narrative-options', asyncHandler(async (req, res) => {
+  const parsedType = z.enum(ASSISTANCE_TYPES).optional().safeParse(req.query.assistanceType)
+  const assistanceType = parsedType.success ? parsedType.data : undefined
+  const includeInactive = req.user?.role === 'admin' && req.query.includeInactive === 'true'
+  res.json({
+    options: await prisma.narrativeOption.findMany({
+      where: {
+        ...(assistanceType ? { assistanceType } : {}),
+        ...(includeInactive ? {} : { isActive: true }),
+      },
+      orderBy: [{ assistanceType: 'asc' }, { field: 'asc' }, { sortOrder: 'asc' }, { label: 'asc' }],
+    }),
+  })
+}))
+
+const narrativeOptionSchema = z.object({
+  assistanceType: z.enum(ASSISTANCE_TYPES),
+  field: z.enum(NARRATIVE_FIELDS),
+  label: z.string().trim().min(1).max(150),
+  content: z.string().trim().min(1).max(5000),
+  sortOrder: z.number().int().min(0).max(9999).default(0),
+  isActive: z.boolean().default(true),
+})
+
+router.post('/narrative-options', adminOnly, asyncHandler(async (req, res) => {
+  const option = await prisma.narrativeOption.create({ data: narrativeOptionSchema.parse(req.body) })
+  await logAdminAudit(prisma, { actorId: req.user?.id, action: 'narrative_option.create', targetType: 'narrative_option', targetId: option.id, summary: `Created ${option.assistanceType} ${option.field} option` })
+  res.status(201).json(option)
+}))
+
+router.put('/narrative-options/:id', adminOnly, asyncHandler(async (req, res) => {
+  const id = paramValue(req.params.id)
+  const option = await prisma.narrativeOption.update({ where: { id }, data: narrativeOptionSchema.parse(req.body) })
+  await logAdminAudit(prisma, { actorId: req.user?.id, action: 'narrative_option.update', targetType: 'narrative_option', targetId: option.id, summary: `Updated ${option.assistanceType} ${option.field} option` })
+  res.json(option)
+}))
+
+router.delete('/narrative-options/:id', adminOnly, asyncHandler(async (req, res) => {
+  const id = paramValue(req.params.id)
+  const option = await prisma.narrativeOption.delete({ where: { id } })
+  await logAdminAudit(prisma, { actorId: req.user?.id, action: 'narrative_option.delete', targetType: 'narrative_option', targetId: option.id, summary: `Deleted ${option.assistanceType} ${option.field} option` })
+  res.status(204).send()
+}))
 const updateSchema = z.object({
   locationCode:   z.string().min(1).max(10).regex(/^[A-Z0-9]+$/i),
   agencyCode:     z.string().min(1).max(10).regex(/^[A-Z0-9]+$/i),

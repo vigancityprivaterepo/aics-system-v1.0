@@ -240,20 +240,21 @@ export default function CaseList() {
             <p className="text-sm text-slate-400 mt-1">Try adjusting your filters or open a new case.</p>
           </div>
         ) : (
-          <table className="w-full">
-            <thead>
-              <tr>
-                <th className="table-header text-left">Case ID #</th>
-                <th className="table-header text-left">Client</th>
-                <th className="table-header text-left">Type</th>
-                <th className="table-header text-left">Status</th>
-                <th className="table-header text-left">Workflow</th>
-                <th className="table-header text-left">Social Worker</th>
-                <th className="table-header text-left">Date</th>
-                <th className="table-header text-left">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[720px]">
+              <thead>
+                <tr>
+                  <th className="table-header text-left">Case ID #</th>
+                  <th className="table-header text-left">Client</th>
+                  <th className="table-header text-left">Type</th>
+                  <th className="table-header text-left">Status</th>
+                  <th className="table-header text-left">Workflow</th>
+                  <th className="table-header text-left">Social Worker</th>
+                  <th className="table-header text-left">Date</th>
+                  <th className="table-header text-left">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
               {cases.map((c) => {
                 const approvalMessages = workflowApprovalMessages(c)
                 return (
@@ -333,7 +334,7 @@ export default function CaseList() {
                           navigate(`/cases/${c.id}`)
                         }}
                         title="Open case"
-                        className="rounded p-1.5 text-slate-400 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                        className="rounded p-2 text-slate-400 hover:bg-blue-50 hover:text-blue-600 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
                       >
                         <EditIcon className="h-4 w-4" />
                       </button>
@@ -344,7 +345,7 @@ export default function CaseList() {
                         }}
                         disabled={deletingId === c.id}
                         title="Delete case"
-                        className="rounded p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600 transition-colors disabled:opacity-40"
+                        className="rounded p-2 text-slate-400 hover:bg-red-50 hover:text-red-600 transition-colors disabled:opacity-40 min-h-[44px] min-w-[44px] flex items-center justify-center"
                       >
                         <TrashIcon className="h-4 w-4" />
                       </button>
@@ -353,8 +354,9 @@ export default function CaseList() {
                 </tr>
                 )
               })}
-            </tbody>
-          </table>
+              </tbody>
+            </table>
+          </div>
         )}
         {/* Pagination */}
         {total > LIMIT && (
@@ -364,7 +366,7 @@ export default function CaseList() {
               type="button"
               onClick={() => { setLoading(true); setPage((p) => Math.max(1, p - 1)) }}
               disabled={page <= 1}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-300 text-slate-600 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
+              className="inline-flex h-10 w-10 sm:h-8 sm:w-8 items-center justify-center rounded-md border border-slate-300 text-slate-600 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
               aria-label="Previous page"
             >
               <ChevronLeftIcon className="h-4 w-4" />
@@ -373,7 +375,7 @@ export default function CaseList() {
               type="button"
               onClick={() => { setLoading(true); setPage((p) => Math.min(totalPages, p + 1)) }}
               disabled={page >= totalPages}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-300 text-slate-600 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
+              className="inline-flex h-10 w-10 sm:h-8 sm:w-8 items-center justify-center rounded-md border border-slate-300 text-slate-600 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
               aria-label="Next page"
             >
               <ChevronRightIcon className="h-4 w-4" />

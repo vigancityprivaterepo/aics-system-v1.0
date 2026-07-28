@@ -282,7 +282,7 @@ export default function Dashboard() {
 
   return (
     <div className="animate-fade-in">
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="portal-page-title">Dashboard</h1>
           <p className="portal-page-subtitle">Overview of assistance cases and client activity</p>
@@ -511,7 +511,7 @@ export default function Dashboard() {
           </Link>
         </div>
         <div className="overflow-x-auto -mx-6">
-          <table className="w-full">
+          <table className="w-full min-w-[640px]">
             <thead>
               <tr>
                 <th className="table-header text-left first:pl-6">Case Number</th>

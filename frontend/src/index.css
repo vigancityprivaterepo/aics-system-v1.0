@@ -163,6 +163,54 @@
 ::-webkit-scrollbar-thumb { background: #c1c7d0; border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: #10b981; }
 
+/* === Responsive utilities === */
+
+/* Touch target enforcement — WCAG 2.5.5 / Apple HIG: min 44×44px on mobile */
+@media (max-width: 767px) {
+  /* Page header stacks vertically on narrow screens */
+  .page-header {
+    @apply flex-col items-start;
+  }
+
+  /* Ensure all interactive buttons meet 44px touch target */
+  .btn-primary,
+  .btn-green,
+  .btn-outline,
+  .btn-ghost,
+  .btn-danger,
+  .portal-button-primary,
+  .portal-button-secondary,
+  .portal-button-green {
+    min-height: 44px;
+  }
+
+  /* Tighter table padding on mobile to save horizontal space */
+  .table-header {
+    @apply px-3 py-3;
+  }
+  .table-cell {
+    @apply px-3 py-3;
+  }
+
+  /* Reduce oversized empty-state padding on mobile */
+  .portal-empty {
+    @apply p-8;
+  }
+
+  /* Queue cards stack on mobile */
+  .queue-card {
+    @apply flex-col items-start;
+  }
+}
+
+/* Responsive table wrapper utility */
+.overflow-table-wrapper {
+  @apply overflow-x-auto -mx-0;
+}
+.overflow-table-wrapper table {
+  @apply min-w-full;
+}
+
 /* === Print styles === */
 @media print {
   .no-print { display: none !important; }

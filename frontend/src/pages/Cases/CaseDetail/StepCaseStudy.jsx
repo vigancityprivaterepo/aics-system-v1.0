@@ -1,10 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
 import api from '../../../lib/api'
 import { FileTextIcon, PlusIcon, TrashIcon } from '../../../components/ui/Icons'
 import MedicineTable from '../../../components/MedicineTable'
-import RichTextEditor from '../../../components/RichTextEditor'
+import NarrativePresetField from '../../../components/NarrativePresetField'
 import { formatCurrency } from '../../../lib/utils'
 
 const defaultMember = { name: '', age: '', relationship: '', civilStatus: '', occupation: '', monthlyIncome: '' }
@@ -59,6 +59,7 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false }) 
   const [medicines, setMedicines] = useState(caseData.medicines || [])
   const [saving, setSaving] = useState(false)
   const [analyzingFindings, setAnalyzingFindings] = useState(false)
+  const [narrativeOptions, setNarrativeOptions] = useState([])
 
   const { control, register, handleSubmit, watch, setValue } = useForm({
     defaultValues: {
@@ -75,6 +76,14 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false }) 
     },
   })
 
+
+  useEffect(() => {
+    let active = true
+    api.get('/settings/narrative-options', { params: { assistanceType: caseData.assistanceType } })
+      .then(({ data }) => { if (active) setNarrativeOptions(data.options || []) })
+      .catch(() => {})
+    return () => { active = false }
+  }, [caseData.assistanceType])
   const amount = watch('amount')
   const parsedAmount = Number(amount)
   const amountCap = resolveAmountCap(caseData.assistanceType)
@@ -275,12 +284,11 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false }) 
                 </div>
               )}
               <div>
-                <div className="mb-1 flex items-center justify-between gap-3"><label className="portal-label">Presenting Problem *</label>{!readOnly && <button type="button" onClick={handleAnalyzeFindings} disabled={analyzingFindings} className="portal-button-secondary text-xs">{analyzingFindings ? 'Generating...' : 'Generate Findings Draft'}</button>}</div>
-                <Controller name="presentingProblem" control={control} render={({ field }) => <RichTextEditor value={field.value} onChange={field.onChange} readOnly={readOnly} minHeightClass="min-h-[7rem]" placeholder="State the client's concern or reason for seeking assistance." />} />
+                {!readOnly && <div className="mb-2 flex justify-end"><button type="button" onClick={handleAnalyzeFindings} disabled={analyzingFindings} className="portal-button-secondary text-xs">{analyzingFindings ? 'Generating...' : 'Generate Findings Draft'}</button></div>}
+                <Controller name="presentingProblem" control={control} render={({ field }) => <NarrativePresetField label="Presenting Problem *" value={field.value} onChange={field.onChange} options={narrativeOptions.filter((item) => item.field === 'presenting_problem')} readOnly={readOnly} minHeightClass="min-h-[7rem]" placeholder="State the client's concern or reason for seeking assistance." />} />
               </div>
               <div>
-                <label className="portal-label">Findings / Narrative *</label>
-                <Controller name="findings" control={control} render={({ field }) => <RichTextEditor value={field.value} onChange={field.onChange} readOnly={readOnly} minHeightClass="min-h-[12rem]" placeholder="Write the case study findings used in the generated report." />} />
+                <Controller name="findings" control={control} render={({ field }) => <NarrativePresetField label="Findings / Narrative *" value={field.value} onChange={field.onChange} options={narrativeOptions.filter((item) => item.field === 'findings')} readOnly={readOnly} minHeightClass="min-h-[12rem]" placeholder="Write the case study findings used in the generated report." />} />
               </div>
             </div>
           </section>

@@ -196,7 +196,7 @@ export default function CaseDetailLayout() {
   return (
     <div className="animate-fade-in">
       <div className="mb-6">
-        <button onClick={() => navigate('/cases')} className="btn-ghost mb-4 text-sm">
+        <button onClick={() => navigate('/cases')} className="btn-ghost mb-4 text-sm min-h-[44px]">
           <ChevronLeftIcon className="h-4 w-4" />
           Back to Cases
         </button>
@@ -292,20 +292,22 @@ export default function CaseDetailLayout() {
         onApprovalStage={handleApprovalStage}
       />
 
-      <div className="mb-4 flex gap-1 rounded-xl border border-slate-200 bg-slate-100 p-1">
-        {tabs.map((tab) => (
-          <button
-            key={tab.key}
-            onClick={() => navigate(`/cases/${id}/${tab.key}`)}
-            className={`flex-1 rounded-lg px-5 py-2 text-sm font-medium transition-colors ${
-              activeTabKey === tab.key
-                ? 'bg-white text-brand-primary shadow-sm'
-                : 'text-slate-500 hover:text-slate-700'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
+      <div className="mb-4 overflow-x-auto">
+        <div className="flex min-w-max gap-1 rounded-xl border border-slate-200 bg-slate-100 p-1">
+          {tabs.map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => navigate(`/cases/${id}/${tab.key}`)}
+              className={`min-w-[100px] rounded-lg px-5 py-2.5 min-h-[44px] text-sm font-medium transition-colors ${
+                activeTabKey === tab.key
+                  ? 'bg-white text-brand-primary shadow-sm'
+                  : 'text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <Outlet context={{ caseData, onUpdate: handleUpdateCase, actionLoading }} />
