@@ -726,6 +726,8 @@ function buildRenderData(caseData: any): Record<string, any> {
     reviewedBy:          reviewedByName,
     Administrator:       fmt(textOrNull((caseData as any).officialAdministratorName) ?? reviewedByName),
     administrator:       fmt(textOrNull((caseData as any).officialAdministratorName) ?? reviewedByName),
+    cityAdministrator:   fmt(textOrNull((caseData as any).officialAdministratorName) ?? reviewedByName),
+    CityAdministrator:   fmt(textOrNull((caseData as any).officialAdministratorName) ?? reviewedByName),
     reviewedByTitle,
     reviewedByPosition:  reviewedByTitle,
     reviewedByDate,
@@ -735,6 +737,8 @@ function buildRenderData(caseData: any): Record<string, any> {
     recommendingBy:        recommendingByName,
     CSWDO:                 fmt(textOrNull((caseData as any).officialCswdoName) ?? recommendingByName),
     cswdo:                 fmt(textOrNull((caseData as any).officialCswdoName) ?? recommendingByName),
+    cityCSWDO:             fmt(textOrNull((caseData as any).officialCswdoName) ?? recommendingByName),
+    CityCSWDO:             fmt(textOrNull((caseData as any).officialCswdoName) ?? recommendingByName),
     recommendingByTitle,
     recommendingByPosition: recommendingByTitle,
     recommendingByDate,
@@ -1099,4 +1103,5 @@ export async function generatePlainCaseStudyDocx(caseData: any): Promise<Buffer>
   const template = loadFirstAvailableTemplate(PLAIN_CASE_STUDY_CANDIDATES)
   return renderDoc(template, buildRenderData(caseData))
 }
+
 

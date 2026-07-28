@@ -1,4 +1,4 @@
-﻿import { prisma } from '../utils/prisma.js'
+import { prisma } from '../utils/prisma.js'
 
 export async function findCaseWithDetails(id: string) {
   return prisma.case.findUnique({
@@ -38,7 +38,7 @@ export async function findCaseWithDetails(id: string) {
       },
       approvals: {
         orderBy: { actedAt: 'asc' },
-        include: { actedByUser: { select: { signatureParam: true } } },
+        include: { actedByUser: { select: { signatureParam: true, position: true } } },
       },
     },
   })
@@ -53,13 +53,14 @@ export async function getApprovalSettings() {
       reviewedByUserId: true,
       recommendingUserId: true,
       approvedByUserId: true,
-      reviewedByUser: { select: { id: true, name: true, approvalLevel: true, eSignatureUrl: true, signatureParam: true, isActive: true } },
-      recommendingUser: { select: { id: true, name: true, approvalLevel: true, eSignatureUrl: true, signatureParam: true, isActive: true } },
-      approvedByUser: { select: { id: true, name: true, approvalLevel: true, eSignatureUrl: true, signatureParam: true, isActive: true } },
+      reviewedByUser: { select: { id: true, name: true, approvalLevel: true, eSignatureUrl: true, signatureParam: true, position: true, isActive: true } },
+      recommendingUser: { select: { id: true, name: true, approvalLevel: true, eSignatureUrl: true, signatureParam: true, position: true, isActive: true } },
+      approvedByUser: { select: { id: true, name: true, approvalLevel: true, eSignatureUrl: true, signatureParam: true, position: true, isActive: true } },
     },
   })
 }
 
 export type ApprovalSettings = Awaited<ReturnType<typeof getApprovalSettings>>
 export type CaseWithDetails = NonNullable<Awaited<ReturnType<typeof findCaseWithDetails>>>
+
 

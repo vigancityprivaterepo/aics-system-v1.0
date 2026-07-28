@@ -9,6 +9,7 @@ export type ApprovalAssignee = {
   approvalLevel: string
   eSignatureUrl: string | null
   signatureParam: string | null
+  position: string | null
   isActive: boolean
 }
 
@@ -53,3 +54,5 @@ export const APPROVAL_STAGE_META: Record<ApprovalStage, {
     label: 'Approved',
   },
 }
+
+

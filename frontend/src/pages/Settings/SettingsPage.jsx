@@ -27,6 +27,18 @@ const APPROVAL_LEVELS = [
   { value: 'approver', label: 'Final Approver' },
 ]
 
+const POSITION_OPTIONS = [
+  'Administrative Aide III',
+  'Social Welfare Assistant',
+  'Social Welfare Officer I',
+  'Social Welfare Officer II',
+  'Social Welfare Officer III',
+  'City Administrator',
+  'City Social Welfare and Development Officer',
+  "City Social Welfare and Dev't. Officer",
+  'City Mayor',
+]
+
 const EMPTY_FORM = {
   name: '',
   username: '',
@@ -1102,13 +1114,19 @@ export default function SettingsPage() {
                   </div>
                   <div>
                     <label className="portal-label">Position / Title</label>
-                    <input
+                    <select
                       className="portal-input"
                       value={form.position}
-                      placeholder="e.g. Administrative Aide III"
-                      maxLength={200}
                       onChange={(e) => setForm({ ...form, position: e.target.value })}
-                    />
+                    >
+                      <option value="">- Select title -</option>
+                      {form.position && !POSITION_OPTIONS.includes(form.position) && (
+                        <option value={form.position}>{form.position}</option>
+                      )}
+                      {POSITION_OPTIONS.map((position) => (
+                        <option key={position} value={position}>{position}</option>
+                      ))}
+                    </select>
                   </div>
                   <div>
                     <label className="portal-label">
@@ -1151,6 +1169,7 @@ export default function SettingsPage() {
     </div>
   )
 }
+
 
 
 

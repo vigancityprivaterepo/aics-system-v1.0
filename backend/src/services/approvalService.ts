@@ -53,6 +53,7 @@ export function mapApprovalAssignee(
     approvalLevel: user.approvalLevel,
     eSignatureUrl: user.eSignatureUrl ?? null,
     signatureParam: user.signatureParam ?? null,
+    position: user.position ?? null,
     isActive: user.isActive,
   }
 }
@@ -89,3 +90,5 @@ export function normalizeApprovalNotes(notes: string | undefined): string | null
   const value = String(notes ?? '').trim()
   return value.length > 0 ? value : null
 }
+
+

@@ -91,7 +91,7 @@ export async function updateStatus(req: Request, res: Response) {
 
     const actingUser = await prisma.user.findUnique({
       where: { id: req.user!.id },
-      select: { id: true, name: true, approvalLevel: true, isActive: true, eSignatureUrl: true },
+      select: { id: true, name: true, approvalLevel: true, isActive: true, eSignatureUrl: true, position: true },
     })
     if (!actingUser || !actingUser.isActive) throw new HttpError(403, 'Your account is inactive.')
     const actorLevels = parseApprovalLevels(actingUser.approvalLevel)
@@ -128,7 +128,7 @@ export async function updateStatus(req: Request, res: Response) {
           stage: currentStage,
           actedByUserId: stageAssignee.id,
           actedByName: stageAssignee.name,
-          actedByTitle: approvalActorTitle(currentStage),
+          actedByTitle: stageAssignee.position ?? approvalActorTitle(currentStage),
           signatureUrlSnapshot: stageAssignee.eSignatureUrl,
           actedAt,
           action,
@@ -137,7 +137,7 @@ export async function updateStatus(req: Request, res: Response) {
         update: {
           actedByUserId: stageAssignee.id,
           actedByName: stageAssignee.name,
-          actedByTitle: approvalActorTitle(currentStage),
+          actedByTitle: stageAssignee.position ?? approvalActorTitle(currentStage),
           signatureUrlSnapshot: stageAssignee.eSignatureUrl,
           actedAt,
           action,
@@ -189,4 +189,5 @@ export async function updateStatus(req: Request, res: Response) {
 
   res.json({ id: updated.id, status: updated.status })
 }
+
 

@@ -1,4 +1,4 @@
-﻿import type { ApprovalStage } from '@prisma/client'
+import type { ApprovalStage } from '@prisma/client'
 import { APPROVAL_STAGE_ORDER, APPROVAL_STAGE_META, type ApprovalAssigneeByStage } from '../types/caseTypes.js'
 import { approvalActorTitle } from '../services/approvalService.js'
 import { assessCaseWorkflow } from '../services/caseWorkflowService.js'
@@ -66,6 +66,7 @@ export function serializeCase(caseRow: any, assigneesByStage?: ApprovalAssigneeB
           actedByTitle: row.actedByTitle ?? approvalActorTitle(stage),
           signatureUrl: row.signatureUrlSnapshot ?? null,
           signatureParam: row.actedByUser?.signatureParam ?? null,
+          position: row.actedByUser?.position ?? null,
           actedAt: row.actedAt ? new Date(row.actedAt).toISOString().slice(0, 10) : null,
           notes: row.notes ?? null,
         }
@@ -299,15 +300,15 @@ export function serializeCase(caseRow: any, assigneesByStage?: ApprovalAssigneeB
     },
     approvalSignatureFallbacks,
     reviewedByName: reviewedStage?.actedByName ?? reviewedAssignee?.name ?? null,
-    reviewedByTitle: reviewedStage?.actedByTitle ?? approvalActorTitle('for_review'),
+    reviewedByTitle: reviewedStage?.actedByTitle ?? reviewedAssignee?.position ?? approvalActorTitle('for_review'),
     reviewedByDate: reviewedStage?.actedAt ?? null,
     reviewedBySignature: reviewedStage?.signatureUrl ?? null,
     recommendingByName: recommendingStage?.actedByName ?? recommendingAssignee?.name ?? null,
-    recommendingByTitle: recommendingStage?.actedByTitle ?? approvalActorTitle('recommending_approval'),
+    recommendingByTitle: recommendingStage?.actedByTitle ?? recommendingAssignee?.position ?? approvalActorTitle('recommending_approval'),
     recommendingByDate: recommendingStage?.actedAt ?? null,
     recommendingBySignature: recommendingStage?.signatureUrl ?? null,
     approvedByName: approvedStage?.actedByName ?? approvedAssignee?.name ?? null,
-    approvedByTitle: approvedStage?.actedByTitle ?? approvalActorTitle('for_approval'),
+    approvedByTitle: approvedStage?.actedByTitle ?? approvedAssignee?.position ?? approvalActorTitle('for_approval'),
     approvedByDate: approvedStage?.actedAt ?? null,
     approvedBySignature: approvedStage?.signatureUrl ?? null,
     preparedBySignature: caseRow.socialWorker?.eSignatureUrl ?? null,
@@ -319,6 +320,7 @@ export function serializeCase(caseRow: any, assigneesByStage?: ApprovalAssigneeB
 export type SerializedCase = ReturnType<typeof serializeCase>
 
 export { portalContextFromAuditFlags, normalizeWorkflowStatus, mapRequirements, APPROVAL_STAGE_META, APPROVAL_STAGE_ORDER }
+
 
 
 
