@@ -41,7 +41,17 @@ function amountLabelForType(assistanceType) {
   }
   return 'Amount (PHP)'
 }
-
+function EncodingSectionHeader({ number, title, description }) {
+  return (
+    <div className="mb-4 flex items-start gap-3 border-b border-slate-200 pb-3">
+      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-700 text-xs font-bold text-white">{number}</span>
+      <div>
+        <h3 className="text-sm font-semibold text-slate-900">{title}</h3>
+        {description && <p className="mt-0.5 text-xs text-slate-500">{description}</p>}
+      </div>
+    </div>
+  )
+}
 export default function StepCaseStudy({ caseData, onUpdate, readOnly = false }) {
   const isMedicine = caseData.assistanceType === 'medicine'
   const isBurial = caseData.assistanceType === 'burial'
@@ -190,9 +200,12 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false }) 
 
   return (
     <div className="card">
-      <div className="form-section-title flex items-center gap-2">
-        <FileTextIcon className="h-4 w-4 text-brand-primary" />
-        Uniform Case Study Narrative
+      <div className="mb-5 flex items-start gap-3">
+        <FileTextIcon className="mt-0.5 h-5 w-5 text-brand-primary" />
+        <div>
+          <h2 className="text-base font-semibold text-slate-900">Case Encoding</h2>
+          <p className="mt-1 text-sm text-slate-500">Fill out the case study details in order. Each section maps to the generated report.</p>
+        </div>
       </div>
 
       {readOnly && (
@@ -202,284 +215,84 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false }) 
       )}
 
       <form onSubmit={handleSubmit(onSave)}>
-        <fieldset disabled={readOnly} className="space-y-5">
-          {/* Sub-section: Social Worker & Assessment Info */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <div className="sm:col-span-3 mt-2 mb-1 flex items-center gap-2 border-b border-slate-150 pb-2">
-              <span className="text-base">📅</span>
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Social Worker &amp; Assessment Info</p>
+        <fieldset disabled={readOnly} className="space-y-4">
+          <section className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+            <EncodingSectionHeader number="1" title="Assessment Info" description="Set the assessment date and assigned case worker." />
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <div>
+                <label className="portal-label">Date of Assessment *</label>
+                <input type="date" {...register('dateOfAssessment')} className="portal-input" />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="portal-label">Employee Name *</label>
+                <input type="text" {...register('socialWorkerName')} className="portal-input" placeholder="Full name of assigned social worker" />
+              </div>
             </div>
-            <div>
-              <label className="portal-label">Date of Assessment *</label>
-              <input type="date" {...register('dateOfAssessment')} className="portal-input" />
-            </div>
-            <div className="sm:col-span-2">
-              <label className="portal-label">Employee Name *</label>
-              <input
-                type="text"
-                {...register('socialWorkerName')}
-                className="portal-input"
-                placeholder="Full name of assigned social worker"
-              />
-            </div>
-          </div>
+          </section>
 
-          {/* Sub-section: Family Composition */}
-          <div>
-            <div className="flex items-center gap-2 border-b border-slate-150 pb-2 mb-3">
-              <span className="text-base">👨‍👩‍👧‍👦</span>
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Family Composition</p>
-            </div>
+          <section className="rounded-lg border border-slate-200 bg-white p-4">
+            <EncodingSectionHeader number="2" title="Household Members" description="Add family members included in the case study." />
             <div className="mt-1 overflow-x-auto rounded-lg border border-slate-200">
               <table className="w-full text-xs">
                 <thead>
                   <tr className="bg-slate-50">
                     {['Name', 'Age', 'Relationship', 'Civil Status', 'Occupation', ''].map((header) => (
-                      <th key={header} className="px-3 py-2 text-left font-semibold uppercase tracking-wider text-slate-400">
-                        {header}
-                      </th>
+                      <th key={header} className="px-3 py-2 text-left font-semibold uppercase tracking-wider text-slate-400">{header}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {family.length === 0 && (
-                    <tr>
-                      <td colSpan={6} className="px-3 py-4 text-center text-slate-400">
-                        No family members added
-                      </td>
-                    </tr>
-                  )}
+                  {family.length === 0 && <tr><td colSpan={6} className="px-3 py-4 text-center text-slate-400">No family members added</td></tr>}
                   {family.map((member, index) => (
                     <tr key={index} className="border-t border-slate-100">
-                      <td className="px-2 py-1.5">
-                        <input
-                          type="text"
-                          value={member.name || ''}
-                          onChange={(e) => updateFamilyMember(index, 'name', e.target.value)}
-                          className="portal-input py-1 text-xs"
-                        />
-                      </td>
-                      <td className="px-2 py-1.5">
-                        <input
-                          type="number"
-                          value={member.age || ''}
-                          onChange={(e) => updateFamilyMember(index, 'age', e.target.value)}
-                          className="portal-input py-1 text-xs"
-                        />
-                      </td>
-                      <td className="px-2 py-1.5">
-                        <select
-                          value={member.relationship || ''}
-                          onChange={(e) => updateFamilyMember(index, 'relationship', e.target.value)}
-                          className="portal-input py-1 text-xs"
-                        >
-                          <option value="">Select</option>
-                          {RELATIONSHIP_OPTIONS.map((relationship) => (
-                            <option key={relationship} value={relationship}>
-                              {relationship}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                      <td className="px-2 py-1.5">
-                        <select
-                          value={member.civilStatus || ''}
-                          onChange={(e) => updateFamilyMember(index, 'civilStatus', e.target.value)}
-                          className="portal-input py-1 text-xs"
-                        >
-                          <option value="">Select status</option>
-                          {CIVIL_STATUS_OPTIONS.map((status) => (
-                            <option key={status} value={status}>
-                              {status}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                      <td className="px-2 py-1.5">
-                        <input
-                          type="text"
-                          value={member.occupation || ''}
-                          onChange={(e) => updateFamilyMember(index, 'occupation', e.target.value)}
-                          className="portal-input py-1 text-xs"
-                        />
-                      </td>
-                      <td className="px-2 py-1.5">
-                        <button type="button" onClick={() => removeFamilyMember(index)} className="text-red-400 hover:text-red-600">
-                          <TrashIcon className="h-3.5 w-3.5" />
-                        </button>
-                      </td>
+                      <td className="px-2 py-1.5"><input type="text" value={member.name || ''} onChange={(e) => updateFamilyMember(index, 'name', e.target.value)} className="portal-input py-1 text-xs" /></td>
+                      <td className="px-2 py-1.5"><input type="number" value={member.age || ''} onChange={(e) => updateFamilyMember(index, 'age', e.target.value)} className="portal-input py-1 text-xs" /></td>
+                      <td className="px-2 py-1.5"><select value={member.relationship || ''} onChange={(e) => updateFamilyMember(index, 'relationship', e.target.value)} className="portal-input py-1 text-xs"><option value="">Select</option>{RELATIONSHIP_OPTIONS.map((relationship) => <option key={relationship} value={relationship}>{relationship}</option>)}</select></td>
+                      <td className="px-2 py-1.5"><select value={member.civilStatus || ''} onChange={(e) => updateFamilyMember(index, 'civilStatus', e.target.value)} className="portal-input py-1 text-xs"><option value="">Select status</option>{CIVIL_STATUS_OPTIONS.map((status) => <option key={status} value={status}>{status}</option>)}</select></td>
+                      <td className="px-2 py-1.5"><input type="text" value={member.occupation || ''} onChange={(e) => updateFamilyMember(index, 'occupation', e.target.value)} className="portal-input py-1 text-xs" /></td>
+                      <td className="px-2 py-1.5"><button type="button" onClick={() => removeFamilyMember(index)} className="text-red-400 hover:text-red-600"><TrashIcon className="h-3.5 w-3.5" /></button></td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-            {!readOnly && (
-              <button type="button" onClick={addFamilyMember} className="portal-button-secondary mt-2 text-xs">
-                <PlusIcon className="h-3.5 w-3.5" />
-                Add Member
-              </button>
-            )}
-          </div>
+            {!readOnly && <button type="button" onClick={addFamilyMember} className="portal-button-secondary mt-2 text-xs"><PlusIcon className="h-3.5 w-3.5" />Add Member</button>}
+          </section>
 
-          <div className="grid grid-cols-1 gap-4">
-            {isBurial && (
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                <div className="form-section-title mb-4">Deceased Information</div>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div className="sm:col-span-2">
-                    <label className="portal-label">Name of the Deceased</label>
-                    <input
-                      type="text"
-                      {...register('deceasedName')}
-                      className="portal-input"
-                      placeholder="Full name of the deceased"
-                    />
-                  </div>
-                  <div className="sm:col-span-2">
-                    <label className="portal-label">Address</label>
-                    <input
-                      type="text"
-                      {...register('deceasedAddress')}
-                      className="portal-input"
-                      placeholder="Home address of the deceased"
-                    />
-                  </div>
-                  <div>
-                    <label className="portal-label">Age</label>
-                    <input
-                      type="number"
-                      min="0"
-                      {...register('deceasedAge')}
-                      className="portal-input"
-                      placeholder="0"
-                    />
-                  </div>
-                  <div>
-                    <label className="portal-label">Civil Status</label>
-                    <select {...register('deceasedCivilStatus')} className="portal-input">
-                      <option value="">Select status</option>
-                      {CIVIL_STATUS_OPTIONS.map((status) => (
-                        <option key={status} value={status}>
-                          {status}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="sm:col-span-2">
-                    <label className="portal-label">Occupation</label>
-                    <input
-                      type="text"
-                      {...register('deceasedOccupation')}
-                      className="portal-input"
-                      placeholder="Occupation of the deceased"
-                    />
+          <section className="rounded-lg border border-slate-200 bg-white p-4">
+            <EncodingSectionHeader number="3" title="Narrative" description="State the concern and write the findings used in the generated report." />
+            <div className="grid grid-cols-1 gap-4">
+              {isBurial && (
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                  <EncodingSectionHeader number="3A" title="Deceased Information" description="Complete this only for burial assistance." />
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div className="sm:col-span-2"><label className="portal-label">Name of the Deceased</label><input type="text" {...register('deceasedName')} className="portal-input" placeholder="Full name of the deceased" /></div>
+                    <div className="sm:col-span-2"><label className="portal-label">Address</label><input type="text" {...register('deceasedAddress')} className="portal-input" placeholder="Home address of the deceased" /></div>
+                    <div><label className="portal-label">Age</label><input type="number" min="0" {...register('deceasedAge')} className="portal-input" placeholder="0" /></div>
+                    <div><label className="portal-label">Civil Status</label><select {...register('deceasedCivilStatus')} className="portal-input"><option value="">Select status</option>{CIVIL_STATUS_OPTIONS.map((status) => <option key={status} value={status}>{status}</option>)}</select></div>
+                    <div className="sm:col-span-2"><label className="portal-label">Occupation</label><input type="text" {...register('deceasedOccupation')} className="portal-input" placeholder="Occupation of the deceased" /></div>
                   </div>
                 </div>
+              )}
+              <div>
+                <div className="mb-1 flex items-center justify-between gap-3"><label className="portal-label">Presenting Problem *</label>{!readOnly && <button type="button" onClick={handleAnalyzeFindings} disabled={analyzingFindings} className="portal-button-secondary text-xs">{analyzingFindings ? 'Generating...' : 'Generate Findings Draft'}</button>}</div>
+                <Controller name="presentingProblem" control={control} render={({ field }) => <RichTextEditor value={field.value} onChange={field.onChange} readOnly={readOnly} minHeightClass="min-h-[7rem]" placeholder="State the client's concern or reason for seeking assistance." />} />
               </div>
-            )}
-
-            {/* Sub-section: Findings & Narrative */}
-            <div className="mt-2 mb-1 flex items-center gap-2 border-b border-slate-150 pb-2">
-              <span className="text-base">📌</span>
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Findings &amp; Narrative</p>
-            </div>
-
-            <div>
-              <div className="mb-1 flex items-center justify-between gap-3">
-                <label className="portal-label">Presenting Problem *</label>
-                {!readOnly && (
-                  <button
-                    type="button"
-                    onClick={handleAnalyzeFindings}
-                    disabled={analyzingFindings}
-                    className="portal-button-secondary text-xs"
-                  >
-                    {analyzingFindings ? 'Generating...' : 'Generate Findings Draft'}
-                  </button>
-                )}
+              <div>
+                <label className="portal-label">Findings / Narrative *</label>
+                <Controller name="findings" control={control} render={({ field }) => <RichTextEditor value={field.value} onChange={field.onChange} readOnly={readOnly} minHeightClass="min-h-[12rem]" placeholder="Write the case study findings used in the generated report." />} />
               </div>
-              <Controller
-                name="presentingProblem"
-                control={control}
-                render={({ field }) => (
-                  <RichTextEditor
-                    value={field.value}
-                    onChange={field.onChange}
-                    readOnly={readOnly}
-                    minHeightClass="min-h-[7rem]"
-                    placeholder="State the client's concern or reason for seeking assistance."
-                  />
-                )}
-              />
             </div>
-
-            <div>
-              <label className="portal-label">Findings / Narrative *</label>
-              <Controller
-                name="findings"
-                control={control}
-                render={({ field }) => (
-                  <RichTextEditor
-                    value={field.value}
-                    onChange={field.onChange}
-                    readOnly={readOnly}
-                    minHeightClass="min-h-[12rem]"
-                    placeholder="Write the uniform case study narrative that will map directly into the template findings."
-                  />
-                )}
-              />
-            </div>
-
-            <div>
-              <p className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
-                The narrative above is used as the uniform template source for case study findings.
-              </p>
-            </div>
-          </div>
+          </section>
 
           {isMedicine ? (
-            <div className="border-t border-slate-200 pt-5">
-              <div className="form-section-title mb-4">Medicine Items</div>
-              <MedicineTable items={medicines} onChange={setMedicines} readOnly={readOnly} />
-            </div>
+            <section className="rounded-lg border border-slate-200 bg-white p-4"><EncodingSectionHeader number="4" title="Medicine Items" description="Encode prescribed medicines and quantities for this assistance." /><MedicineTable items={medicines} onChange={setMedicines} readOnly={readOnly} /></section>
           ) : (
-            <div className="border-t border-slate-200 pt-5">
-              {/* Sub-section: Financial Assistance */}
-              <div className="mt-2 mb-3 flex items-center gap-2 border-b border-slate-150 pb-2">
-                <span className="text-base">💵</span>
-                <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Financial Assistance</p>
-              </div>
-              <div className="grid grid-cols-1 gap-4 sm:max-w-sm">
-                <div>
-                  <label className="portal-label">{amountLabelForType(caseData.assistanceType)} *</label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="any"
-                    {...register('amount')}
-                    className="portal-input"
-                    placeholder="0.00"
-                  />
-                  {isOverCap && (
-                    <p className="mt-1 text-xs text-amber-600">
-                      Amount exceeds {formatCurrency(amountCap)}. Ensure proper authorization.
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
+            <section className="rounded-lg border border-slate-200 bg-white p-4"><EncodingSectionHeader number="4" title="Assistance Amount" description="Enter the amount for the guarantee letter or cash assistance." /><div className="grid grid-cols-1 gap-4 sm:max-w-sm"><div><label className="portal-label">{amountLabelForType(caseData.assistanceType)} *</label><input type="number" min="0" step="any" {...register('amount')} className="portal-input" placeholder="0.00" />{isOverCap && <p className="mt-1 text-xs text-amber-600">Amount exceeds {formatCurrency(amountCap)}. Ensure proper authorization.</p>}</div></div></section>
           )}
         </fieldset>
-
-        {!readOnly && (
-          <div className="mt-5 flex justify-end">
-            <button type="submit" disabled={saving} className="portal-button-primary" id="btn-save-case-study">
-              {saving ? 'Saving...' : 'Save Case Study'}
-            </button>
-          </div>
-        )}
+        {!readOnly && <div className="mt-5 flex justify-end"><button type="submit" disabled={saving} className="portal-button-primary" id="btn-save-case-study">{saving ? 'Saving...' : 'Save Case Encoding'}</button></div>}
       </form>
     </div>
   )
 }
-

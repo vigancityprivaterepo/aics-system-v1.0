@@ -51,6 +51,13 @@ const updateSchema = z.object({
   eyeglassPrefix: z.string().min(1).max(10).regex(/^[A-Z0-9]+$/i),
   plainPrefix:    z.string().min(1).max(10).regex(/^[A-Z0-9]+$/i),
   sequenceDigits: z.number().int().min(2).max(6),
+  clientStartSequence: z.number().int().min(1).max(999999),
+  medicineStartSequence: z.number().int().min(1).max(999999),
+  burialStartSequence: z.number().int().min(1).max(999999),
+  hospitalStartSequence: z.number().int().min(1).max(999999),
+  medicalStartSequence: z.number().int().min(1).max(999999),
+  eyeglassStartSequence: z.number().int().min(1).max(999999),
+  plainStartSequence: z.number().int().min(1).max(999999),
   reviewedByUserId: z.string().uuid().nullable().optional(),
   recommendingUserId: z.string().uuid().nullable().optional(),
   approvedByUserId: z.string().uuid().nullable().optional(),
@@ -108,6 +115,13 @@ router.put('/', requireRole(['admin']), asyncHandler(async (req, res) => {
       recommendingUserId: settings.recommendingUserId,
       approvedByUserId: settings.approvedByUserId,
       sequenceDigits: settings.sequenceDigits,
+      clientStartSequence: settings.clientStartSequence,
+      medicineStartSequence: settings.medicineStartSequence,
+      burialStartSequence: settings.burialStartSequence,
+      hospitalStartSequence: settings.hospitalStartSequence,
+      medicalStartSequence: settings.medicalStartSequence,
+      eyeglassStartSequence: settings.eyeglassStartSequence,
+      plainStartSequence: settings.plainStartSequence,
     },
   })
   res.json(settings)
@@ -161,3 +175,4 @@ router.post('/backups/:filename/restore', adminOnly, asyncHandler(async (req, re
 }))
 
 export default router
+

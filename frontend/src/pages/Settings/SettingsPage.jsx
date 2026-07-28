@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import api from '../../lib/api'
 import { useAuthStore } from '../../store/authStore'
@@ -37,6 +37,16 @@ const EMPTY_FORM = {
   password: '',
 }
 const AUDIT_PAGE_SIZE = 5
+
+const CASE_NUMBER_SERIES = [
+  { key: 'client', label: 'Client ID', prefixField: 'clientPrefix', sequenceField: 'clientStartSequence', prefixLabel: 'Client Prefix' },
+  { key: 'medicine', label: 'Medicine', prefixField: 'medicinePrefix', sequenceField: 'medicineStartSequence', prefixLabel: 'Medicine Prefix' },
+  { key: 'burial', label: 'Burial', prefixField: 'burialPrefix', sequenceField: 'burialStartSequence', prefixLabel: 'Burial Prefix' },
+  { key: 'hospital', label: 'Hospital', prefixField: 'hospitalPrefix', sequenceField: 'hospitalStartSequence', prefixLabel: 'Hospital Prefix' },
+  { key: 'medical', label: 'Medical', prefixField: 'medicalPrefix', sequenceField: 'medicalStartSequence', prefixLabel: 'Medical Prefix' },
+  { key: 'eyeglass', label: 'Eyeglass', prefixField: 'eyeglassPrefix', sequenceField: 'eyeglassStartSequence', prefixLabel: 'Eyeglass Prefix' },
+  { key: 'plain', label: 'Plain AICS', prefixField: 'plainPrefix', sequenceField: 'plainStartSequence', prefixLabel: 'Plain AICS Prefix' },
+]
 
 const roleLabel = (r) => ROLES.find((x) => x.value === r)?.label ?? r
 
@@ -81,6 +91,7 @@ export default function SettingsPage() {
   const isAdmin = currentUser?.role === 'admin'
 
   const [activeTab, setActiveTab] = useState('users')
+  const [selectedCaseSeries, setSelectedCaseSeries] = useState('medicine')
 
   const DEFAULT_FMT = {
     locationCode:   'VGN',
@@ -93,6 +104,13 @@ export default function SettingsPage() {
     eyeglassPrefix: 'EYE',
     plainPrefix:    'PLN',
     sequenceDigits: 3,
+    clientStartSequence: 1,
+    medicineStartSequence: 1,
+    burialStartSequence: 1,
+    hospitalStartSequence: 1,
+    medicalStartSequence: 1,
+    eyeglassStartSequence: 1,
+    plainStartSequence: 1,
     reviewedByUserId:   null,
     recommendingUserId: null,
     approvedByUserId:   null,
@@ -134,6 +152,13 @@ export default function SettingsPage() {
       eyeglassPrefix: data.eyeglassPrefix ?? 'EYE',
       plainPrefix:    data.plainPrefix    ?? 'PLN',
       sequenceDigits: data.sequenceDigits ?? 3,
+      clientStartSequence: data.clientStartSequence ?? 1,
+      medicineStartSequence: data.medicineStartSequence ?? 1,
+      burialStartSequence: data.burialStartSequence ?? 1,
+      hospitalStartSequence: data.hospitalStartSequence ?? 1,
+      medicalStartSequence: data.medicalStartSequence ?? 1,
+      eyeglassStartSequence: data.eyeglassStartSequence ?? 1,
+      plainStartSequence: data.plainStartSequence ?? 1,
       reviewedByUserId:   data.reviewedByUserId   ?? null,
       recommendingUserId: data.recommendingUserId ?? null,
       approvedByUserId:   data.approvedByUserId   ?? null,
@@ -164,6 +189,13 @@ export default function SettingsPage() {
       const { data } = await api.put('/settings', {
         ...fmt,
         sequenceDigits: Number(fmt.sequenceDigits),
+        clientStartSequence: Number(fmt.clientStartSequence),
+        medicineStartSequence: Number(fmt.medicineStartSequence),
+        burialStartSequence: Number(fmt.burialStartSequence),
+        hospitalStartSequence: Number(fmt.hospitalStartSequence),
+        medicalStartSequence: Number(fmt.medicalStartSequence),
+        eyeglassStartSequence: Number(fmt.eyeglassStartSequence),
+        plainStartSequence: Number(fmt.plainStartSequence),
         reviewedByUserId: fmt.reviewedByUserId || null,
         recommendingUserId: fmt.recommendingUserId || null,
         approvedByUserId: fmt.approvedByUserId || null,
@@ -180,6 +212,13 @@ export default function SettingsPage() {
         eyeglassPrefix: data.eyeglassPrefix ?? prev.eyeglassPrefix,
         plainPrefix:    data.plainPrefix    ?? prev.plainPrefix,
         sequenceDigits: data.sequenceDigits ?? prev.sequenceDigits,
+        clientStartSequence: data.clientStartSequence ?? prev.clientStartSequence,
+        medicineStartSequence: data.medicineStartSequence ?? prev.medicineStartSequence,
+        burialStartSequence: data.burialStartSequence ?? prev.burialStartSequence,
+        hospitalStartSequence: data.hospitalStartSequence ?? prev.hospitalStartSequence,
+        medicalStartSequence: data.medicalStartSequence ?? prev.medicalStartSequence,
+        eyeglassStartSequence: data.eyeglassStartSequence ?? prev.eyeglassStartSequence,
+        plainStartSequence: data.plainStartSequence ?? prev.plainStartSequence,
         reviewedByUserId:   data.reviewedByUserId   ?? null,
         recommendingUserId: data.recommendingUserId ?? null,
         approvedByUserId:   data.approvedByUserId   ?? null,
@@ -192,14 +231,32 @@ export default function SettingsPage() {
     }
   }
 
-  const seq = String(1).padStart(Number(fmt.sequenceDigits) || 3, '0')
-  const previewClient   = `${fmt.clientPrefix}-${fmt.locationCode}-${seq}`
-  const previewMedicine = `${fmt.medicinePrefix}-${fmt.agencyCode}-${fmt.locationCode}-${seq}`
-  const previewBurial   = `${fmt.burialPrefix}-${fmt.agencyCode}-${fmt.locationCode}-${seq}`
-  const previewHospital = `${fmt.hospitalPrefix}-${fmt.agencyCode}-${fmt.locationCode}-${seq}`
-  const previewMedical  = `${fmt.medicalPrefix}-${fmt.agencyCode}-${fmt.locationCode}-${seq}`
-  const previewEyeglass = `${fmt.eyeglassPrefix}-${fmt.agencyCode}-${fmt.locationCode}-${seq}`
-  const previewPlain    = `${fmt.plainPrefix}-${fmt.agencyCode}-${fmt.locationCode}-${seq}`
+  const formatSeq = (value) => String(Number(value) || 1).padStart(Number(fmt.sequenceDigits) || 3, '0')
+  const seqClient = formatSeq(fmt.clientStartSequence)
+  const seqMedicine = formatSeq(fmt.medicineStartSequence)
+  const seqBurial = formatSeq(fmt.burialStartSequence)
+  const seqHospital = formatSeq(fmt.hospitalStartSequence)
+  const seqMedical = formatSeq(fmt.medicalStartSequence)
+  const seqEyeglass = formatSeq(fmt.eyeglassStartSequence)
+  const seqPlain = formatSeq(fmt.plainStartSequence)
+  const previewClient   = `${fmt.clientPrefix}-${fmt.locationCode}-${seqClient}`
+  const previewMedicine = `${fmt.medicinePrefix}-${fmt.agencyCode}-${fmt.locationCode}-${seqMedicine}`
+  const previewBurial   = `${fmt.burialPrefix}-${fmt.agencyCode}-${fmt.locationCode}-${seqBurial}`
+  const previewHospital = `${fmt.hospitalPrefix}-${fmt.agencyCode}-${fmt.locationCode}-${seqHospital}`
+  const previewMedical  = `${fmt.medicalPrefix}-${fmt.agencyCode}-${fmt.locationCode}-${seqMedical}`
+  const previewEyeglass = `${fmt.eyeglassPrefix}-${fmt.agencyCode}-${fmt.locationCode}-${seqEyeglass}`
+  const previewPlain    = `${fmt.plainPrefix}-${fmt.agencyCode}-${fmt.locationCode}-${seqPlain}`
+  const previews = {
+    client: previewClient,
+    medicine: previewMedicine,
+    burial: previewBurial,
+    hospital: previewHospital,
+    medical: previewMedical,
+    eyeglass: previewEyeglass,
+    plain: previewPlain,
+  }
+  const selectedSeries = CASE_NUMBER_SERIES.find((series) => series.key === selectedCaseSeries) ?? CASE_NUMBER_SERIES[0]
+  const selectedPreview = previews[selectedSeries.key]
 
   useEffect(() => {
     if (!isAdmin) return
@@ -724,14 +781,9 @@ export default function SettingsPage() {
             <h2 className="text-base font-semibold text-slate-900">Case Number Format</h2>
             <p className="text-sm text-slate-500">Configure the ID and case number codes generated for new records. Changes apply to new records only.</p>
           </div>
-          <form onSubmit={saveFmt}>
+          <form onSubmit={saveFmt} className="space-y-5">
             {/* Global format settings */}
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-              <div>
-                <label className="portal-label">Client Prefix</label>
-                <input className="portal-input font-mono" value={fmt.clientPrefix} maxLength={10}
-                  onChange={(e) => setFmt((f) => ({ ...f, clientPrefix: e.target.value.toUpperCase() }))} />
-              </div>
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
               <div>
                 <label className="portal-label">Agency Code</label>
                 <input className="portal-input font-mono" value={fmt.agencyCode} maxLength={10}
@@ -751,44 +803,51 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            {/* Case type prefixes */}
-            <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-5">
-              <div>
-                <label className="portal-label">Medicine Prefix</label>
-                <input className="portal-input font-mono" value={fmt.medicinePrefix} maxLength={10}
-                  onChange={(e) => setFmt((f) => ({ ...f, medicinePrefix: e.target.value.toUpperCase() }))} />
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+                <div>
+                  <label className="portal-label">Series</label>
+                  <select
+                    className="portal-input"
+                    value={selectedCaseSeries}
+                    onChange={(e) => setSelectedCaseSeries(e.target.value)}
+                  >
+                    {CASE_NUMBER_SERIES.map((series) => (
+                      <option key={series.key} value={series.key}>{series.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="portal-label">{selectedSeries.prefixLabel}</label>
+                  <input
+                    className="portal-input font-mono"
+                    value={fmt[selectedSeries.prefixField]}
+                    maxLength={10}
+                    onChange={(e) => setFmt((f) => ({ ...f, [selectedSeries.prefixField]: e.target.value.toUpperCase() }))}
+                  />
+                </div>
+                <div>
+                  <label className="portal-label">Next Number</label>
+                  <input
+                    className="portal-input font-mono"
+                    type="number"
+                    min="1"
+                    max="999999"
+                    value={fmt[selectedSeries.sequenceField]}
+                    onChange={(e) => setFmt((f) => ({ ...f, [selectedSeries.sequenceField]: e.target.value }))}
+                  />
+                </div>
               </div>
-              <div>
-                <label className="portal-label">Burial Prefix</label>
-                <input className="portal-input font-mono" value={fmt.burialPrefix} maxLength={10}
-                  onChange={(e) => setFmt((f) => ({ ...f, burialPrefix: e.target.value.toUpperCase() }))} />
+              <div className="mt-4 rounded-md border border-slate-200 bg-white px-3 py-2">
+                <span className="mr-2 text-xs font-medium text-slate-400">Preview</span>
+                <span className="font-mono text-sm font-bold text-brand-primary">{selectedPreview}</span>
               </div>
-              <div>
-                <label className="portal-label">Hospital Prefix</label>
-                <input className="portal-input font-mono" value={fmt.hospitalPrefix} maxLength={10}
-                  onChange={(e) => setFmt((f) => ({ ...f, hospitalPrefix: e.target.value.toUpperCase() }))} />
-              </div>
-              <div>
-                <label className="portal-label">Medical Prefix</label>
-                <input className="portal-input font-mono" value={fmt.medicalPrefix} maxLength={10}
-                  onChange={(e) => setFmt((f) => ({ ...f, medicalPrefix: e.target.value.toUpperCase() }))} />
-              </div>
-              <div>
-                <label className="portal-label">Eyeglass Prefix</label>
-                <input className="portal-input font-mono" value={fmt.eyeglassPrefix} maxLength={10}
-                  onChange={(e) => setFmt((f) => ({ ...f, eyeglassPrefix: e.target.value.toUpperCase() }))} />
-              </div>
-              <div>
-                <label className="portal-label">Plain AICS Prefix</label>
-                <input className="portal-input font-mono" value={fmt.plainPrefix} maxLength={10}
-                  onChange={(e) => setFmt((f) => ({ ...f, plainPrefix: e.target.value.toUpperCase() }))} />
-              </div>
+              <p className="mt-2 text-xs text-slate-400">Existing higher numbers are still skipped automatically.</p>
             </div>
-
-            <div className="mt-5 rounded-lg border border-slate-200 bg-slate-50 px-4 py-4">
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Approval Hierarchy Assignment</p>
-              <p className="mt-1 text-xs text-slate-400">Only employees with the matching approval level are shown. The selected official&apos;s e-signature will be embedded in generated documents.</p>
-              <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <p className="mt-1 text-xs text-slate-400">Only employees with the matching approval level are shown. Missing e-signatures will not block approval, but documents will omit that signature image.</p>
+              <div className="mt-3 grid grid-cols-1 gap-4 lg:grid-cols-3">
                 {[
                   { label: 'Reviewed By', field: 'reviewedByUserId', pool: reviewerUsers, role: 'reviewer' },
                   { label: 'Recommending Approval', field: 'recommendingUserId', pool: recommenderUsers, role: 'recommender' },
@@ -831,7 +890,7 @@ export default function SettingsPage() {
                           ) : (
                             <div className="grid gap-4 md:grid-cols-2">
                               <span className="text-lg">Signature</span>
-                              <span className="text-xs text-amber-600">{selectedUser.name} - no e-signature uploaded</span>
+                              <span className="text-xs text-amber-600">{selectedUser.name} - no e-signature uploaded; workflow can still proceed</span>
                             </div>
                           )}
                         </div>
@@ -844,20 +903,7 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            <div className="mt-4 rounded-lg bg-slate-50 border border-slate-200 px-4 py-3">
-              <p className="text-xs font-medium text-slate-500 mb-2">Preview</p>
-              <div className="flex flex-wrap gap-x-5 gap-y-2 text-xs font-mono">
-                <span><span className="text-slate-400 mr-1">Client ID:</span><span className="text-brand-primary font-bold">{previewClient}</span></span>
-                <span><span className="text-slate-400 mr-1">Medicine:</span><span className="text-emerald-700 font-bold">{previewMedicine}</span></span>
-                <span><span className="text-slate-400 mr-1">Burial:</span><span className="text-amber-700 font-bold">{previewBurial}</span></span>
-                <span><span className="text-slate-400 mr-1">Hospital:</span><span className="text-blue-700 font-bold">{previewHospital}</span></span>
-                <span><span className="text-slate-400 mr-1">Medical:</span><span className="text-violet-700 font-bold">{previewMedical}</span></span>
-                <span><span className="text-slate-400 mr-1">Eyeglass:</span><span className="text-orange-600 font-bold">{previewEyeglass}</span></span>
-                <span><span className="text-slate-400 mr-1">Plain AICS:</span><span className="text-slate-700 font-bold">{previewPlain}</span></span>
-              </div>
-            </div>
-
-            <div className="mt-4 flex justify-end">
+            <div className="flex justify-end">
               <button type="submit" disabled={fmtSaving} className="portal-button-primary">
                 {fmtSaving ? 'Saving...' : 'Save Format'}
               </button>
@@ -1105,7 +1151,6 @@ export default function SettingsPage() {
     </div>
   )
 }
-
 
 
 

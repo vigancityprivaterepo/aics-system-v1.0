@@ -384,6 +384,13 @@ model SystemSettings {
   plainPrefix    String   @default("PLN") @map("plain_prefix") @db.VarChar(10)
   clientPrefix   String   @default("CID") @map("client_prefix") @db.VarChar(10)
   sequenceDigits Int      @default(3) @map("sequence_digits")
+  clientStartSequence Int @default(1) @map("client_start_sequence")
+  medicineStartSequence Int @default(1) @map("medicine_start_sequence")
+  burialStartSequence Int @default(1) @map("burial_start_sequence")
+  hospitalStartSequence Int @default(1) @map("hospital_start_sequence")
+  medicalStartSequence Int @default(1) @map("medical_start_sequence")
+  eyeglassStartSequence Int @default(1) @map("eyeglass_start_sequence")
+  plainStartSequence Int @default(1) @map("plain_start_sequence")
   reviewedByUserId String? @map("reviewed_by_user_id") @db.Uuid
   recommendingUserId String? @map("recommending_user_id") @db.Uuid
   approvedByUserId String? @map("approved_by_user_id") @db.Uuid

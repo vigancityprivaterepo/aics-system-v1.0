@@ -102,9 +102,6 @@ export async function updateStatus(req: Request, res: Response) {
       throw new HttpError(403, `Only the assigned ${APPROVAL_STAGE_META[currentStage].label.toLowerCase()} may perform this action.`)
     }
 
-    if (isApprovalProgressTransition(caseData.status, nextStatus as CaseStatus) && !actingUser.eSignatureUrl) {
-      throw new HttpError(400, `Assigned ${APPROVAL_STAGE_META[currentStage].label.toLowerCase()} must have an e-signature before approval.`)
-    }
 
     stageAssignee = {
       ...stageAssignee,
@@ -192,3 +189,4 @@ export async function updateStatus(req: Request, res: Response) {
 
   res.json({ id: updated.id, status: updated.status })
 }
+

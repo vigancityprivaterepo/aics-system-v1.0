@@ -104,14 +104,20 @@ export default function RichTextEditor({
   useEffect(() => {
     const editor = editorRef.current
     if (!editor) return
+    if (document.activeElement === editor) return
     if (editor.innerHTML !== normalizedValue) {
       editor.innerHTML = normalizedValue
     }
   }, [normalizedValue])
 
-  const syncValue = () => {
+  const syncValue = ({ normalize = false } = {}) => {
     const editor = editorRef.current
     if (!editor) return
+    if (!normalize) {
+      onChange(editor.innerHTML)
+      return
+    }
+
     const normalizedHtml = normalizeEditorHtml(editor.innerHTML)
     if (editor.innerHTML !== normalizedHtml) {
       editor.innerHTML = normalizedHtml
@@ -123,7 +129,7 @@ export default function RichTextEditor({
     if (event.key === 'Tab') {
       event.preventDefault()
       document.execCommand('insertHTML', false, '&nbsp;&nbsp;&nbsp;&nbsp;')
-      syncValue()
+      syncValue({ normalize: true })
     }
   }
 
@@ -139,8 +145,8 @@ export default function RichTextEditor({
           ref={editorRef}
           contentEditable={!readOnly}
           suppressContentEditableWarning
-          onInput={syncValue}
-          onBlur={syncValue}
+          onInput={() => syncValue()}
+          onBlur={() => syncValue({ normalize: true })}
           onKeyDown={handleKeyDown}
           className={`portal-input rounded-none border-0 bg-transparent px-4 py-3 focus:ring-0 ${minHeightClass}`}
           style={{ whiteSpace: 'pre-wrap' }}
@@ -149,3 +155,4 @@ export default function RichTextEditor({
     </div>
   )
 }
+

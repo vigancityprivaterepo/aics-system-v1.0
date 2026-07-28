@@ -1,4 +1,4 @@
-﻿import fs from 'node:fs'
+import fs from 'node:fs'
 import path from 'node:path'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
@@ -367,6 +367,9 @@ function buildRenderData(caseData: any): Record<string, any> {
   const isAssistanceType = (type: string) => caseData.assistanceType === type
   const clientCategory = String(c.clientCategory ?? '').trim().toLowerCase()
   const hasCategory = (needle: string) => clientCategory.includes(needle)
+  const isIntakeSourceCategory = ['walk-in', 'walk_in', 'referred', 'rescued'].includes(clientCategory)
+  const isKnownBeneficiaryCategory = hasCategory('4ps') || hasCategory('solo') || hasCategory('senior') || hasCategory('pwd')
+  const hasOtherBeneficiaryCategory = Boolean(clientCategory) && !isIntakeSourceCategory && !isKnownBeneficiaryCategory
   const rawRequirements = caseData.requirements ?? []
   const requirementMap = new Map<string, boolean>()
   if (Array.isArray(rawRequirements)) {
@@ -484,8 +487,8 @@ function buildRenderData(caseData: any): Record<string, any> {
     soloParentCheckBox:  checkbox(hasCategory('solo')),
     seniorCitizenCheckBox: checkbox(Boolean(c.isSenior) || hasCategory('senior')),
     pwdCheckBox:         checkbox(Boolean(c.isPwd) || hasCategory('pwd')),
-    otherCategoryCheckBox: checkbox(Boolean(clientCategory) && !hasCategory('4ps') && !hasCategory('solo') && !hasCategory('senior') && !hasCategory('pwd')),
-    otherCategoryText:   Boolean(clientCategory) && !hasCategory('4ps') && !hasCategory('solo') && !hasCategory('senior') && !hasCategory('pwd') ? fmt(c.clientCategory) : '',
+    otherCategoryCheckBox: checkbox(hasOtherBeneficiaryCategory),
+    otherCategoryText:   hasOtherBeneficiaryCategory ? fmt(c.clientCategory) : '',
 
     // Global CGV AICS Documentary Requirements Submitted table ticks
     medicineDocsCheckBox: checkbox(isMedicine),
@@ -1096,11 +1099,4 @@ export async function generatePlainCaseStudyDocx(caseData: any): Promise<Buffer>
   const template = loadFirstAvailableTemplate(PLAIN_CASE_STUDY_CANDIDATES)
   return renderDoc(template, buildRenderData(caseData))
 }
-
-
-
-
-
-
-
 
