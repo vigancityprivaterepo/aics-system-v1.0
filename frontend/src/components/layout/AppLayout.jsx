@@ -251,6 +251,7 @@ function SidebarNav({ closeSidebar, isAdmin, isCityHealthOffice, pendingByType, 
       >
         <SectionLabel>Health Office</SectionLabel>
         <div className="space-y-0.5">
+          <NavItem to="/vehicle-requests" Icon={Ambulance} label="Ambulance Requests" onClick={closeSidebar} />
           <DatabaseGroup onNavigate={closeSidebar} isCHO={true} />
         </div>
       </nav>

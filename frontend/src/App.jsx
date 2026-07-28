@@ -67,7 +67,6 @@ function AppRoutes() {
             <Route path="/reports" element={<ReportsPage />} />
             <Route path="/portal-applications" element={<PortalApplicationsPage />} />
             <Route path="/documents/verify" element={<DocumentVerifierPage />} />
-            <Route path="/vehicle-requests" element={<VehicleRequestsPage />} />
 
             <Route element={<ProtectedRoute roles={['admin']} redirectTo="/dashboard" />}>
               <Route path="/settings" element={<SettingsPage />} />
@@ -76,6 +75,7 @@ function AppRoutes() {
 
           <Route element={<ProtectedRoute roles={['admin', 'employee', 'city_health_office']} redirectTo="/medicines" />}>
             <Route path="/medicines" element={<MedicineDatabase />} />
+            <Route path="/vehicle-requests" element={<VehicleRequestsPage />} />
           </Route>
 
           <Route element={<ProtectedRoute roles={['admin', 'employee']} redirectTo="/medicines" />}>

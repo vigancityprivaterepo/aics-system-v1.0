@@ -79,6 +79,7 @@ model User {
   recommendingSettings SystemSettings[] @relation("settings_recommending_user")
   approvedBySettings SystemSettings[] @relation("settings_approved_by_user")
   vehicleRequests VehicleRequest[] @relation("vehicle_request_creator")
+  vehicleRequestsReviewed VehicleRequest[] @relation("vehicle_request_cho_reviewer")
 
   @@map("users")
 }
@@ -433,16 +434,21 @@ model VehicleRequest {
   otherFees             Decimal  @default(0) @map("other_fees") @db.Decimal(12, 2)
   fuelExpenses          Decimal  @default(0) @map("fuel_expenses") @db.Decimal(12, 2)
   remarks               String?
-  status                String   @default("draft") @db.VarChar(20)
+  status                String   @default("pending_cho_review") @db.VarChar(20)
   createdById           String   @map("created_by_id") @db.Uuid
+  choReviewedById       String?  @map("cho_reviewed_by_id") @db.Uuid
+  choReviewedByName     String?  @map("cho_reviewed_by_name") @db.VarChar(200)
+  choReviewedAt         DateTime? @map("cho_reviewed_at") @db.Timestamptz(6)
   createdAt             DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt             DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   createdBy User @relation("vehicle_request_creator", fields: [createdById], references: [id])
+  choReviewedBy User? @relation("vehicle_request_cho_reviewer", fields: [choReviewedById], references: [id])
 
   @@index([requestDate])
   @@index([status])
   @@index([vehicleType])
+  @@index([choReviewedById])
   @@map("vehicle_requests")
 }
 model NarrativeOption {
