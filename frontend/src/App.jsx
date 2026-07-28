@@ -22,6 +22,7 @@ import SettingsPage from './pages/Settings/SettingsPage'
 import ReportsPage from './pages/Reports/ReportsPage'
 import PortalApplicationsPage from './pages/PortalApplications/PortalApplicationsPage'
 import DocumentVerifierPage from './pages/Documents/DocumentVerifierPage'
+import VehicleRequestsPage from './pages/VehicleRequests/VehicleRequestsPage'
 import { useAuthStore } from './store/authStore'
 
 function HomeRedirect() {
@@ -66,6 +67,7 @@ function AppRoutes() {
             <Route path="/reports" element={<ReportsPage />} />
             <Route path="/portal-applications" element={<PortalApplicationsPage />} />
             <Route path="/documents/verify" element={<DocumentVerifierPage />} />
+            <Route path="/vehicle-requests" element={<VehicleRequestsPage />} />
 
             <Route element={<ProtectedRoute roles={['admin']} redirectTo="/dashboard" />}>
               <Route path="/settings" element={<SettingsPage />} />

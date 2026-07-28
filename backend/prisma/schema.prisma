@@ -78,6 +78,7 @@ model User {
   reviewedBySettings SystemSettings[] @relation("settings_reviewed_by_user")
   recommendingSettings SystemSettings[] @relation("settings_recommending_user")
   approvedBySettings SystemSettings[] @relation("settings_approved_by_user")
+  vehicleRequests VehicleRequest[] @relation("vehicle_request_creator")
 
   @@map("users")
 }
@@ -403,6 +404,47 @@ model SystemSettings {
   @@map("system_settings")
 }
 
+model VehicleRequest {
+  id                    String   @id @default(uuid()) @db.Uuid
+  requestNumber         String   @unique @map("request_number") @db.VarChar(30)
+  vehicleType           String   @map("vehicle_type") @db.VarChar(30)
+  otherVehicle          String?  @map("other_vehicle") @db.VarChar(150)
+  requestDate           DateTime @map("request_date") @db.Date
+  requestedBy           String   @map("requested_by") @db.VarChar(200)
+  office                String   @db.VarChar(200)
+  address               String   @db.VarChar(300)
+  purpose               String
+  destination           String   @db.VarChar(300)
+  departureDate         DateTime @map("departure_date") @db.Date
+  departureTime         String   @map("departure_time") @db.VarChar(20)
+  arrivalDate           DateTime @map("arrival_date") @db.Date
+  arrivalTime           String   @map("arrival_time") @db.VarChar(20)
+  numberOfPassengers    Int      @map("number_of_passengers")
+  availability          String   @default("pending") @db.VarChar(20)
+  vehicleModel          String?  @map("vehicle_model") @db.VarChar(150)
+  unavailableReason     String?  @map("unavailable_reason")
+  plateNumber           String?  @map("plate_number") @db.VarChar(50)
+  alternativeVehicle    String?  @map("alternative_vehicle") @db.VarChar(150)
+  alternativeModel      String?  @map("alternative_model") @db.VarChar(150)
+  alternativePlate      String?  @map("alternative_plate") @db.VarChar(50)
+  driverPerDiem         Decimal  @default(0) @map("driver_per_diem") @db.Decimal(12, 2)
+  rentalFees            Decimal  @default(0) @map("rental_fees") @db.Decimal(12, 2)
+  tollFees              Decimal  @default(0) @map("toll_fees") @db.Decimal(12, 2)
+  otherFees             Decimal  @default(0) @map("other_fees") @db.Decimal(12, 2)
+  fuelExpenses          Decimal  @default(0) @map("fuel_expenses") @db.Decimal(12, 2)
+  remarks               String?
+  status                String   @default("draft") @db.VarChar(20)
+  createdById           String   @map("created_by_id") @db.Uuid
+  createdAt             DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  createdBy User @relation("vehicle_request_creator", fields: [createdById], references: [id])
+
+  @@index([requestDate])
+  @@index([status])
+  @@index([vehicleType])
+  @@map("vehicle_requests")
+}
 model NarrativeOption {
   id             String         @id @default(uuid()) @db.Uuid
   assistanceType AssistanceType @map("assistance_type")

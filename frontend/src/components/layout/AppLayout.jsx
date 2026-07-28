@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Outlet, NavLink, Link, useNavigate, useLocation } from 'react-router-dom'
 import toast from 'react-hot-toast'
+import { Ambulance } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore'
 import api from '../../lib/api'
 import logo from '../../assets/logo.png'
@@ -274,6 +275,7 @@ function SidebarNav({ closeSidebar, isAdmin, isCityHealthOffice, pendingByType, 
           badge={portalSubmittedCount}
         />
         <NavItem to="/documents/verify" Icon={QrCodeIcon} label="QR Verifier" onClick={closeSidebar} />
+        <NavItem to="/vehicle-requests" Icon={Ambulance} label="Vehicle Requests" onClick={closeSidebar} />
         <CasesGroup onNavigate={closeSidebar} pendingByType={pendingByType} />
       </div>
 

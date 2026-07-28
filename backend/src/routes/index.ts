@@ -14,6 +14,7 @@ import portalApplicationsRoutes from './portalApplications.js'
 import applicantApplicationsRoutes from './applicantApplications.js'
 import applicantsRoutes from './applicants.js'
 import documentRoutes from './documents.js'
+import vehicleRequestRoutes from './vehicleRequests.js'
 import { requireAuth, requireRole } from '../middleware/auth.js'
 import { getReadinessStatus } from '../services/healthService.js'
 
@@ -62,6 +63,7 @@ router.use('/applicants', applicantsRoutes)
 router.use(requireRole(['admin', 'employee']))
 router.use('/clients', clientRoutes)
 router.use('/cases', caseRoutes)
+router.use('/vehicle-requests', vehicleRequestRoutes)
 router.use('/dashboard', dashboardRoutes)
 router.use('/reports', reportRoutes)
 router.use('/settings', settingsRoutes)
