@@ -6,18 +6,26 @@ import toast from 'react-hot-toast'
 
 export default function StepMedicineEncode({ caseData, onUpdate }) {
   const [medicines, setMedicines] = useState(caseData.medicines || [])
-  const [amount, setAmount] = useState(caseData.amount ?? '')
-  const [templateType, setTemplateType] = useState(caseData.medicineDetails?.templateType || 'personal')
   const [conformeName, setConformeName] = useState(caseData.medicineDetails?.conformeName || '')
   const [conformeRelationship, setConformeRelationship] = useState(caseData.medicineDetails?.conformeRelationship || '')
   const [saving, setSaving] = useState(false)
 
   const handleSave = async () => {
     setSaving(true)
-    const numAmount = parseFloat(amount) || 0
+    const normalizedRelationship = conformeRelationship.trim().toLowerCase()
+    const templateType =
+      normalizedRelationship === 'self' || (!conformeName.trim() && !normalizedRelationship)
+        ? 'personal'
+        : 'proxy'
+    const medicinePayload = {
+      medicines,
+      ...(caseData.amount !== null && caseData.amount !== undefined && caseData.amount !== ''
+        ? { amount: caseData.amount }
+        : {}),
+    }
     try {
       const [medicineRes, caseRes] = await Promise.all([
-        api.post(`/cases/${caseData.id}/medicines`, { medicines, amount: numAmount }),
+        api.post(`/cases/${caseData.id}/medicines`, medicinePayload),
         api.put(`/cases/${caseData.id}`, {
           medicineTemplateType: templateType,
           medicineConformeName: conformeName,
@@ -26,7 +34,7 @@ export default function StepMedicineEncode({ caseData, onUpdate }) {
       ])
       onUpdate({
         medicines: medicineRes.data?.medicines ?? medicines,
-        amount: medicineRes.data?.totalAmount ?? caseRes.data?.amount ?? numAmount,
+        amount: medicineRes.data?.totalAmount ?? caseRes.data?.amount ?? caseData.amount,
         medicineDetails: {
           ...(caseData.medicineDetails || {}),
           templateType,
@@ -41,7 +49,7 @@ export default function StepMedicineEncode({ caseData, onUpdate }) {
         toast.error(err.response?.data?.message || 'Failed to save medicines')
         return
       }
-      onUpdate({ medicines, amount: numAmount })
+      onUpdate({ medicines, amount: caseData.amount })
       toast.error(err.response?.data?.message || 'Failed to save changes')
     } finally {
       setSaving(false)
@@ -61,13 +69,6 @@ export default function StepMedicineEncode({ caseData, onUpdate }) {
       />
 
       <div className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5 space-y-4">
-        <div>
-          <label className="text-sm font-semibold text-brand-dark block">Medicine Case Study Template</label>
-          <select value={templateType} onChange={(e) => setTemplateType(e.target.value)} className="portal-input mt-1 max-w-xs">
-            <option value="personal">Personal</option>
-            <option value="proxy">Proxy / Representative</option>
-          </select>
-        </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="block">
@@ -90,26 +91,6 @@ export default function StepMedicineEncode({ caseData, onUpdate }) {
               placeholder="e.g. Self, Mother, Son, Spouse"
             />
           </label>
-        </div>
-      </div>
-      <div className="rounded-xl bg-brand-bg border border-brand-green/20 p-4 sm:p-5">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <label className="text-sm font-semibold text-brand-dark block">Total Amount Requested (PHP) *</label>
-            <p className="text-xs text-slate-500">Manually encode the financial assistance amount requested for this medicine case.</p>
-          </div>
-          <div className="relative w-full sm:w-64">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-slate-500 text-xs">PHP</span>
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              placeholder="0.00"
-              className="portal-input pl-12 font-mono font-bold text-lg text-brand-primary"
-            />
-          </div>
         </div>
       </div>
 

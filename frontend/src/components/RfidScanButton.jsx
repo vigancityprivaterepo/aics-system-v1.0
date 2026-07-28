@@ -1,6 +1,5 @@
 import { useCallback, useState } from 'react'
 import toast from 'react-hot-toast'
-import { Download } from 'lucide-react'
 import api from '../lib/api'
 import { useRfidScanner } from '../hooks/useRfidScanner'
 
@@ -9,7 +8,6 @@ const normalizeUid = (value) => String(value ?? '').trim().toUpperCase().replace
 export default function RfidScanButton({ onClientFound, disabled = false, className = '' }) {
   const [active, setActive] = useState(false)
   const [scanning, setScanning] = useState(false)
-  const [manualUid, setManualUid] = useState('')
 
   const handleScan = useCallback(async (rawUid) => {
     const uid = normalizeUid(rawUid)
@@ -20,7 +18,6 @@ export default function RfidScanButton({ onClientFound, disabled = false, classN
         headers: { 'Cache-Control': 'no-cache' }, params: { t: Date.now() },
       })
       setActive(false)
-      setManualUid('')
       onClientFound?.(res.data)
       toast.success(`Card matched: ${res.data.lastName}, ${res.data.firstName}`)
     } catch (err) {
@@ -34,12 +31,6 @@ export default function RfidScanButton({ onClientFound, disabled = false, classN
   const toggle = () => {
     if (disabled) return
     setActive((current) => !current)
-    setManualUid('')
-  }
-
-  const submitManual = (event) => {
-    event.preventDefault()
-    handleScan(manualUid)
   }
 
   return (
@@ -50,17 +41,6 @@ export default function RfidScanButton({ onClientFound, disabled = false, classN
         <span>{active ? (scanning ? 'Reading card...' : 'Tap card now') : 'RFID Scan'}</span>
         {active && <span className="relative flex h-2 w-2"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" /><span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" /></span>}
       </button>
-      {active && (
-        <div className="min-w-64 space-y-2">
-          <form onSubmit={submitManual} className="flex gap-2">
-            <input value={manualUid} onChange={(event) => setManualUid(event.target.value)} className="portal-input py-2 font-mono uppercase" placeholder="Paste or type card UID" autoComplete="off" aria-label="RFID card UID" />
-            <button type="submit" disabled={scanning || normalizeUid(manualUid).length < 4} className="portal-button-secondary px-3 disabled:opacity-50">Find</button>
-          </form>
-          <a href="/rfid-tools/Install-AICS-RFID-Bridge.cmd" download className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700 hover:text-emerald-900">
-            <Download className="h-3.5 w-3.5" /> Install ACS reader on this Windows PC
-          </a>
-        </div>
-      )}
     </div>
   )
 }

@@ -326,8 +326,10 @@ export async function updateCase(req: Request, res: Response) {
     }
   }
 
-  if (current.assistanceType === 'medicine') {
+  if (current.assistanceType === 'medicine' && body.medicineTemplateType !== undefined) {
     auditFlags.medicine_template_type = body.medicineTemplateType === 'proxy' ? 'proxy' : 'personal'
+  }
+  if (current.assistanceType === 'medicine') {
     if (body.medicineConformeName !== undefined) {
       const v = String(body.medicineConformeName ?? '').trim()
       if (v) auditFlags.medicine_conforme_name = v

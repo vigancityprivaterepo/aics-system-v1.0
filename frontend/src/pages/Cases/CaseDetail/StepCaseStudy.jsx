@@ -87,7 +87,6 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false }) 
   const parsedAmount = Number(amount)
   const amountCap = resolveAmountCap(caseData.assistanceType)
   const isOverCap = !isMedicine && amountCap != null && Number.isFinite(parsedAmount) && parsedAmount > amountCap
-  const medicineTotal = medicines.reduce((sum, item) => sum + (parseFloat(item.totalPrice) || 0), 0)
 
   const addFamilyMember = () => setFamily([...family, { ...defaultMember }])
   const removeFamilyMember = (index) => setFamily(family.filter((_, idx) => idx !== index))
@@ -122,10 +121,10 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false }) 
       if (isMedicine) {
         const [caseRes, medicinesRes] = await Promise.all([
           api.put(`/cases/${caseData.id}`, casePayload),
-          api.post(`/cases/${caseData.id}/medicines`, { medicines }),
+          api.post(`/cases/${caseData.id}/medicines`, { medicines, amount: data.amount }),
         ])
 
-        const totalAmount = Number(medicinesRes.data?.totalAmount ?? medicineTotal)
+        const totalAmount = Number(medicinesRes.data?.totalAmount ?? data.amount)
         onUpdate({
           ...casePayload,
           medicines: medicinesRes.data?.medicines ?? medicines,
@@ -165,7 +164,7 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false }) 
       onUpdate({
         ...casePayload,
         medicines: isMedicine ? medicines : caseData.medicines,
-        amount: isMedicine ? medicineTotal : data.amount,
+        amount: data.amount,
         ...(isBurial
           ? {
               burialDetails: {
@@ -269,7 +268,15 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false }) 
           </section>
 
           {isMedicine ? (
-            <section className="rounded-lg border border-slate-200 bg-white p-4"><EncodingSectionHeader number="4" title="Medicine Items" description="Encode prescribed medicines and quantities for this assistance." /><MedicineTable items={medicines} onChange={setMedicines} readOnly={readOnly} /></section>
+            <section className="rounded-lg border border-slate-200 bg-white p-4">
+              <EncodingSectionHeader number="4" title="Medicine Items" description="Encode prescribed medicines and quantities for this assistance." />
+              <MedicineTable items={medicines} onChange={setMedicines} readOnly={readOnly} />
+              <div className="mt-5 border-t border-slate-200 pt-4 sm:max-w-sm">
+                <label className="portal-label">Total Amount Requested (PHP) *</label>
+                <input type="number" min="0" step="0.01" required {...register('amount')} className="portal-input" placeholder="0.00" />
+                <p className="mt-1 text-xs text-slate-500">Manually encode the financial assistance amount requested for this medicine case.</p>
+              </div>
+            </section>
           ) : (
             <section className="rounded-lg border border-slate-200 bg-white p-4"><EncodingSectionHeader number="4" title="Assistance Amount" description="Enter the amount for the guarantee letter or cash assistance." /><div className="grid grid-cols-1 gap-4 sm:max-w-sm"><div><label className="portal-label">{amountLabelForType(caseData.assistanceType)} *</label><input type="number" min="0" step="any" {...register('amount')} className="portal-input" placeholder="0.00" />{isOverCap && <p className="mt-1 text-xs text-amber-600">Amount exceeds {formatCurrency(amountCap)}. Ensure proper authorization.</p>}</div></div></section>
           )}

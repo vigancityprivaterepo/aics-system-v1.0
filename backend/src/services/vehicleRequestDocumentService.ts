@@ -43,6 +43,7 @@ export function generateVehicleRequestDocx(request: any) {
 
   const doc = new Docxtemplater(zip, { paragraphLoop: true, linebreaks: true, nullGetter: () => '' })
   doc.render({
+    controlNumber: request.requestNumber,
     chCC: selected('city_coaster'), chCB: selected('city_bus'), chMan: selected('manlift'),
     choth: selected('other'), chT: selected('truck'), chVan: selected('van'), chAmbu: selected('ambulance'),
     InputSpecify: request.otherVehicle ?? '',
