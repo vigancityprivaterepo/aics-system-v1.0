@@ -6,13 +6,12 @@ import { currencyFromDb, parseOptionalCurrency } from '../utils/currency.js'
 import { computeMedicineTotal } from '../utils/business.js'
 import { generateCaseCaseNumber } from '../utils/caseNumber.js'
 import { findCaseWithDetails, getApprovalSettings } from '../queries/caseQueries.js'
-import { serializeCase, portalContextFromAuditFlags, normalizeWorkflowStatus } from '../serializers/caseSerializer.js'
+import { serializeCase, normalizeWorkflowStatus } from '../serializers/caseSerializer.js'
 import { resolveApprovalAssignees } from '../services/approvalService.js'
 import { assessCaseWorkflow } from '../services/caseWorkflowService.js'
 import { assertCaseReadable, assertEditableCase, ensureRequirementRows, paramId } from '../services/caseService.js'
 import { APPROVAL_STAGE_META, APPROVAL_STAGE_ORDER } from '../types/caseTypes.js'
-import { generateClaudeFindingsDraft } from '../services/aiService.js'
-import { generateFindingsSchema, updateCaseSchema } from '../schemas/caseSchemas.js'
+import { updateCaseSchema } from '../schemas/caseSchemas.js'
 import { statusToApprovalStage } from '../services/approvalService.js'
 import { auditLog } from '../utils/auditLog.js'
 import { resetApprovalsAfterMaterialEdit, valuesDiffer } from '../services/workflowIntegrityService.js'
@@ -476,36 +475,3 @@ export async function pendingApprovalsByType(req: Request, res: Response) {
   return res.json({ byType, total, pendingStatuses })
 }
 
-export async function generateFindings(req: Request, res: Response) {
-  const caseId = paramId(req.params.id)
-  const body = generateFindingsSchema.parse(req.body ?? {})
-
-  const caseData = await findCaseWithDetails(caseId)
-  if (!caseData) throw new HttpError(404, 'Case not found')
-  assertEditableCase(caseData, req.user, 'Case findings assist')
-
-  const findings = await generateClaudeFindingsDraft({
-    assistanceType: caseData.assistanceType,
-    presentingProblem: body.presentingProblem ?? caseData.presentingProblem ?? null,
-    client: {
-      firstName: caseData.client.firstName,
-      middleName: caseData.client.middleName,
-      lastName: caseData.client.lastName,
-      dateOfBirth: caseData.client.dateOfBirth?.toISOString().slice(0, 10) ?? null,
-      sex: caseData.client.sex ?? null,
-      civilStatus: caseData.client.civilStatus ?? null,
-      barangay: caseData.client.barangay ?? null,
-      municipality: caseData.client.municipality ?? null,
-      province: caseData.client.province ?? null,
-      occupation: caseData.client.occupation ?? null,
-      contactNumber: caseData.client.contactNumber ?? null,
-      is4ps: caseData.client.is4ps,
-      isPwd: caseData.client.isPwd,
-      isSenior: caseData.client.isSenior,
-    },
-    familyComposition: caseData.familyComposition ?? [],
-    portalContext: portalContextFromAuditFlags(caseData.auditFlags),
-  })
-
-  res.json({ findings })
-}

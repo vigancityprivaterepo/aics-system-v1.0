@@ -38,9 +38,6 @@ async function start() {
   if (!env.semaphoreApiKey) {
     logger.warn('Semaphore SMS not configured; SMS delivery is disabled outside production')
   }
-  if (!env.anthropicApiKey) {
-    logger.warn('Anthropic AI findings assist disabled')
-  }
   if (env.rateLimitMode === 'memory') {
     logger.warn('Rate limiting is using in-memory storage; deploy as a single backend instance only')
   }

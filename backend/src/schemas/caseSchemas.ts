@@ -124,10 +124,6 @@ export const saveMedicinesSchema = z.object({
   })),
 })
 
-export const generateFindingsSchema = z.object({
-  presentingProblem: z.string().optional().nullable(),
-})
-
 export const patchRequirementSchema = z.object({
   isSubmitted: z.boolean(),
   notes: z.string().optional().nullable(),

@@ -58,10 +58,9 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false }) 
   const [family, setFamily] = useState(caseData.familyComposition || [])
   const [medicines, setMedicines] = useState(caseData.medicines || [])
   const [saving, setSaving] = useState(false)
-  const [analyzingFindings, setAnalyzingFindings] = useState(false)
   const [narrativeOptions, setNarrativeOptions] = useState([])
 
-  const { control, register, handleSubmit, watch, setValue } = useForm({
+  const { control, register, handleSubmit, watch } = useForm({
     defaultValues: {
       dateOfAssessment: caseData.dateOfAssessment || new Date().toISOString().slice(0, 10),
       socialWorkerName: caseData.socialWorkerName || '',
@@ -95,29 +94,6 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false }) 
   const updateFamilyMember = (index, field, value) =>
     setFamily(family.map((member, idx) => (idx === index ? { ...member, [field]: value } : member)))
 
-  const handleAnalyzeFindings = async () => {
-    const presentingProblem = String(watch('presentingProblem') ?? '').trim()
-    if (!presentingProblem) {
-      toast.error('Enter the presenting problem first.')
-      return
-    }
-
-    setAnalyzingFindings(true)
-    try {
-      const res = await api.post(`/cases/${caseData.id}/generate-findings`, { presentingProblem })
-      const nextFindings = String(res.data?.findings ?? '').trim()
-      if (!nextFindings) {
-        toast.error('Claude did not return any findings draft.')
-        return
-      }
-      setValue('findings', nextFindings, { shouldDirty: true, shouldTouch: true })
-      toast.success('Findings draft generated')
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to generate findings draft')
-    } finally {
-      setAnalyzingFindings(false)
-    }
-  }
 
   const onSave = async (data) => {
     setSaving(true)
@@ -284,7 +260,6 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false }) 
                 </div>
               )}
               <div>
-                {!readOnly && <div className="mb-2 flex justify-end"><button type="button" onClick={handleAnalyzeFindings} disabled={analyzingFindings} className="portal-button-secondary text-xs">{analyzingFindings ? 'Generating...' : 'Generate Findings Draft'}</button></div>}
                 <Controller name="presentingProblem" control={control} render={({ field }) => <NarrativePresetField label="Presenting Problem *" value={field.value} onChange={field.onChange} options={narrativeOptions.filter((item) => item.field === 'presenting_problem')} readOnly={readOnly} minHeightClass="min-h-[7rem]" placeholder="State the client's concern or reason for seeking assistance." />} />
               </div>
               <div>

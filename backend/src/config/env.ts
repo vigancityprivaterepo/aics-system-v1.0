@@ -76,8 +76,6 @@ export const env = {
   smtpFrom: process.env.SMTP_FROM ?? 'AICS Vigan City <noreply@vigancity.gov.ph>',
   semaphoreApiKey: process.env.SEMAPHORE_API_KEY ?? '',
   semaphoreSenderId: process.env.SEMAPHORE_SENDER_ID ?? 'AICS',
-  anthropicApiKey: process.env.ANTHROPIC_API_KEY ?? '',
-  anthropicModel: process.env.ANTHROPIC_MODEL ?? 'claude-sonnet-4-6',
   trustProxy: parseTrustProxy(process.env.TRUST_PROXY ?? (isProduction ? 'true' : 'false')),
   rateLimitMode: process.env.RATE_LIMIT_MODE ?? 'memory',
   openSignBaseUrl: process.env.OPENSIGN_BASE_URL ?? '',

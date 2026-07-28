@@ -3,7 +3,7 @@ import { Router } from 'express'
 import multer from 'multer'
 import { asyncHandler } from '../utils/asyncHandler.js'
 import { requireAuth } from '../middleware/auth.js'
-import { listCases, getCase, createCase, updateCase, deleteCase, pendingApprovalsByType, generateFindings } from '../controllers/caseController.js'
+import { listCases, getCase, createCase, updateCase, deleteCase, pendingApprovalsByType } from '../controllers/caseController.js'
 import { updateStatus } from '../controllers/caseApprovalController.js'
 import { caseStudyDocx, caseStudyHtml, caseStudyPdf, guaranteeLetterPdf, guaranteeLetterDocx, endorsementDocx, acknowledgementDocx } from '../controllers/caseDocumentController.js'
 import { sendGuaranteeLetterToOpenSign } from '../controllers/openSignController.js'
@@ -35,7 +35,6 @@ router.delete('/:id', asyncHandler(deleteCase))
 
 // ── Workflow ────────────────────────────────────────────────────────────────
 router.patch('/:id/status', asyncHandler(updateStatus))
-router.post('/:id/generate-findings', asyncHandler(generateFindings))
 
 // ── Requirements ────────────────────────────────────────────────────────────
 router.get('/:id/requirements', asyncHandler(getRequirements))
