@@ -1,11 +1,9 @@
 import { useState } from 'react'
-import MedicineTable from '../../../components/MedicineTable'
 import { PillIcon } from '../../../components/ui/Icons'
 import api from '../../../lib/api'
 import toast from 'react-hot-toast'
 
 export default function StepMedicineEncode({ caseData, onUpdate }) {
-  const [medicines, setMedicines] = useState(caseData.medicines || [])
   const [conformeName, setConformeName] = useState(caseData.medicineDetails?.conformeName || '')
   const [conformeRelationship, setConformeRelationship] = useState(caseData.medicineDetails?.conformeRelationship || '')
   const [saving, setSaving] = useState(false)
@@ -19,22 +17,14 @@ export default function StepMedicineEncode({ caseData, onUpdate }) {
       !normalizedConformeName && (normalizedRelationship === 'self' || !normalizedRelationship)
         ? 'personal'
         : 'proxy'
-    const medicinePayload = {
-      medicines,
-      ...(caseData.amount !== null && caseData.amount !== undefined && caseData.amount !== ''
-        ? { amount: caseData.amount }
-        : {}),
-    }
     try {
-      const medicineRes = await api.post(`/cases/${caseData.id}/medicines`, medicinePayload)
       const caseRes = await api.put(`/cases/${caseData.id}`, {
         medicineTemplateType: templateType,
         medicineConformeName: normalizedConformeName,
         medicineConformeRelationship: normalizedRelationshipValue,
       })
       onUpdate({
-        medicines: medicineRes.data?.medicines ?? medicines,
-        amount: medicineRes.data?.totalAmount ?? caseRes.data?.amount ?? caseData.amount,
+        amount: caseRes.data?.amount ?? caseData.amount,
         medicineDetails: {
           ...(caseData.medicineDetails || {}),
           templateType,
@@ -43,15 +33,15 @@ export default function StepMedicineEncode({ caseData, onUpdate }) {
         },
         proxyName: normalizedConformeName || null,
         proxyRelationship: normalizedRelationshipValue || null,
-        status: caseRes.data?.status ?? medicineRes.data?.status ?? caseData.status,
+        status: caseRes.data?.status ?? caseData.status,
       })
-      toast.success((medicineRes.data?.approvalsReset || caseRes.data?.approvalsReset) ? 'Medicine details saved. Case returned to encoding for re-review.' : 'Medicine details saved')
+      toast.success(caseRes.data?.approvalsReset ? 'Medicine requester saved. Case returned to encoding for re-review.' : 'Medicine requester saved')
     } catch (err) {
       if (err.response) {
-        toast.error(err.response?.data?.message || 'Failed to save medicines')
+        toast.error(err.response?.data?.message || 'Failed to save medicine requester')
         return
       }
-      onUpdate({ medicines, amount: caseData.amount })
+      onUpdate({ amount: caseData.amount })
       toast.error(err.response?.data?.message || 'Failed to save changes')
     } finally {
       setSaving(false)
@@ -64,11 +54,6 @@ export default function StepMedicineEncode({ caseData, onUpdate }) {
         <PillIcon className="h-4 w-4 text-brand-green" />
         Medicine Encoding
       </div>
-
-      <MedicineTable
-        items={medicines}
-        onChange={setMedicines}
-      />
 
       <div className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5 space-y-4">
 
@@ -97,8 +82,8 @@ export default function StepMedicineEncode({ caseData, onUpdate }) {
       </div>
 
       <div className="flex justify-end">
-        <button onClick={handleSave} disabled={saving || medicines.length === 0} className="portal-button-primary" id="btn-save-medicines">
-          {saving ? 'Saving...' : 'Save Medicines'}
+        <button onClick={handleSave} disabled={saving} className="portal-button-primary" id="btn-save-medicines">
+          {saving ? 'Saving...' : 'Save Medicine Requester'}
         </button>
       </div>
     </div>
