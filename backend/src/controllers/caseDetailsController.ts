@@ -9,6 +9,8 @@ import { updateBurialSchema, updateHospitalSchema, updateMedicalSchema, updateEy
 import { removeStoredUpload, validateStoredUpload } from '../services/uploadValidation.js'
 import { resetApprovalsAfterMaterialEdit, valuesDiffer } from '../services/workflowIntegrityService.js'
 
+const HOSPITAL_MEDICAL_GL_MAX_AMOUNT = 30000
+
 function addChangedField(changedFields: string[], label: string, currentValue: unknown, nextValue: unknown) {
   if (valuesDiffer(currentValue ?? null, nextValue ?? null)) {
     changedFields.push(label)
@@ -250,8 +252,8 @@ export async function updateHospital(req: Request, res: Response) {
     body.amount == null || (typeof body.amount === 'string' && body.amount.trim() === '')
       ? currencyFromDb(caseData.amount)
       : parseCurrencyAmount(body.amount)
-  if (amount > env.hospitalGlMaxAmount) {
-    throw new HttpError(400, `Hospital amount cannot exceed PHP ${env.hospitalGlMaxAmount.toFixed(2)}`)
+  if (amount > HOSPITAL_MEDICAL_GL_MAX_AMOUNT) {
+    throw new HttpError(400, `Hospital amount cannot exceed PHP ${HOSPITAL_MEDICAL_GL_MAX_AMOUNT.toFixed(2)}`)
   }
 
   const guaranteeLetterUrl = `${env.apiBaseUrl}/api/cases/${caseData.id}/guarantee-letter/pdf`
@@ -356,8 +358,8 @@ export async function updateMedical(req: Request, res: Response) {
     body.amount == null || (typeof body.amount === 'string' && body.amount.trim() === '')
       ? currencyFromDb(caseData.amount)
       : parseCurrencyAmount(body.amount)
-  if (amount > env.hospitalGlMaxAmount) {
-    throw new HttpError(400, `Medical amount cannot exceed PHP ${env.hospitalGlMaxAmount.toFixed(2)}`)
+  if (amount > HOSPITAL_MEDICAL_GL_MAX_AMOUNT) {
+    throw new HttpError(400, `Medical amount cannot exceed PHP ${HOSPITAL_MEDICAL_GL_MAX_AMOUNT.toFixed(2)}`)
   }
 
   const guaranteeLetterUrl = `${env.apiBaseUrl}/api/cases/${caseData.id}/guarantee-letter/pdf`

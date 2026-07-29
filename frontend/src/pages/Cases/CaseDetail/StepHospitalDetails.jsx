@@ -6,7 +6,7 @@ import { HospitalIcon } from '../../../components/ui/Icons'
 import HospitalFacilityPicker from '../../../components/HospitalFacilityPicker'
 import { formatCurrency } from '../../../lib/utils'
 
-const GL_MAX = 10000
+const GL_MAX = 30000
 
 export default function StepHospitalDetails({ caseData, onUpdate }) {
   const [saving, setSaving] = useState(false)

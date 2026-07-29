@@ -11,6 +11,7 @@ const defaultMember = { name: '', age: '', relationship: '', civilStatus: '', oc
 const CIVIL_STATUS_OPTIONS = ['Single', 'Married', 'Widowed', 'Separated', 'Annulled']
 const RELATIONSHIP_OPTIONS = ['Spouse', 'Son', 'Daughter', 'Father', 'Mother', 'Brother', 'Sister', 'Grandson', 'Granddaughter', 'Grandfather', 'Grandmother', 'Uncle', 'Aunt', 'Nephew', 'Niece', 'Son-in-Law', 'Daughter-in-Law', 'Father-in-Law', 'Mother-in-Law', 'Other']
 const GUARANTEE_LETTER_MAX = 10000
+const HOSPITAL_MEDICAL_GL_MAX = 30000
 const PLAIN_AICS_MAX = 35000
 
 function normalizeNarrativeText(value) {
@@ -26,7 +27,10 @@ function normalizeNarrativeText(value) {
 }
 
 function resolveAmountCap(assistanceType) {
-  if (['burial', 'hospital', 'medical', 'eyeglass'].includes(assistanceType)) {
+  if (['hospital', 'medical'].includes(assistanceType)) {
+    return HOSPITAL_MEDICAL_GL_MAX
+  }
+  if (['burial', 'eyeglass'].includes(assistanceType)) {
     return GUARANTEE_LETTER_MAX
   }
   if (assistanceType === 'plain') {
