@@ -310,6 +310,7 @@ function buildRenderData(caseData: any): Record<string, any> {
   const medicineConformeName = textOrNull((medicine as any).conformeName)
   const medicineConformeRelationship = textOrNull((medicine as any).conformeRelationship)
   const hasMedicineRequestingParty = caseData.assistanceType === 'medicine' && Boolean(medicineConformeName)
+  const shouldBlankMedicineRequestor = caseData.assistanceType === 'medicine' && !medicineConformeName && !medicineConformeRelationship
   const allowSelfRelationship =
     !((caseData.assistanceType === 'hospital' && hospital.templateType === 'proxy')
       || (caseData.assistanceType === 'medicine' && (medicineTemplateType === 'proxy' || hasMedicineRequestingParty))
@@ -394,8 +395,8 @@ function buildRenderData(caseData: any): Record<string, any> {
   const isBurial = isAssistanceType('burial')
   const isHospital = isAssistanceType('hospital')
   const isSubsequentAvailment = Boolean((caseData as any).isSubsequentAvailment)
-  const resolvedRequestingParty = resolvedConformeName
-  const resolvedRelationshipToBeneficiary = resolvedRelationship
+  const resolvedRequestingParty = shouldBlankMedicineRequestor ? '' : resolvedConformeName
+  const resolvedRelationshipToBeneficiary = shouldBlankMedicineRequestor ? '' : resolvedRelationship
   const isSelfRequest = ['self', '-', ''].includes(String(resolvedRelationshipToBeneficiary).trim().toLowerCase())
   const resolvedRequestingPartyPhrase = isSelfRequest
     ? resolvedBeneficiaryName
@@ -1113,6 +1114,10 @@ export async function generatePlainCaseStudyDocx(caseData: any): Promise<Buffer>
   const template = loadFirstAvailableTemplate(PLAIN_CASE_STUDY_CANDIDATES)
   return renderDoc(template, buildRenderData(caseData))
 }
+
+
+
+
 
 
 
