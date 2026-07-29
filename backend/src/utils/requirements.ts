@@ -10,15 +10,15 @@ export const REQUIREMENT_DEFINITIONS: Record<AssistanceType, Array<{ key: string
     { key: 'cho_cert', label: 'Certificate of No Available Medicine as Prescribed' },
   ],
   burial: [
-    { key: 'clinical_abstract', label: 'Clinical Abstract' },
-    { key: 'final_bill', label: 'Final Bill' },
-    { key: 'promissory_note', label: 'Promissory Note' },
+    { key: 'death_cert', label: 'Certified True Copy of Death Certificate' },
+    { key: 'billing_stmt', label: 'Billing Statement/Statement of Account' },
     { key: 'indigency', label: 'Certificate of Indigency' },
     { key: 'id_copy', label: 'Photocopy of ID' },
   ],
   hospital: [
-    { key: 'death_cert', label: 'Certified True Copy of Death Certificate' },
-    { key: 'billing_stmt', label: 'Billing Statement/Statement of Account' },
+    { key: 'clinical_abstract', label: 'Clinical Abstract' },
+    { key: 'final_bill', label: 'Final Bill' },
+    { key: 'promissory_note', label: 'Promissory Note' },
     { key: 'indigency', label: 'Certificate of Indigency' },
     { key: 'id_copy', label: 'Photocopy of ID' },
   ],
@@ -109,4 +109,5 @@ export function requirementLabelsByKey(type: AssistanceType): Record<string, str
 export function emptyRequirementMap(type: AssistanceType): Record<string, boolean> {
   return Object.fromEntries(REQUIREMENT_DEFINITIONS[type].map((r) => [r.key, false]))
 }
+
 

@@ -12,16 +12,16 @@ const MEDICINE_REQUIREMENTS = [
 ]
 
 const BURIAL_REQUIREMENTS = [
-  { key: 'clinical_abstract', label: 'Clinical Abstract' },
-  { key: 'final_bill', label: 'Final Bill' },
-  { key: 'promissory_note', label: 'Promissory Note' },
+  { key: 'death_cert', label: 'Certified True Copy of Death Certificate' },
+  { key: 'billing_stmt', label: 'Billing Statement/Statement of Account' },
   { key: 'indigency', label: 'Certificate of Indigency' },
   { key: 'id_copy', label: 'Photocopy of ID' },
 ]
 
 const HOSPITAL_REQUIREMENTS = [
-  { key: 'death_cert', label: 'Certified True Copy of Death Certificate' },
-  { key: 'billing_stmt', label: 'Billing Statement/Statement of Account' },
+  { key: 'clinical_abstract', label: 'Clinical Abstract' },
+  { key: 'final_bill', label: 'Final Bill' },
+  { key: 'promissory_note', label: 'Promissory Note' },
   { key: 'indigency', label: 'Certificate of Indigency' },
   { key: 'id_copy', label: 'Photocopy of ID' },
 ]
@@ -56,19 +56,19 @@ const REQUIREMENTS_BY_TYPE = {
 }
 
 const CGV_REQUIREMENT_ROWS = [
-  { no: 1, medicine: { key: 'personal_letter', label: 'Letter Request' }, medical: { key: 'med_request', label: 'Request Form' }, burial: { key: 'clinical_abstract', label: 'Clinical Abstract' }, hospital: { key: 'death_cert', label: 'Certified True Copy of Death Certificate' }, eyeglass: null },
-  { no: 2, medicine: { key: 'medical_cert', label: 'Medical Certificate' }, medical: { key: 'medical_cert', label: 'Medical Certificate' }, burial: { key: 'final_bill', label: 'Final Bill' }, hospital: { key: 'billing_stmt', label: 'Billing Statement/Statement of Account' }, eyeglass: null },
-  { no: 3, medicine: { key: 'prescription', label: 'Prescription' }, medical: { key: 'price_quotation', label: 'Price Quotation' }, burial: { key: 'promissory_note', label: 'Promissory Note' }, hospital: { key: 'indigency', label: 'Certificate of Indigency' }, eyeglass: { key: 'prescription', label: 'Prescription' } },
-  { no: 4, medicine: { key: 'indigency', label: 'Certificate of Indigency' }, medical: { key: 'indigency', label: 'Certificate of Indigency' }, burial: { key: 'indigency', label: 'Certificate of Indigency' }, hospital: { key: 'id_copy', label: 'Photocopy of ID' }, eyeglass: { key: 'indigency', label: 'Certificate of Indigency' } },
-  { no: 5, medicine: { key: 'id_copy', label: 'Photocopy of ID' }, medical: { key: 'id_copy', label: 'Photocopy of ID' }, burial: { key: 'id_copy', label: 'Photocopy of ID' }, hospital: null, eyeglass: { key: 'id_copy', label: 'Photocopy of ID' } },
+  { no: 1, medicine: { key: 'personal_letter', label: 'Letter Request' }, medical: { key: 'med_request', label: 'Request Form' }, hospital: { key: 'clinical_abstract', label: 'Clinical Abstract' }, burial: { key: 'death_cert', label: 'Certified True Copy of Death Certificate' }, eyeglass: null },
+  { no: 2, medicine: { key: 'medical_cert', label: 'Medical Certificate' }, medical: { key: 'medical_cert', label: 'Medical Certificate' }, hospital: { key: 'final_bill', label: 'Final Bill' }, burial: { key: 'billing_stmt', label: 'Billing Statement/Statement of Account' }, eyeglass: null },
+  { no: 3, medicine: { key: 'prescription', label: 'Prescription' }, medical: { key: 'price_quotation', label: 'Price Quotation' }, hospital: { key: 'promissory_note', label: 'Promissory Note' }, burial: { key: 'indigency', label: 'Certificate of Indigency' }, eyeglass: { key: 'prescription', label: 'Prescription' } },
+  { no: 4, medicine: { key: 'indigency', label: 'Certificate of Indigency' }, medical: { key: 'indigency', label: 'Certificate of Indigency' }, hospital: { key: 'indigency', label: 'Certificate of Indigency' }, burial: { key: 'id_copy', label: 'Photocopy of ID' }, eyeglass: { key: 'indigency', label: 'Certificate of Indigency' } },
+  { no: 5, medicine: { key: 'id_copy', label: 'Photocopy of ID' }, medical: { key: 'id_copy', label: 'Photocopy of ID' }, hospital: { key: 'id_copy', label: 'Photocopy of ID' }, burial: null, eyeglass: { key: 'id_copy', label: 'Photocopy of ID' } },
   { no: 6, medicine: { key: 'cho_cert', label: 'Certificate of No Available Medicine as Prescribed' }, medical: null, burial: null, hospital: null, eyeglass: null },
 ]
 
 const CGV_TYPES = [
   { key: 'medicine', label: 'Medicine' },
   { key: 'medical', label: 'Medical' },
-  { key: 'burial', label: 'Burial' },
   { key: 'hospital', label: 'Hospital' },
+  { key: 'burial', label: 'Burial' },
   { key: 'eyeglass', label: 'Eyeglass' },
 ]
 
@@ -228,5 +228,6 @@ export default function RequirementsChecklist({ assistanceType, requirements = {
     </div>
   )
 }
+
 
 
