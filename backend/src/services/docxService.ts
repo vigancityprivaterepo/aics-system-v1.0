@@ -303,6 +303,10 @@ function buildRenderData(caseData: any): Record<string, any> {
   const resolvedBeneficiaryAddress = caseData.assistanceType === 'burial' ? resolvedDeceasedAddress : fmt(address)
   const resolvedProxyName = fmt(fullName)
   const resolvedProxyNameList = fmt(clientName)
+  const burialConformeName = textOrNull(burial.conformeName)
+  const burialConformeRelationship = textOrNull(burial.conformeRelationship)
+  const resolvedBurialRequestorName = caseData.assistanceType === 'burial' ? fmt(burialConformeName ?? textOrNull(fullName)) : resolvedProxyName
+  const resolvedBurialRequestorNameList = caseData.assistanceType === 'burial' ? resolvedBurialRequestorName : resolvedProxyNameList
   const medicineConformeName = textOrNull((medicine as any).conformeName)
   const medicineConformeRelationship = textOrNull((medicine as any).conformeRelationship)
   const hasMedicineRequestingParty = caseData.assistanceType === 'medicine' && Boolean(medicineConformeName)
@@ -316,7 +320,7 @@ function buildRenderData(caseData: any): Record<string, any> {
     ?? medicineConformeName
     ?? textOrNull(hospital.conformeName)
     ?? textOrNull(medical.conformeName)
-    ?? textOrNull(burial.conformeName)
+    ?? burialConformeName
     ?? textOrNull(hospital.patientName)
     ?? textOrNull(fullName)
   )
@@ -325,7 +329,7 @@ function buildRenderData(caseData: any): Record<string, any> {
     ?? medicineConformeRelationship
     ?? textOrNull(hospital.conformeRelationship)
     ?? textOrNull(medical.conformeRelationship)
-    ?? textOrNull(burial.conformeRelationship)
+    ?? burialConformeRelationship
     ?? (hasMedicineRequestingParty ? 'N/A' : allowSelfRelationship ? 'Self' : null)
   )
   const resolvedDateOfAssessment = formatLongDate(
@@ -548,11 +552,11 @@ function buildRenderData(caseData: any): Record<string, any> {
     fullName:            resolvedBeneficiaryName,
     beneficiaryName:     resolvedBeneficiaryName,
     beneficiaryAddress:  resolvedBeneficiaryAddress,
-    proxyName:           resolvedProxyName,
-    proxyClientName:     resolvedProxyNameList,
+    proxyName:           resolvedBurialRequestorName,
+    proxyClientName:     resolvedBurialRequestorNameList,
     proxyRelationship:   resolvedRelationship,
-    requestorName:       resolvedProxyName,
-    requestorClientName: resolvedProxyNameList,
+    requestorName:       resolvedBurialRequestorName,
+    requestorClientName: resolvedBurialRequestorNameList,
     address:             resolvedAddress,
     age:                 caseData.assistanceType === 'burial' ? resolvedDeceasedAge : calcAge(c.dateOfBirth),
     dateOfBirth:         caseData.assistanceType === 'burial' ? '-' : fmt(c.dateOfBirth),
@@ -1109,5 +1113,7 @@ export async function generatePlainCaseStudyDocx(caseData: any): Promise<Buffer>
   const template = loadFirstAvailableTemplate(PLAIN_CASE_STUDY_CANDIDATES)
   return renderDoc(template, buildRenderData(caseData))
 }
+
+
 
 

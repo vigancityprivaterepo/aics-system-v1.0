@@ -221,8 +221,8 @@ export default function StepReports({ caseData }) {
           </div>
           <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
             <p className="portal-label">Proxy / Requestor</p>
-            <p className="mt-1 font-semibold text-slate-800">{caseData.proxyName || `${caseData.client?.firstName || ''} ${caseData.client?.lastName || ''}`.trim() || 'Not recorded'}</p>
-            <p className="mt-1 text-xs text-slate-500">{caseData.proxyRelationship || 'Relationship not recorded'}</p>
+            <p className="mt-1 font-semibold text-slate-800">{caseData.burialDetails?.conformeName || caseData.proxyName || `${caseData.client?.firstName || ''} ${caseData.client?.lastName || ''}`.trim() || 'Not recorded'}</p>
+            <p className="mt-1 text-xs text-slate-500">{caseData.burialDetails?.conformeRelationship || caseData.proxyRelationship || 'Relationship not recorded'}</p>
           </div>
         </div>
       )}
@@ -268,3 +268,4 @@ export default function StepReports({ caseData }) {
     </div>
   )
 }
+

@@ -207,8 +207,8 @@ export default function CaseDetailLayout() {
             <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm">
               <p className="font-semibold text-slate-800">Beneficiary: {caseData.beneficiaryName || 'No deceased name recorded'}</p>
               <p className="mt-1 text-slate-500">
-                Proxy / Requestor: {caseData.proxyName || `${caseData.client?.firstName || ''} ${caseData.client?.lastName || ''}`.trim() || 'Not recorded'}
-                {caseData.proxyRelationship ? ` (${caseData.proxyRelationship})` : ''}
+                Proxy / Requestor: {caseData.burialDetails?.conformeName || caseData.proxyName || `${caseData.client?.firstName || ''} ${caseData.client?.lastName || ''}`.trim() || 'Not recorded'}
+                {(caseData.burialDetails?.conformeRelationship || caseData.proxyRelationship) ? ` (${caseData.burialDetails?.conformeRelationship || caseData.proxyRelationship})` : ''}
               </p>
             </div>
           )}
@@ -314,3 +314,6 @@ export default function CaseDetailLayout() {
     </div>
   )
 }
+
+
+
