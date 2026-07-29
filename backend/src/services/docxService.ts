@@ -409,9 +409,11 @@ function buildRenderData(caseData: any): Record<string, any> {
   const resolvedRequestingParty = shouldBlankRequestor ? '' : resolvedConformeName
   const resolvedRelationshipToBeneficiary = shouldBlankRequestor ? '' : resolvedRelationship
   const isSelfRequest = ['self', '-', ''].includes(String(resolvedRelationshipToBeneficiary).trim().toLowerCase())
-  const resolvedRequestingPartyPhrase = isSelfRequest
-    ? resolvedBeneficiaryName
-    : `${resolvedRequestingParty}, the ${resolvedRelationshipToBeneficiary} of the beneficiary,`
+  const resolvedRequestingPartyPhrase = shouldBlankRequestor
+    ? 'The beneficiary'
+    : isSelfRequest
+      ? resolvedBeneficiaryName
+      : `${resolvedRequestingParty}, the ${resolvedRelationshipToBeneficiary} of the beneficiary,`
   const resolvedServiceProviderName = fmt(
     caseData.assistanceType === 'burial' ? textOrNull(burial.funeralHome)
     : caseData.assistanceType === 'hospital' ? textOrNull(hospital.hospitalName)
@@ -516,15 +518,21 @@ function buildRenderData(caseData: any): Record<string, any> {
     hospitalDocsCheckBox: checkbox(isBurial),
     reqMedicineLetterRequest: checkbox(isMedicine && isReqSubmitted('personal_letter')),
     reqMedicalRequestForm: checkbox(isMedical && isReqSubmitted('med_request')),
+    reqhospitalClinicalAbstract: checkbox(isHospital && isReqSubmitted('clinical_abstract')),
+    reqHospitalClinicalAbstract: checkbox(isHospital && isReqSubmitted('clinical_abstract')),
     reqBurialClinicalAbstract: checkbox(isHospital && isReqSubmitted('clinical_abstract')),
+    reqBurialDeathCertificate: checkbox(isBurial && isReqSubmitted('death_cert')),
     reqHospitalDeathCertificate: checkbox(isBurial && isReqSubmitted('death_cert')),
     reqMedicineMedicalCertificate: checkbox(isMedicine && isReqSubmitted('medical_cert')),
     reqMedicalMedicalCertificate: checkbox(isMedical && isReqSubmitted('medical_cert')),
+    reqHospitalFinalBill: checkbox(isHospital && isReqSubmitted('final_bill')),
     reqBurialFinalBill: checkbox(isHospital && isReqSubmitted('final_bill')),
+    reqBurialBillingStatement: checkbox(isBurial && isReqSubmitted('billing_stmt', 'hospital_bill')),
     reqHospitalBillingStatement: checkbox(isBurial && isReqSubmitted('billing_stmt', 'hospital_bill')),
     reqMedicinePrescription: checkbox(isMedicine && isReqSubmitted('prescription')),
     reqMedicineEyeglassCertificate: checkbox(isAssistanceType('eyeglass') && isReqSubmitted('prescription')),
     reqMedicalPriceQuotation: checkbox(isMedical && isReqSubmitted('price_quotation')),
+    reqHospitalPromissoryNote: checkbox(isHospital && isReqSubmitted('promissory_note')),
     reqBurialPromissoryNote: checkbox(isHospital && isReqSubmitted('promissory_note')),
     reqHospitalCertificateIndigency: checkbox(isBurial && isReqSubmitted('indigency')),
     reqMedicineCertificateIndigency: checkbox(isMedicine && isReqSubmitted('indigency')),
