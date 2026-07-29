@@ -305,31 +305,42 @@ function buildRenderData(caseData: any): Record<string, any> {
   const resolvedProxyNameList = fmt(clientName)
   const burialConformeName = textOrNull(burial.conformeName)
   const burialConformeRelationship = textOrNull(burial.conformeRelationship)
+  const hospitalConformeName = textOrNull(hospital.conformeName)
+  const hospitalConformeRelationship = textOrNull(hospital.conformeRelationship)
+  const medicalConformeName = textOrNull(medical.conformeName)
+  const medicalConformeRelationship = textOrNull(medical.conformeRelationship)
+  const eyeglassConformeName = textOrNull((eyeglass as any).conformeName)
+  const eyeglassConformeRelationship = textOrNull((eyeglass as any).conformeRelationship)
   const resolvedBurialRequestorName = caseData.assistanceType === 'burial' ? fmt(burialConformeName ?? textOrNull(fullName)) : resolvedProxyName
   const resolvedBurialRequestorNameList = caseData.assistanceType === 'burial' ? resolvedBurialRequestorName : resolvedProxyNameList
   const medicineConformeName = textOrNull((medicine as any).conformeName)
   const medicineConformeRelationship = textOrNull((medicine as any).conformeRelationship)
   const hasMedicineRequestingParty = caseData.assistanceType === 'medicine' && Boolean(medicineConformeName)
-  const shouldBlankMedicineRequestor = caseData.assistanceType === 'medicine' && !medicineConformeName && !medicineConformeRelationship
+  const shouldBlankRequestor =
+    (caseData.assistanceType === 'medicine' && !medicineConformeName && !medicineConformeRelationship)
+    || (caseData.assistanceType === 'hospital' && !hospitalConformeName && !hospitalConformeRelationship)
+    || (caseData.assistanceType === 'medical' && !medicalConformeName && !medicalConformeRelationship)
+    || (caseData.assistanceType === 'burial' && !burialConformeName && !burialConformeRelationship)
+    || (caseData.assistanceType === 'eyeglass' && !eyeglassConformeName && !eyeglassConformeRelationship)
   const allowSelfRelationship =
     !((caseData.assistanceType === 'hospital' && hospital.templateType === 'proxy')
       || (caseData.assistanceType === 'medicine' && (medicineTemplateType === 'proxy' || hasMedicineRequestingParty))
       || (caseData.assistanceType === 'medical' && medicalTemplateType === 'proxy')
       || (caseData.assistanceType === 'eyeglass' && eyeglassTemplateType === 'proxy'))
   const resolvedConformeName = fmt(
-    textOrNull((eyeglass as any).conformeName)
+    eyeglassConformeName
     ?? medicineConformeName
-    ?? textOrNull(hospital.conformeName)
-    ?? textOrNull(medical.conformeName)
+    ?? hospitalConformeName
+    ?? medicalConformeName
     ?? burialConformeName
     ?? textOrNull(hospital.patientName)
     ?? textOrNull(fullName)
   )
   const resolvedRelationship = fmt(
-    textOrNull((eyeglass as any).conformeRelationship)
+    eyeglassConformeRelationship
     ?? medicineConformeRelationship
-    ?? textOrNull(hospital.conformeRelationship)
-    ?? textOrNull(medical.conformeRelationship)
+    ?? hospitalConformeRelationship
+    ?? medicalConformeRelationship
     ?? burialConformeRelationship
     ?? (hasMedicineRequestingParty ? 'N/A' : allowSelfRelationship ? 'Self' : null)
   )
@@ -395,8 +406,8 @@ function buildRenderData(caseData: any): Record<string, any> {
   const isBurial = isAssistanceType('burial')
   const isHospital = isAssistanceType('hospital')
   const isSubsequentAvailment = Boolean((caseData as any).isSubsequentAvailment)
-  const resolvedRequestingParty = shouldBlankMedicineRequestor ? '' : resolvedConformeName
-  const resolvedRelationshipToBeneficiary = shouldBlankMedicineRequestor ? '' : resolvedRelationship
+  const resolvedRequestingParty = shouldBlankRequestor ? '' : resolvedConformeName
+  const resolvedRelationshipToBeneficiary = shouldBlankRequestor ? '' : resolvedRelationship
   const isSelfRequest = ['self', '-', ''].includes(String(resolvedRelationshipToBeneficiary).trim().toLowerCase())
   const resolvedRequestingPartyPhrase = isSelfRequest
     ? resolvedBeneficiaryName
@@ -553,11 +564,11 @@ function buildRenderData(caseData: any): Record<string, any> {
     fullName:            resolvedBeneficiaryName,
     beneficiaryName:     resolvedBeneficiaryName,
     beneficiaryAddress:  resolvedBeneficiaryAddress,
-    proxyName:           resolvedBurialRequestorName,
-    proxyClientName:     resolvedBurialRequestorNameList,
-    proxyRelationship:   resolvedRelationship,
-    requestorName:       resolvedBurialRequestorName,
-    requestorClientName: resolvedBurialRequestorNameList,
+    proxyName:           resolvedRequestingParty,
+    proxyClientName:     resolvedRequestingParty,
+    proxyRelationship:   resolvedRelationshipToBeneficiary,
+    requestorName:       resolvedRequestingParty,
+    requestorClientName: resolvedRequestingParty,
     address:             resolvedAddress,
     age:                 caseData.assistanceType === 'burial' ? resolvedDeceasedAge : calcAge(c.dateOfBirth),
     dateOfBirth:         caseData.assistanceType === 'burial' ? '-' : fmt(c.dateOfBirth),
@@ -648,7 +659,7 @@ function buildRenderData(caseData: any): Record<string, any> {
     intermitentPlace:    fmt(burial.intermentPlace),
     intermentPlace:      fmt(burial.intermentPlace),
     ConformeName:        resolvedConformeName,
-    relationship:        resolvedRelationship,
+    relationship:        resolvedRelationshipToBeneficiary,
     Relationship:        resolvedRelationship,
     glDate:              new Date().toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' }),
     dateToday:           new Date().toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' }),
@@ -711,7 +722,7 @@ function buildRenderData(caseData: any): Record<string, any> {
       : hospital.templateType !== 'proxy'
     ) ? 'Yes' : 'No',
     conformeName:        resolvedConformeName,
-    conformeRelationship: resolvedRelationship,
+    conformeRelationship: resolvedRelationshipToBeneficiary,
     heShe:               activePronouns.heShe,
     hisHer:              activePronouns.hisHer,
     himHer:              activePronouns.himHer,
@@ -1114,11 +1125,4 @@ export async function generatePlainCaseStudyDocx(caseData: any): Promise<Buffer>
   const template = loadFirstAvailableTemplate(PLAIN_CASE_STUDY_CANDIDATES)
   return renderDoc(template, buildRenderData(caseData))
 }
-
-
-
-
-
-
-
 
