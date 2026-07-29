@@ -354,14 +354,14 @@ export default function ClientProfile() {
         Back to Clients
       </button>
 
-      <div className="mb-4 flex items-end justify-between gap-3">
-        <div>
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div className="min-w-0 flex-1">
           <p className="portal-kicker">Client Record</p>
-          <h1 className="portal-page-title">{client.lastName}, {client.firstName} {client.middleName || ''}</h1>
+          <h1 className="portal-page-title break-words">{client.lastName}, {client.firstName} {client.middleName || ''}</h1>
           <p className="portal-page-subtitle font-mono">{client.caseNumber}</p>
         </div>
         {isAdmin && !editMode && !client.mergedIntoClient && (
-          <div className="flex gap-2">
+          <div className="flex shrink-0 justify-end gap-2 self-end sm:self-auto">
             <button
               type="button"
               onClick={startEdit}

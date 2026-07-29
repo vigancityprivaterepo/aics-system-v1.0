@@ -335,7 +335,7 @@ export default function AppLayout() {
     .join('') || 'U'
 
   return (
-    <div className="flex min-h-screen bg-[#f6f7f9]">
+    <div className="flex min-h-screen min-w-0 overflow-x-hidden bg-[#f6f7f9]">
 
       {/* ── Mobile overlay ── */}
       {sidebarOpen && (
@@ -423,17 +423,17 @@ export default function AppLayout() {
       <MyProfileModal isOpen={profileOpen} onClose={() => setProfileOpen(false)} />
 
       {/* ── Main area ── */}
-      <div className="flex flex-1 flex-col md:ml-60">
+      <div className="flex min-w-0 flex-1 flex-col md:ml-60">
 
         {/* Desktop sticky top bar */}
-        <header className="sticky top-0 z-30 hidden md:flex items-center justify-between gap-4
+        <header className="sticky top-0 z-30 hidden min-w-0 md:flex items-center justify-between gap-4
           border-b border-slate-200 bg-white/95 backdrop-blur-sm px-6 py-3 shadow-sm">
-          <div className="flex items-center gap-2 text-sm text-slate-500">
-            <span className="font-semibold text-emerald-800">Vigan AICS</span>
+          <div className="flex min-w-0 flex-1 items-center gap-2 text-sm text-slate-500">
+            <span className="shrink-0 font-semibold text-emerald-800">Vigan AICS</span>
             <span className="text-slate-300">/</span>
-            <span className="text-slate-600">Case Management System</span>
+            <span className="truncate text-slate-600">Case Management System</span>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex shrink-0 items-center gap-3">
             <span className="text-xs text-slate-400">{new Date().toLocaleDateString('en-PH', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}</span>
             <button
               onClick={() => setProfileOpen(true)}
@@ -446,7 +446,7 @@ export default function AppLayout() {
         </header>
 
         {/* Mobile top bar */}
-        <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-slate-200
+        <header className="sticky top-0 z-30 flex min-w-0 items-center gap-3 border-b border-slate-200
           bg-white px-4 py-3 shadow-sm md:hidden">
           <button
             onClick={() => setSidebarOpen(true)}
@@ -462,10 +462,12 @@ export default function AppLayout() {
         </header>
 
         {/* Page content */}
-        <main className="flex-1 p-4 md:p-6 lg:p-8">
+        <main className="min-w-0 flex-1 overflow-x-hidden p-3 sm:p-4 md:p-6 lg:p-8">
           <Outlet />
         </main>
       </div>
     </div>
   )
 }
+
+

@@ -89,7 +89,7 @@ async function downloadApiFile(endpoint, fallbackFilename) {
 function PeriodPicker({ from, to, basis, onChange, onBasisChange }) {
   return (
     <div className="flex flex-wrap items-end gap-3 lg:gap-4">
-      <div className="flex min-w-[190px] flex-col gap-2">
+      <div className="flex min-w-[150px] flex-1 flex-col gap-2 sm:flex-none">
         <label className="text-xs font-medium uppercase tracking-wide text-slate-500">Report Basis</label>
         <select
           value={basis}
@@ -103,7 +103,7 @@ function PeriodPicker({ from, to, basis, onChange, onBasisChange }) {
           ))}
         </select>
       </div>
-      <div className="flex min-w-[190px] flex-col gap-2">
+      <div className="flex min-w-[150px] flex-1 flex-col gap-2 sm:flex-none">
         <label className="text-xs font-medium uppercase tracking-wide text-slate-500">From</label>
         <input
           type="date"
@@ -113,7 +113,7 @@ function PeriodPicker({ from, to, basis, onChange, onBasisChange }) {
           className="portal-input py-2.5 text-sm"
         />
       </div>
-      <div className="flex min-w-[190px] flex-col gap-2">
+      <div className="flex min-w-[150px] flex-1 flex-col gap-2 sm:flex-none">
         <label className="text-xs font-medium uppercase tracking-wide text-slate-500">To</label>
         <input
           type="date"
@@ -878,3 +878,4 @@ export default function ReportsPage() {
     </div>
   )
 }
+

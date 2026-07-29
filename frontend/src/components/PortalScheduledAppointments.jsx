@@ -21,7 +21,7 @@ export default function PortalScheduledAppointments({ applications, className = 
   if (scheduledApplications.length === 0) return null
 
   return (
-    <div className={`min-w-[260px] flex-1 rounded-xl border border-teal-200 bg-white p-5 ${className}`}>
+    <div className={`min-w-0 flex-1 rounded-xl border border-teal-200 bg-white p-4 sm:p-5 ${className}`}>
       <p className="text-xs font-semibold uppercase tracking-[0.16em] text-teal-700">Scheduled Appointments</p>
       <p className="mt-1 text-sm text-slate-500">{scheduledApplications.length} appointment(s)</p>
       <div className="mt-4">
@@ -57,3 +57,4 @@ export default function PortalScheduledAppointments({ applications, className = 
     </div>
   )
 }
+

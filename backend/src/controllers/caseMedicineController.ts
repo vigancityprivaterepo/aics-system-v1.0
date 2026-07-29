@@ -5,6 +5,7 @@ import { HttpError } from '../utils/httpError.js'
 import { assertCaseReadable, assertEditableCase, paramId } from '../services/caseService.js'
 import { saveMedicinesSchema } from '../schemas/caseSchemas.js'
 import { resetApprovalsAfterMaterialEdit, valuesDiffer } from '../services/workflowIntegrityService.js'
+import { currencyFromDb, parseOptionalCurrency, roundCurrency } from '../utils/currency.js'
 
 export async function getMedicines(req: Request, res: Response) {
   const caseId = paramId(req.params.id)
@@ -38,8 +39,8 @@ export async function saveMedicines(req: Request, res: Response) {
   const normalized = medicines.map((m) => {
     const quantity = Number(m.quantity || 1)
     const unitPrice = Number(m.unitPrice || 0)
-    const calculated = Number(m.totalPrice ?? quantity * unitPrice)
-    return { medicineId: m.medicineId ?? null, medicineName: m.medicineName, quantity, unit: m.unit ?? null, unitPrice, totalPrice: calculated }
+    const calculated = roundCurrency(Number(m.totalPrice ?? quantity * unitPrice))
+    return { medicineId: m.medicineId ?? null, medicineName: m.medicineName, quantity, unit: m.unit ?? null, unitPrice: roundCurrency(unitPrice), totalPrice: calculated }
   })
 
   const existingItems = await prisma.caseMedicine.findMany({ where: { caseId: caseData.id }, orderBy: { createdAt: 'asc' } })
@@ -52,8 +53,9 @@ export async function saveMedicines(req: Request, res: Response) {
     totalPrice: Number(item.totalPrice),
   }))
 
-  const sumTotal = normalized.reduce((sum, m) => sum + m.totalPrice, 0)
-  const finalTotalAmount = amount != null && amount !== '' ? Number(amount) : sumTotal
+  const sumTotal = roundCurrency(normalized.reduce((sum, m) => sum + m.totalPrice, 0))
+  const parsedAmount = parseOptionalCurrency(amount)
+  const finalTotalAmount = parsedAmount != null ? parsedAmount : sumTotal
   const changedFields: string[] = []
   if (valuesDiffer(currentNormalized, normalized)) changedFields.push('medicines')
   if (valuesDiffer(caseData.amount == null ? null : Number(caseData.amount), finalTotalAmount)) changedFields.push('amount')
@@ -64,8 +66,8 @@ export async function saveMedicines(req: Request, res: Response) {
       : {}
   const mergedAuditFlags: Record<string, unknown> = {
     ...existingAuditFlags,
-    manual_amount_override: amount != null,
-    computed_total: finalTotalAmount,
+    manual_amount_override: parsedAmount != null,
+    computed_total: sumTotal,
   }
   delete mergedAuditFlags.override_reason
   delete mergedAuditFlags.override_by
@@ -108,14 +110,16 @@ export async function deleteMedicine(req: Request, res: Response) {
   await prisma.caseMedicine.deleteMany({ where: { id: medId, caseId } })
 
   const items = await prisma.caseMedicine.findMany({ where: { caseId } })
-  const total = items.reduce((sum, item) => sum + Number(item.totalPrice), 0)
+  const total = roundCurrency(items.reduce((sum, item) => sum + Number(item.totalPrice), 0))
+  const currentAmount = currencyFromDb(caseData.amount)
+  const shouldPreserveManualAmount = currentAmount > 0
   const existingAuditFlags =
     typeof caseData.auditFlags === 'object' && caseData.auditFlags && !Array.isArray(caseData.auditFlags)
       ? (caseData.auditFlags as Record<string, unknown>)
       : {}
   const mergedAuditFlags: Record<string, unknown> = {
     ...existingAuditFlags,
-    manual_amount_override: false,
+    manual_amount_override: shouldPreserveManualAmount,
     computed_total: total,
   }
   delete mergedAuditFlags.override_reason
@@ -125,14 +129,14 @@ export async function deleteMedicine(req: Request, res: Response) {
   const resetResult = await prisma.$transaction(async (tx) => {
     await tx.case.update({
       where: { id: caseId },
-      data: { amount: total, auditFlags: mergedAuditFlags as Prisma.InputJsonValue },
+      data: { amount: shouldPreserveManualAmount ? currentAmount : total, auditFlags: mergedAuditFlags as Prisma.InputJsonValue },
     })
     return resetApprovalsAfterMaterialEdit(tx, {
       caseId: caseData.id,
       changedById: req.user?.id,
-      changedFields: ['medicines', 'amount'],
+      changedFields: shouldPreserveManualAmount ? ['medicines'] : ['medicines', 'amount'],
     })
   })
 
-  res.status(200).json({ totalAmount: total, status: resetResult.status ?? caseData.status, approvalsReset: resetResult.approvalsReset })
+  res.status(200).json({ totalAmount: shouldPreserveManualAmount ? currentAmount : total, status: resetResult.status ?? caseData.status, approvalsReset: resetResult.approvalsReset })
 }

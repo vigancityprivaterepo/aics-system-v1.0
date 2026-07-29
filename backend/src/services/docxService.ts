@@ -422,9 +422,9 @@ function buildRenderData(caseData: any): Record<string, any> {
     : resolvedAssistancePurpose
   )
   const resolvedImmediateCircumstance = fmt(
-    resolvedDiagnosis !== '-' ? resolvedDiagnosis
-    : resolvedFindings !== '-' ? resolvedFindings
-    : textOrNull(caseData.presentingProblem)
+    textOrNull(caseData.presentingProblem)
+    ?? (resolvedDiagnosis !== '-' ? resolvedDiagnosis : null)
+    ?? (resolvedFindings !== '-' ? resolvedFindings : null)
   )
   const resolvedIncomeSituation = fmt(textOrNull((caseData as any).incomeSituation) ?? 'limited and irregular income')
   const resolvedCaseSpecificFindings = resolvedFindings
@@ -507,15 +507,18 @@ function buildRenderData(caseData: any): Record<string, any> {
     reqBurialFinalBill: checkbox(isBurial && isReqSubmitted('final_bill')),
     reqHospitalBillingStatement: checkbox(isHospital && isReqSubmitted('billing_stmt', 'hospital_bill')),
     reqMedicinePrescription: checkbox(isMedicine && isReqSubmitted('prescription')),
+    reqMedicineEyeglassCertificate: checkbox(isAssistanceType('eyeglass') && isReqSubmitted('prescription')),
     reqMedicalPriceQuotation: checkbox(isMedical && isReqSubmitted('price_quotation')),
     reqBurialPromissoryNote: checkbox(isBurial && isReqSubmitted('promissory_note')),
     reqHospitalCertificateIndigency: checkbox(isHospital && isReqSubmitted('indigency')),
     reqMedicineCertificateIndigency: checkbox(isMedicine && isReqSubmitted('indigency')),
     reqMedicalCertificateIndigency: checkbox(isMedical && isReqSubmitted('indigency')),
+    reqEyeglassCertificateIndigency: checkbox(isAssistanceType('eyeglass') && isReqSubmitted('indigency')),
     reqBurialCertificateIndigency: checkbox(isBurial && isReqSubmitted('indigency')),
     reqHospitalPhotocopyId: checkbox(isHospital && isReqSubmitted('id_copy')),
     reqMedicinePhotocopyId: checkbox(isMedicine && isReqSubmitted('id_copy')),
     reqMedicalPhotocopyId: checkbox(isMedical && isReqSubmitted('id_copy')),
+    reqEyeglassPhotocopyId: checkbox(isAssistanceType('eyeglass') && isReqSubmitted('id_copy')),
     reqBurialPhotocopyId: checkbox(isBurial && isReqSubmitted('id_copy')),
     reqMedicineCertificateNoAvailableMedicine: checkbox(isMedicine && isReqSubmitted('cho_cert')),
 
