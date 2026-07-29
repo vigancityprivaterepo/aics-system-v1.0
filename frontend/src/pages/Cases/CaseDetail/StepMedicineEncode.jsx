@@ -26,14 +26,12 @@ export default function StepMedicineEncode({ caseData, onUpdate }) {
         : {}),
     }
     try {
-      const [medicineRes, caseRes] = await Promise.all([
-        api.post(`/cases/${caseData.id}/medicines`, medicinePayload),
-        api.put(`/cases/${caseData.id}`, {
-          medicineTemplateType: templateType,
-          medicineConformeName: normalizedConformeName,
-          medicineConformeRelationship: normalizedRelationshipValue,
-        }),
-      ])
+      const medicineRes = await api.post(`/cases/${caseData.id}/medicines`, medicinePayload)
+      const caseRes = await api.put(`/cases/${caseData.id}`, {
+        medicineTemplateType: templateType,
+        medicineConformeName: normalizedConformeName,
+        medicineConformeRelationship: normalizedRelationshipValue,
+      })
       onUpdate({
         medicines: medicineRes.data?.medicines ?? medicines,
         amount: medicineRes.data?.totalAmount ?? caseRes.data?.amount ?? caseData.amount,
@@ -43,6 +41,8 @@ export default function StepMedicineEncode({ caseData, onUpdate }) {
           conformeName: normalizedConformeName || null,
           conformeRelationship: normalizedRelationshipValue || null,
         },
+        proxyName: normalizedConformeName || null,
+        proxyRelationship: normalizedRelationshipValue || null,
         status: caseRes.data?.status ?? medicineRes.data?.status ?? caseData.status,
       })
       toast.success((medicineRes.data?.approvalsReset || caseRes.data?.approvalsReset) ? 'Medicine details saved. Case returned to encoding for re-review.' : 'Medicine details saved')
@@ -104,3 +104,4 @@ export default function StepMedicineEncode({ caseData, onUpdate }) {
     </div>
   )
 }
+

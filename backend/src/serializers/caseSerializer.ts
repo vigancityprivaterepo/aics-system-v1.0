@@ -124,9 +124,20 @@ export function serializeCase(caseRow: any, assigneesByStage?: ApprovalAssigneeB
       ? String(caseRow.burialDetails?.deceasedAddress ?? '').trim() || clientAddress
       : clientAddress
 
-  const proxyName = caseRow.assistanceType === 'burial' ? clientFullName : null
+  const proxyName =
+    caseRow.assistanceType === 'burial' ? (caseRow.burialDetails?.conformeName ?? clientFullName)
+    : caseRow.assistanceType === 'medicine' ? medicineConformeName
+    : caseRow.assistanceType === 'hospital' ? (caseRow.hospitalDetails?.conformeName ?? null)
+    : caseRow.assistanceType === 'medical' ? (caseRow.medicalDetails?.conformeName ?? null)
+    : caseRow.assistanceType === 'eyeglass' ? (caseRow.eyeglassDetails?.conformeName ?? null)
+    : null
   const proxyRelationship =
-    caseRow.assistanceType === 'burial' ? (caseRow.burialDetails?.conformeRelationship ?? null) : null
+    caseRow.assistanceType === 'burial' ? (caseRow.burialDetails?.conformeRelationship ?? null)
+    : caseRow.assistanceType === 'medicine' ? medicineConformeRelationship
+    : caseRow.assistanceType === 'hospital' ? (caseRow.hospitalDetails?.conformeRelationship ?? null)
+    : caseRow.assistanceType === 'medical' ? (caseRow.medicalDetails?.conformeRelationship ?? null)
+    : caseRow.assistanceType === 'eyeglass' ? (caseRow.eyeglassDetails?.conformeRelationship ?? null)
+    : null
 
   return {
     id: caseRow.id,
@@ -320,8 +331,4 @@ export function serializeCase(caseRow: any, assigneesByStage?: ApprovalAssigneeB
 export type SerializedCase = ReturnType<typeof serializeCase>
 
 export { portalContextFromAuditFlags, normalizeWorkflowStatus, mapRequirements, APPROVAL_STAGE_META, APPROVAL_STAGE_ORDER }
-
-
-
-
 
