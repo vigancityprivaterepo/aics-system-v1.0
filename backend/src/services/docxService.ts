@@ -512,8 +512,8 @@ function buildRenderData(caseData: any): Record<string, any> {
     // Global CGV AICS Documentary Requirements Submitted table ticks
     medicineDocsCheckBox: checkbox(isMedicine),
     medicalDocsCheckBox:  checkbox(isMedical),
-    burialDocsCheckBox:   checkbox(isBurial),
-    hospitalDocsCheckBox: checkbox(isHospital),
+    burialDocsCheckBox:   checkbox(isHospital),
+    hospitalDocsCheckBox: checkbox(isBurial),
     reqMedicineLetterRequest: checkbox(isMedicine && isReqSubmitted('personal_letter')),
     reqMedicalRequestForm: checkbox(isMedical && isReqSubmitted('med_request')),
     reqBurialClinicalAbstract: checkbox(isHospital && isReqSubmitted('clinical_abstract')),
