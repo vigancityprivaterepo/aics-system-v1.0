@@ -81,6 +81,33 @@
     @apply p-16 text-center text-slate-400;
   }
 
+
+  /* Keep dense admin screens usable on phones and tablet portrait. */
+  main,
+  section,
+  article,
+  form,
+  fieldset,
+  .portal-surface,
+  .portal-panel {
+    min-width: 0;
+  }
+
+  .portal-button-primary,
+  .portal-button-secondary,
+  .portal-button-green,
+  .btn-primary,
+  .btn-green,
+  .btn-outline,
+  .btn-ghost,
+  .btn-danger {
+    white-space: normal;
+    text-align: center;
+  }
+
+  table {
+    max-width: 100%;
+  }
   /* === Page Header === */
   .page-header {
     @apply mb-6 flex flex-wrap items-center justify-between gap-4 pb-5 border-b border-slate-200;
@@ -196,6 +223,29 @@
     @apply px-3 py-3;
   }
 
+
+  .portal-button-primary,
+  .portal-button-secondary,
+  .portal-button-green,
+  .btn-primary,
+  .btn-green,
+  .btn-outline,
+  .btn-danger {
+    width: 100%;
+  }
+
+  .form-section-title,
+  .card .flex.items-center.justify-between,
+  .card-sm .flex.items-center.justify-between {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
   /* Reduce oversized empty-state padding on mobile */
   .portal-empty {
     @apply p-8;
@@ -220,5 +270,4 @@
   .no-print { display: none !important; }
   body { background: white; }
 }
-
 

@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import toast from 'react-hot-toast'
 import api from '../../lib/api'
 import { PlusIcon, SearchIcon, EditIcon, TrashIcon, HeadstonIcon } from '../../components/ui/Icons'
@@ -171,13 +171,13 @@ export default function FuneralHomeDatabase() {
 
   return (
     <div className="animate-fade-in">
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="portal-kicker">Burial Assistance</p>
           <h1 className="portal-page-title">Funeral Homes</h1>
           <p className="portal-page-subtitle">{total.toLocaleString()} funeral home{total !== 1 ? 's' : ''}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={() => setDeleteAllModal(true)}
             className="rounded-lg border border-red-200 bg-white px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors flex items-center gap-2"
@@ -385,7 +385,7 @@ export default function FuneralHomeDatabase() {
               <span className="text-xs text-slate-500">
                 Showing {total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1}-{Math.min(page * PAGE_SIZE, total)} of {total.toLocaleString()}
               </span>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <button
                   onClick={() => setPage(p => Math.max(1, p - 1))}
                   disabled={page <= 1}

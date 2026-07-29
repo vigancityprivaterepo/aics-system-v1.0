@@ -340,7 +340,7 @@ export default function AppLayout() {
       {/* ── Mobile overlay ── */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/50 md:hidden"
+          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
           onClick={closeSidebar}
           aria-hidden="true"
         />
@@ -352,7 +352,7 @@ export default function AppLayout() {
           bg-[#053d2e]
           transition-transform duration-300 ease-in-out
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-          md:translate-x-0`}
+          lg:translate-x-0`}
         style={{ width: '15rem' }}
       >
         {/* Logo area */}
@@ -423,10 +423,10 @@ export default function AppLayout() {
       <MyProfileModal isOpen={profileOpen} onClose={() => setProfileOpen(false)} />
 
       {/* ── Main area ── */}
-      <div className="flex min-w-0 flex-1 flex-col md:ml-60">
+      <div className="flex min-w-0 flex-1 flex-col lg:ml-60">
 
         {/* Desktop sticky top bar */}
-        <header className="sticky top-0 z-30 hidden min-w-0 md:flex items-center justify-between gap-4
+        <header className="sticky top-0 z-30 hidden min-w-0 lg:flex items-center justify-between gap-4
           border-b border-slate-200 bg-white/95 backdrop-blur-sm px-6 py-3 shadow-sm">
           <div className="flex min-w-0 flex-1 items-center gap-2 text-sm text-slate-500">
             <span className="shrink-0 font-semibold text-emerald-800">Vigan AICS</span>
@@ -447,7 +447,7 @@ export default function AppLayout() {
 
         {/* Mobile top bar */}
         <header className="sticky top-0 z-30 flex min-w-0 items-center gap-3 border-b border-slate-200
-          bg-white px-4 py-3 shadow-sm md:hidden">
+          bg-white px-4 py-3 shadow-sm lg:hidden">
           <button
             onClick={() => setSidebarOpen(true)}
             className="rounded-md p-2.5 text-slate-600 hover:bg-slate-100 min-h-[44px] min-w-[44px] flex items-center justify-center"
@@ -469,5 +469,4 @@ export default function AppLayout() {
     </div>
   )
 }
-
 
