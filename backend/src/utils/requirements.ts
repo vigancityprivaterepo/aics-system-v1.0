@@ -30,10 +30,9 @@ export const REQUIREMENT_DEFINITIONS: Record<AssistanceType, Array<{ key: string
     { key: 'id_copy', label: 'Photocopy of ID' },
   ],
   eyeglass: [
-    { key: 'prescription',    label: 'Eyeglass Prescription' },
-    { key: 'indigency',       label: 'Certificate of Indigency' },
-    { key: 'id_copy',         label: 'Photocopy of ID' },
-    { key: 'personal_letter', label: 'Personal Letter addressed to the LCE' },
+    { key: 'prescription', label: 'Prescription' },
+    { key: 'indigency', label: 'Certificate of Indigency' },
+    { key: 'id_copy', label: 'Photocopy of ID' },
   ],
   plain: [
     { key: 'indigency', label: 'Certificate of Indigency' },
@@ -110,3 +109,4 @@ export function requirementLabelsByKey(type: AssistanceType): Record<string, str
 export function emptyRequirementMap(type: AssistanceType): Record<string, boolean> {
   return Object.fromEntries(REQUIREMENT_DEFINITIONS[type].map((r) => [r.key, false]))
 }
+

@@ -35,10 +35,9 @@ const MEDICAL_REQUIREMENTS = [
 ]
 
 const EYEGLASS_REQUIREMENTS = [
-  { key: 'prescription', label: 'Eyeglass Prescription' },
+  { key: 'prescription', label: 'Prescription' },
   { key: 'indigency', label: 'Certificate of Indigency' },
   { key: 'id_copy', label: 'Photocopy of ID' },
-  { key: 'personal_letter', label: 'Personal Letter addressed to the LCE' },
 ]
 
 const PLAIN_REQUIREMENTS = [
@@ -57,12 +56,12 @@ const REQUIREMENTS_BY_TYPE = {
 }
 
 const CGV_REQUIREMENT_ROWS = [
-  { no: 1, medicine: { key: 'personal_letter', label: 'Letter Request' }, medical: { key: 'med_request', label: 'Request Form' }, burial: { key: 'clinical_abstract', label: 'Clinical Abstract' }, hospital: { key: 'death_cert', label: 'Certified True Copy of Death Certificate' } },
-  { no: 2, medicine: { key: 'medical_cert', label: 'Medical Certificate' }, medical: { key: 'medical_cert', label: 'Medical Certificate' }, burial: { key: 'final_bill', label: 'Final Bill' }, hospital: { key: 'billing_stmt', label: 'Billing Statement/Statement of Account' } },
-  { no: 3, medicine: { key: 'prescription', label: 'Prescription' }, medical: { key: 'price_quotation', label: 'Price Quotation' }, burial: { key: 'promissory_note', label: 'Promissory Note' }, hospital: { key: 'indigency', label: 'Certificate of Indigency' } },
-  { no: 4, medicine: { key: 'indigency', label: 'Certificate of Indigency' }, medical: { key: 'indigency', label: 'Certificate of Indigency' }, burial: { key: 'indigency', label: 'Certificate of Indigency' }, hospital: { key: 'id_copy', label: 'Photocopy of ID' } },
-  { no: 5, medicine: { key: 'id_copy', label: 'Photocopy of ID' }, medical: { key: 'id_copy', label: 'Photocopy of ID' }, burial: { key: 'id_copy', label: 'Photocopy of ID' }, hospital: null },
-  { no: 6, medicine: { key: 'cho_cert', label: 'Certificate of No Available Medicine as Prescribed' }, medical: null, burial: null, hospital: null },
+  { no: 1, medicine: { key: 'personal_letter', label: 'Letter Request' }, medical: { key: 'med_request', label: 'Request Form' }, burial: { key: 'clinical_abstract', label: 'Clinical Abstract' }, hospital: { key: 'death_cert', label: 'Certified True Copy of Death Certificate' }, eyeglass: null },
+  { no: 2, medicine: { key: 'medical_cert', label: 'Medical Certificate' }, medical: { key: 'medical_cert', label: 'Medical Certificate' }, burial: { key: 'final_bill', label: 'Final Bill' }, hospital: { key: 'billing_stmt', label: 'Billing Statement/Statement of Account' }, eyeglass: null },
+  { no: 3, medicine: { key: 'prescription', label: 'Prescription' }, medical: { key: 'price_quotation', label: 'Price Quotation' }, burial: { key: 'promissory_note', label: 'Promissory Note' }, hospital: { key: 'indigency', label: 'Certificate of Indigency' }, eyeglass: { key: 'prescription', label: 'Prescription' } },
+  { no: 4, medicine: { key: 'indigency', label: 'Certificate of Indigency' }, medical: { key: 'indigency', label: 'Certificate of Indigency' }, burial: { key: 'indigency', label: 'Certificate of Indigency' }, hospital: { key: 'id_copy', label: 'Photocopy of ID' }, eyeglass: { key: 'indigency', label: 'Certificate of Indigency' } },
+  { no: 5, medicine: { key: 'id_copy', label: 'Photocopy of ID' }, medical: { key: 'id_copy', label: 'Photocopy of ID' }, burial: { key: 'id_copy', label: 'Photocopy of ID' }, hospital: null, eyeglass: { key: 'id_copy', label: 'Photocopy of ID' } },
+  { no: 6, medicine: { key: 'cho_cert', label: 'Certificate of No Available Medicine as Prescribed' }, medical: null, burial: null, hospital: null, eyeglass: null },
 ]
 
 const CGV_TYPES = [
@@ -70,6 +69,7 @@ const CGV_TYPES = [
   { key: 'medical', label: 'Medical' },
   { key: 'burial', label: 'Burial' },
   { key: 'hospital', label: 'Hospital' },
+  { key: 'eyeglass', label: 'Eyeglass' },
 ]
 
 export default function RequirementsChecklist({ assistanceType, requirements = {}, onChange, readOnly = false, variant = 'list' }) {
@@ -84,7 +84,7 @@ export default function RequirementsChecklist({ assistanceType, requirements = {
   const completedCount = items.filter((r) => requirements[r.key]).length
 
   if (variant === 'cgvTable') {
-    const activeTypes = assistanceType === 'plain' || assistanceType === 'eyeglass'
+    const activeTypes = assistanceType === 'plain'
       ? new Set(CGV_TYPES.map((type) => type.key))
       : new Set([assistanceType])
     const activeKeys = [...new Set(CGV_REQUIREMENT_ROWS.map((row) => (
@@ -102,7 +102,7 @@ export default function RequirementsChecklist({ assistanceType, requirements = {
         </div>
 
         <div className="overflow-x-auto rounded-lg border border-slate-200">
-          <table className="min-w-[900px] w-full border-collapse text-xs">
+          <table className="min-w-[1120px] w-full border-collapse text-xs">
             <thead>
               <tr className="bg-slate-100 text-slate-800">
                 <th className="w-10 border border-slate-300 px-2 py-3" />
@@ -228,3 +228,5 @@ export default function RequirementsChecklist({ assistanceType, requirements = {
     </div>
   )
 }
+
+
