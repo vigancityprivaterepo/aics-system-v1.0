@@ -1,4 +1,4 @@
-﻿import { useState } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
@@ -9,6 +9,7 @@ import DuplicateReviewModal from '../../components/clients/DuplicateReviewModal'
 
 
 const defaultFamilyMember = { name: '', age: '', relationship: '', occupation: '' }
+const RELIGION_OPTIONS = ['Roman Catholic', 'Iglesia ni Cristo', 'Islam', 'Born Again Christian', 'Evangelical', 'Protestant', 'Aglipayan', 'Seventh-day Adventist', "Jehovah's Witness", 'Other']
 const RELATIONSHIP_OPTIONS = ['Spouse', 'Son', 'Daughter', 'Father', 'Mother', 'Brother', 'Sister', 'Grandson', 'Granddaughter', 'Grandfather', 'Grandmother', 'Uncle', 'Aunt', 'Nephew', 'Niece', 'Son-in-Law', 'Daughter-in-Law', 'Father-in-Law', 'Mother-in-Law', 'Other']
 
 export default function ClientForm() {
@@ -175,7 +176,10 @@ export default function ClientForm() {
             </div>
             <div>
               <label className="portal-label">Religion</label>
-              <input {...register('religion')} className="portal-input" placeholder="e.g. Roman Catholic, Islam, INC" />
+              <select {...register('religion')} className="portal-input">
+                <option value="">Select religion</option>
+                {RELIGION_OPTIONS.map((religion) => <option key={religion} value={religion}>{religion}</option>)}
+              </select>
             </div>
             <div>
               <label className="portal-label">Client Category</label>

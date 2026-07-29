@@ -27,6 +27,7 @@ const RENDER_OPTIONS = {
 export default function MedicineCaseStudyPreview({ caseData }) {
   const [state, setState] = useState({ loading: true, error: false, message: '' })
   const abCache = useRef(null)
+  const cacheKeyRef = useRef(null)
   const containerRef = useRef(null)
 
   const doRender = useCallback(async (arrayBuffer) => {
@@ -46,11 +47,20 @@ export default function MedicineCaseStudyPreview({ caseData }) {
   }, [])
 
   useEffect(() => {
-    if (abCache.current) {
+    const cacheKey = [
+      caseData.id,
+      caseData.medicineDetails?.templateType || '',
+      caseData.medicineDetails?.conformeName || '',
+      caseData.medicineDetails?.conformeRelationship || '',
+    ].join('|')
+
+    if (abCache.current && cacheKeyRef.current === cacheKey) {
       doRender(abCache.current)
       return
     }
 
+    abCache.current = null
+    cacheKeyRef.current = cacheKey
     let cancelled = false
     setState({ loading: true, error: false, message: '' })
 
@@ -71,7 +81,7 @@ export default function MedicineCaseStudyPreview({ caseData }) {
       })
 
     return () => { cancelled = true }
-  }, [caseData.id, doRender])
+  }, [caseData.id, caseData.medicineDetails?.templateType, caseData.medicineDetails?.conformeName, caseData.medicineDetails?.conformeRelationship, doRender])
 
   const handleDownload = async () => {
     const DOCX_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'

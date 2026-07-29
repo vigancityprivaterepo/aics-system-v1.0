@@ -12,9 +12,11 @@ export default function StepMedicineEncode({ caseData, onUpdate }) {
 
   const handleSave = async () => {
     setSaving(true)
-    const normalizedRelationship = conformeRelationship.trim().toLowerCase()
+    const normalizedRelationshipValue = conformeRelationship.trim()
+    const normalizedRelationship = normalizedRelationshipValue.toLowerCase()
+    const normalizedConformeName = conformeName.trim()
     const templateType =
-      normalizedRelationship === 'self' || (!conformeName.trim() && !normalizedRelationship)
+      !normalizedConformeName && (normalizedRelationship === 'self' || !normalizedRelationship)
         ? 'personal'
         : 'proxy'
     const medicinePayload = {
@@ -28,8 +30,8 @@ export default function StepMedicineEncode({ caseData, onUpdate }) {
         api.post(`/cases/${caseData.id}/medicines`, medicinePayload),
         api.put(`/cases/${caseData.id}`, {
           medicineTemplateType: templateType,
-          medicineConformeName: conformeName,
-          medicineConformeRelationship: conformeRelationship,
+          medicineConformeName: normalizedConformeName,
+          medicineConformeRelationship: normalizedRelationshipValue,
         }),
       ])
       onUpdate({
@@ -38,8 +40,8 @@ export default function StepMedicineEncode({ caseData, onUpdate }) {
         medicineDetails: {
           ...(caseData.medicineDetails || {}),
           templateType,
-          conformeName: conformeName.trim() || null,
-          conformeRelationship: conformeRelationship.trim() || null,
+          conformeName: normalizedConformeName || null,
+          conformeRelationship: normalizedRelationshipValue || null,
         },
         status: caseRes.data?.status ?? medicineRes.data?.status ?? caseData.status,
       })

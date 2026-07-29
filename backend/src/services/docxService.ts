@@ -303,14 +303,17 @@ function buildRenderData(caseData: any): Record<string, any> {
   const resolvedBeneficiaryAddress = caseData.assistanceType === 'burial' ? resolvedDeceasedAddress : fmt(address)
   const resolvedProxyName = fmt(fullName)
   const resolvedProxyNameList = fmt(clientName)
+  const medicineConformeName = textOrNull((medicine as any).conformeName)
+  const medicineConformeRelationship = textOrNull((medicine as any).conformeRelationship)
+  const hasMedicineRequestingParty = caseData.assistanceType === 'medicine' && Boolean(medicineConformeName)
   const allowSelfRelationship =
     !((caseData.assistanceType === 'hospital' && hospital.templateType === 'proxy')
-      || (caseData.assistanceType === 'medicine' && medicineTemplateType === 'proxy')
+      || (caseData.assistanceType === 'medicine' && (medicineTemplateType === 'proxy' || hasMedicineRequestingParty))
       || (caseData.assistanceType === 'medical' && medicalTemplateType === 'proxy')
       || (caseData.assistanceType === 'eyeglass' && eyeglassTemplateType === 'proxy'))
   const resolvedConformeName = fmt(
     textOrNull((eyeglass as any).conformeName)
-    ?? textOrNull((medicine as any).conformeName)
+    ?? medicineConformeName
     ?? textOrNull(hospital.conformeName)
     ?? textOrNull(medical.conformeName)
     ?? textOrNull(burial.conformeName)
@@ -319,11 +322,11 @@ function buildRenderData(caseData: any): Record<string, any> {
   )
   const resolvedRelationship = fmt(
     textOrNull((eyeglass as any).conformeRelationship)
-    ?? textOrNull((medicine as any).conformeRelationship)
+    ?? medicineConformeRelationship
     ?? textOrNull(hospital.conformeRelationship)
     ?? textOrNull(medical.conformeRelationship)
     ?? textOrNull(burial.conformeRelationship)
-    ?? (allowSelfRelationship ? 'Self' : null)
+    ?? (hasMedicineRequestingParty ? 'N/A' : allowSelfRelationship ? 'Self' : null)
   )
   const resolvedDateOfAssessment = formatLongDate(
     textOrNull(caseData.dateOfAssessment)

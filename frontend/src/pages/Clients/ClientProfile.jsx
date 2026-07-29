@@ -4,7 +4,7 @@ import toast from 'react-hot-toast'
 import api from '../../lib/api'
 import { formatDate } from '../../lib/utils'
 import { useAuthStore } from '../../store/authStore'
-import { ChevronLeftIcon, IdCardIcon, PhoneIcon, MapPinIcon, EditIcon, TrashIcon, ClipboardIcon, ArrowRightIcon } from '../../components/ui/Icons'
+import { ChevronLeftIcon, IdCardIcon, EditIcon, TrashIcon, ClipboardIcon, ArrowRightIcon } from '../../components/ui/Icons'
 import StatusBadge from '../../components/ui/StatusBadge'
 import ClientSearchBar from '../../components/ClientSearchBar'
 import DuplicateReviewModal from '../../components/clients/DuplicateReviewModal'
@@ -74,6 +74,7 @@ function buildCaseDescription(h) {
 }
 
 const defaultFamilyMember = { name: '', age: '', relationship: '', occupation: '' }
+const RELIGION_OPTIONS = ['Roman Catholic', 'Iglesia ni Cristo', 'Islam', 'Born Again Christian', 'Evangelical', 'Protestant', 'Aglipayan', 'Seventh-day Adventist', "Jehovah's Witness", 'Other']
 const RELATIONSHIP_OPTIONS = ['Spouse', 'Son', 'Daughter', 'Father', 'Mother', 'Brother', 'Sister', 'Grandson', 'Granddaughter', 'Grandfather', 'Grandmother', 'Uncle', 'Aunt', 'Nephew', 'Niece', 'Son-in-Law', 'Daughter-in-Law', 'Father-in-Law', 'Mother-in-Law', 'Other']
 
 function toEditForm(client) {
@@ -400,23 +401,30 @@ export default function ClientProfile() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4">
         <div className="card">
           <div className="form-section-title flex items-center gap-2">
             <IdCardIcon className="h-4 w-4" />
             Personal Information
           </div>
           {!editMode ? (
-            <div className="space-y-2 text-sm text-slate-700">
+            <div className="grid grid-cols-1 gap-x-6 gap-y-2 text-sm text-slate-700 sm:grid-cols-2 lg:grid-cols-3">
               <p><span className="font-semibold">Date of Birth:</span> {formatDate(client.dateOfBirth)}</p>
               <p><span className="font-semibold">Sex:</span> {client.sex || '-'}</p>
               <p><span className="font-semibold">Civil Status:</span> {client.civilStatus || '-'}</p>
               <p><span className="font-semibold">Occupation:</span> {client.occupation || '-'}</p>
               <p><span className="font-semibold">Religion:</span> {client.religion || '-'}</p>
               <p><span className="font-semibold">Category:</span> {client.clientCategory || '-'}</p>
+              <p><span className="font-semibold">Phone:</span> {client.contactNumber || '-'}</p>
+              <p className="sm:col-span-2"><span className="font-semibold">Address:</span> {[client.barangay, client.municipality, client.province, client.region].filter(Boolean).join(', ') || '-'}</p>
+              <div className="flex flex-wrap gap-2 pt-1 lg:col-span-3">
+                {client.is4ps && <span className="badge badge-green">4Ps</span>}
+                {client.isPwd && <span className="badge badge-blue">PWD</span>}
+                {client.isSenior && <span className="badge badge-amber">Senior Citizen</span>}
+              </div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
               <div>
                 <label className="portal-label">Last Name *</label>
                 <input
@@ -488,12 +496,15 @@ export default function ClientProfile() {
               </div>
               <div>
                 <label className="portal-label">Religion</label>
-                <input
+                <select
                   className="portal-input"
                   value={form.religion}
                   onChange={(e) => setForm((prev) => ({ ...prev, religion: e.target.value }))}
-                  placeholder="e.g. Roman Catholic, Islam, INC"
-                />
+                >
+                  <option value="">Select religion</option>
+                  {form.religion && !RELIGION_OPTIONS.includes(form.religion) && <option value={form.religion}>{form.religion}</option>}
+                  {RELIGION_OPTIONS.map((religion) => <option key={religion} value={religion}>{religion}</option>)}
+                </select>
               </div>
               <div>
                 <label className="portal-label">Category</label>
@@ -507,48 +518,27 @@ export default function ClientProfile() {
                   <option value="rescued">Rescued</option>
                 </select>
               </div>
+              <div>
+                <label className="portal-label">Phone</label>
+                <input
+                  className="portal-input"
+                  value={form.contactNumber}
+                  onChange={(e) => setForm((prev) => ({ ...prev, contactNumber: e.target.value }))}
+                  placeholder="09XXXXXXXXX"
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="portal-label">Address</label>
+                <input
+                  className="portal-input bg-slate-50 text-slate-500"
+                  value={[client.barangay, client.municipality, client.province, client.region].filter(Boolean).join(', ') || '-'}
+                  readOnly
+                />
+              </div>
             </div>
           )}
-        </div>
-
-        <div className="card">
-          <div className="form-section-title flex items-center gap-2">
-            <PhoneIcon className="h-4 w-4" />
-            Contact
-          </div>
-          {!editMode ? (
-            <div className="space-y-2 text-sm text-slate-700">
-              <p><span className="font-semibold">Phone:</span> {client.contactNumber || '-'}</p>
-            </div>
-          ) : (
-            <div>
-              <label className="portal-label">Phone</label>
-              <input
-                className="portal-input"
-                value={form.contactNumber}
-                onChange={(e) => setForm((prev) => ({ ...prev, contactNumber: e.target.value }))}
-                placeholder="09XXXXXXXXX"
-              />
-            </div>
-          )}
-        </div>
-
-        <div className="card lg:col-span-1">
-          <div className="form-section-title flex items-center gap-2">
-            <MapPinIcon className="h-4 w-4" />
-            Address
-          </div>
-          <p className="text-sm text-slate-700">
-            {[client.barangay, client.municipality, client.province, client.region].filter(Boolean).join(', ') || '-'}
-          </p>
-          <div className="mt-4 flex gap-2">
-            {client.is4ps && <span className="badge badge-green">4Ps</span>}
-            {client.isPwd && <span className="badge badge-blue">PWD</span>}
-            {client.isSenior && <span className="badge badge-amber">Senior Citizen</span>}
-          </div>
         </div>
       </div>
-
 
       <div className="card mt-4">
         <div className="form-section-title flex items-center justify-between">
