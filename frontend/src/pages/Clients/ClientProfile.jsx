@@ -98,6 +98,7 @@ export default function ClientProfile() {
   const navigate = useNavigate()
   const { user } = useAuthStore()
   const isAdmin = user?.role === 'admin'
+  const canEditClientProfile = ['admin', 'employee'].includes(user?.role)
 
   const [client, setClient] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -147,7 +148,7 @@ export default function ClientProfile() {
   }, [id])
 
   const startEdit = () => {
-    if (!client || !isAdmin) return
+    if (!client || !canEditClientProfile) return
     setForm(toEditForm(client))
     setEditMode(true)
   }
@@ -198,7 +199,7 @@ export default function ClientProfile() {
   }
 
   const saveEdit = async () => {
-    if (!client || !isAdmin) return
+    if (!client || !canEditClientProfile) return
     if (!form.lastName.trim() || !form.firstName.trim()) {
       toast.error('First name and last name are required.')
       return
@@ -247,7 +248,7 @@ export default function ClientProfile() {
   }
 
   const handleSaveAnyway = async (reason) => {
-    if (!client || !duplicateModal?.payload) return
+    if (!client || !canEditClientProfile || !duplicateModal?.payload) return
     setSaving(true)
     try {
       const res = await api.put(`/clients/${client.id}`, {
@@ -360,7 +361,7 @@ export default function ClientProfile() {
           <h1 className="portal-page-title break-words">{client.lastName}, {client.firstName} {client.middleName || ''}</h1>
           <p className="portal-page-subtitle font-mono">{client.caseNumber}</p>
         </div>
-        {isAdmin && !editMode && !client.mergedIntoClient && (
+        {canEditClientProfile && !editMode && !client.mergedIntoClient && (
           <div className="flex shrink-0 justify-end gap-2 self-end sm:self-auto">
             <button
               type="button"
@@ -371,16 +372,18 @@ export default function ClientProfile() {
             >
               <EditIcon className="h-4 w-4" />
             </button>
-            <button
-              type="button"
-              onClick={handleDelete}
-              disabled={deleting}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-red-200 bg-red-50 text-red-500 transition-colors hover:bg-red-100 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-40"
-              title="Delete client"
-              aria-label="Delete client"
-            >
-              <TrashIcon className="h-4 w-4" />
-            </button>
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={deleting}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-red-200 bg-red-50 text-red-500 transition-colors hover:bg-red-100 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-40"
+                title="Delete client"
+                aria-label="Delete client"
+              >
+                <TrashIcon className="h-4 w-4" />
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -855,7 +858,7 @@ export default function ClientProfile() {
 
       </div>
 
-      {isAdmin && editMode && (
+      {canEditClientProfile && editMode && (
         <div className="mt-4 flex justify-end gap-3">
           <button type="button" onClick={cancelEdit} className="portal-button-secondary" disabled={saving}>
             Cancel

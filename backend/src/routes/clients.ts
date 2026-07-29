@@ -432,7 +432,7 @@ router.get('/:id', asyncHandler(async (req, res) => {
   })
 }))
 
-router.put('/:id', requireRole(['admin']), asyncHandler(async (req, res) => {
+router.put('/:id', requireRole(['admin', 'employee']), asyncHandler(async (req, res) => {
   const clientId = paramId(req.params.id)
   const body = updateClientSchema.parse(req.body)
 
