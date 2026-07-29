@@ -512,8 +512,8 @@ function buildRenderData(caseData: any): Record<string, any> {
     // Global CGV AICS Documentary Requirements Submitted table ticks
     medicineDocsCheckBox: checkbox(isMedicine),
     medicalDocsCheckBox:  checkbox(isMedical),
-    burialDocsCheckBox:   checkbox(isHospital),
-    hospitalDocsCheckBox: checkbox(isBurial),
+    burialDocsCheckBox:   checkbox(isBurial),
+    hospitalDocsCheckBox: checkbox(isHospital),
     reqMedicineLetterRequest: checkbox(isMedicine && isReqSubmitted('personal_letter')),
     reqMedicalRequestForm: checkbox(isMedical && isReqSubmitted('med_request')),
     reqBurialClinicalAbstract: checkbox(isHospital && isReqSubmitted('clinical_abstract')),
@@ -1125,5 +1125,4 @@ export async function generatePlainCaseStudyDocx(caseData: any): Promise<Buffer>
   const template = loadFirstAvailableTemplate(PLAIN_CASE_STUDY_CANDIDATES)
   return renderDoc(template, buildRenderData(caseData))
 }
-
 
