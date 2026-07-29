@@ -11,6 +11,8 @@ export default function StepEyeglassDetails({ caseData, onUpdate }) {
       doctorName: caseData.eyeglassDetails?.doctorName || '',
       clinicName: caseData.eyeglassDetails?.clinicName || '',
       clinicAddress: caseData.eyeglassDetails?.clinicAddress || '',
+      conformeName: caseData.eyeglassDetails?.conformeName || '',
+      conformeRelationship: caseData.eyeglassDetails?.conformeRelationship || '',
       amount: caseData.amount ?? '',
     },
   })
@@ -19,14 +21,14 @@ export default function StepEyeglassDetails({ caseData, onUpdate }) {
     setSaving(true)
     try {
       const res = await api.put(`/cases/${caseData.id}/eyeglass`, data)
-      onUpdate({ eyeglassDetails: res.data, amount: res.data?.amount ?? data.amount, status: res.data?.status ?? caseData.status })
+      onUpdate({ eyeglassDetails: res.data, amount: res.data?.amount ?? data.amount, proxyName: data.conformeName || null, proxyRelationship: data.conformeRelationship || null, status: res.data?.status ?? caseData.status })
       toast.success(res.data?.approvalsReset ? 'Eyeglass details saved. Case returned to encoding for re-review.' : 'Eyeglass details saved')
     } catch (err) {
       if (err.response) {
         toast.error(err.response?.data?.message || 'Failed to save eyeglass details')
         return
       }
-      onUpdate({ eyeglassDetails: data, amount: data.amount })
+      onUpdate({ eyeglassDetails: data, amount: data.amount, proxyName: data.conformeName || null, proxyRelationship: data.conformeRelationship || null })
       toast.error(err.response?.data?.message || 'Failed to save changes')
     } finally {
       setSaving(false)
@@ -67,6 +69,20 @@ export default function StepEyeglassDetails({ caseData, onUpdate }) {
             <input type="text" {...register('clinicAddress')} className="portal-input" placeholder="City / Municipality, Province" />
           </div>
 
+
+          {/* Sub-section: Representative & Conforme */}
+          <div className="sm:col-span-2 mt-4 mb-1 flex items-center gap-2 border-b border-slate-150 pb-2">
+            <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Representative &amp; Conforme</p>
+          </div>
+
+          <div>
+            <label className="portal-label">Conforme Name</label>
+            <input type="text" {...register('conformeName')} className="portal-input" placeholder="Full name of representative / next of kin" />
+          </div>
+          <div>
+            <label className="portal-label">Relationship to Patient</label>
+            <input type="text" {...register('conformeRelationship')} className="portal-input" placeholder="e.g. Mother, Spouse, Self" />
+          </div>
           {/* Sub-section: Financial Assistance */}
           <div className="sm:col-span-2 mt-4 mb-1 flex items-center gap-2 border-b border-slate-150 pb-2">
             <span className="text-base">💵</span>
@@ -88,4 +104,7 @@ export default function StepEyeglassDetails({ caseData, onUpdate }) {
     </div>
   )
 }
+
+
+
 

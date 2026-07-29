@@ -1,4 +1,4 @@
-﻿import { useState } from 'react'
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
 import api from '../../../lib/api'
@@ -42,14 +42,14 @@ export default function StepMedicalDetails({ caseData, onUpdate }) {
     setSaving(true)
     try {
       const res = await api.put(`/cases/${caseData.id}/medical`, data)
-      onUpdate({ medicalDetails: res.data, amount: res.data?.amount ?? data.amount, status: res.data?.status ?? caseData.status })
+      onUpdate({ medicalDetails: res.data, amount: res.data?.amount ?? data.amount, proxyName: data.conformeName || null, proxyRelationship: data.conformeRelationship || null, status: res.data?.status ?? caseData.status })
       toast.success(res.data?.approvalsReset ? 'Medical details saved. Case returned to encoding for re-review.' : 'Medical details saved')
     } catch (err) {
       if (err.response) {
         toast.error(err.response?.data?.message || 'Failed to save medical details')
         return
       }
-      onUpdate({ medicalDetails: data, amount: data.amount })
+      onUpdate({ medicalDetails: data, amount: data.amount, proxyName: data.conformeName || null, proxyRelationship: data.conformeRelationship || null })
       toast.error(err.response?.data?.message || 'Failed to save changes')
     } finally {
       setSaving(false)
@@ -174,4 +174,5 @@ export default function StepMedicalDetails({ caseData, onUpdate }) {
     </div>
   )
 }
+
 
