@@ -425,7 +425,7 @@ function buildRenderData(caseData: any): Record<string, any> {
     hospital: 'payment of hospitalization expenses',
     medical: resolvedMedicalRequestedAssistance !== '-' ? resolvedMedicalRequestedAssistance : 'medical procedure/examination',
     eyeglass: 'purchase of eyeglasses',
-    medicine: 'purchase of medicines',
+    medicine: 'purchase of maintenance medications',
     burial: 'burial/funeral expenses',
     plain: resolvedNatureOfAssistance !== '-' ? resolvedNatureOfAssistance : 'emergency assistance',
   }
