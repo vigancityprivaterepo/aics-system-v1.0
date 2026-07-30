@@ -12,6 +12,7 @@ interface JwtPayload {
   employeeId: string
   role: UserRole
   approvalLevel?: string[]
+  position?: string | null
 }
 
 const VALID_ROLES: UserRole[] = ['admin', 'employee', 'city_health_office']
@@ -54,6 +55,7 @@ export function requireAuth(req: Request, _res: Response, next: NextFunction) {
         employeeId: true,
         role: true,
         approvalLevel: true,
+        position: true,
         isActive: true,
       },
     })
@@ -69,6 +71,7 @@ export function requireAuth(req: Request, _res: Response, next: NextFunction) {
       employeeId: dbUser.employeeId,
       role: validateRole(String(dbUser.role)),
       approvalLevel: parseApprovalLevels(dbUser.approvalLevel),
+      position: dbUser.position,
     }
     next()
   })().catch(next)

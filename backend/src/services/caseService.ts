@@ -4,6 +4,35 @@ import { HttpError } from '../utils/httpError.js'
 import { ACTIVE_APPROVAL_STATUSES, EDIT_LOCKED_STATUSES, STATUS_FLOW } from '../types/caseTypes.js'
 import { REQUIREMENT_DEFINITIONS, emptyRequirementMap } from '../utils/requirements.js'
 const NON_ADMIN_ALLOWED_CASE_TYPES: AssistanceType[] = ['hospital', 'medical']
+const FULL_CASE_ACCESS_POSITIONS = new Set([
+  'Administrative Aide I',
+  'Administrative Aide II',
+  'Administrative Aide III',
+  'Administrative Aide IV',
+  'Administrative Aide V',
+  'Administrative Assistant I',
+  'Administrative Assistant II',
+  'Administrative Assistant III',
+  'Administrative Assistant IV',
+  'Administrative Assistant V',
+  'Administrative Officer I',
+  'Administrative Officer II',
+  'Administrative Officer III',
+  'Administrative Officer IV',
+])
+
+export function userCanAccessAllCaseTypes(user: Express.AuthUser | undefined): boolean {
+  if (!user) return false
+  if (user.role === 'admin') return true
+  return user.role === 'employee' && FULL_CASE_ACCESS_POSITIONS.has(String(user.position ?? '').trim())
+}
+
+export function allowedCaseTypesForUser(user: Express.AuthUser | undefined): AssistanceType[] | undefined {
+  if (!user) return []
+  if (userCanAccessAllCaseTypes(user)) return undefined
+  if (user.role === 'employee') return NON_ADMIN_ALLOWED_CASE_TYPES
+  return []
+}
 
 export function assertAllowedCaseTypeForUser(
   assistanceType: AssistanceType | undefined,
@@ -11,14 +40,13 @@ export function assertAllowedCaseTypeForUser(
   action = 'This case type',
 ) {
   if (!user) throw new HttpError(401, 'Unauthorized')
-  if (user.role === 'admin') return
+  if (userCanAccessAllCaseTypes(user)) return
   if (user.role !== 'employee') {
     throw new HttpError(403, 'Cases are not available for your account.')
   }
   if (assistanceType && NON_ADMIN_ALLOWED_CASE_TYPES.includes(assistanceType)) return
   throw new HttpError(403, `${action} is limited to medical and hospital cases for your account.`)
 }
-
 export function paramId(value: string | string[] | undefined): string {
   if (Array.isArray(value)) return value[0] ?? ''
   return value ?? ''

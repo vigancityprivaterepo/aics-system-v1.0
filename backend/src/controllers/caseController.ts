@@ -9,7 +9,7 @@ import { findCaseWithDetails, getApprovalSettings } from '../queries/caseQueries
 import { serializeCase, normalizeWorkflowStatus } from '../serializers/caseSerializer.js'
 import { resolveApprovalAssignees } from '../services/approvalService.js'
 import { assessCaseWorkflow } from '../services/caseWorkflowService.js'
-import { assertAllowedCaseTypeForUser, assertCaseReadable, assertEditableCase, ensureRequirementRows, paramId } from '../services/caseService.js'
+import { allowedCaseTypesForUser, assertAllowedCaseTypeForUser, assertCaseReadable, assertEditableCase, ensureRequirementRows, paramId } from '../services/caseService.js'
 import { APPROVAL_STAGE_META, APPROVAL_STAGE_ORDER } from '../types/caseTypes.js'
 import { updateCaseSchema } from '../schemas/caseSchemas.js'
 import { statusToApprovalStage } from '../services/approvalService.js'
@@ -59,9 +59,7 @@ export async function listCases(req: Request, res: Response) {
     assertAllowedCaseTypeForUser(type as AssistanceType, req.user, 'Case list')
   }
 
-  const allowedAssistanceTypes = req.user.role === 'admin'
-    ? undefined
-    : ([AssistanceType.hospital, AssistanceType.medical] as AssistanceType[])
+  const allowedAssistanceTypes = allowedCaseTypesForUser(req.user)
 
   const where: Prisma.CaseWhereInput = {
     ...(type ? { assistanceType: type as AssistanceType } : allowedAssistanceTypes ? { assistanceType: { in: allowedAssistanceTypes } } : {}),

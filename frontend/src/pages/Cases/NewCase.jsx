@@ -4,6 +4,7 @@ import toast from 'react-hot-toast'
 import api from '../../lib/api'
 import ClientSearchBar from '../../components/ClientSearchBar'
 import { useAuthStore } from '../../store/authStore'
+import { allowedCaseTypesForUser } from '../../utils/accessRules'
 import {
   PillIcon, CrossIcon, ArrowRightIcon, PlusIcon, ChevronLeftIcon,
   HospitalIcon, GlassesIcon, HeadstonIcon, FileTextIcon,
@@ -19,14 +20,13 @@ const CASE_TYPES = [
 ]
 
 const TYPE_LABEL = { medicine: 'Medicine', burial: 'Burial', hospital: 'Hospital', medical: 'Medical', eyeglass: 'Eyeglass', plain: 'Plain AICS' }
-const LIMITED_CASE_TYPES = ['medical', 'hospital']
 
 export default function NewCase() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const requestedPresetType = searchParams.get('type') ?? ''
   const user = useAuthStore((state) => state.user)
-  const allowedCaseTypes = user?.role === 'admin' ? CASE_TYPES.map((caseType) => caseType.type) : LIMITED_CASE_TYPES
+  const allowedCaseTypes = allowedCaseTypesForUser(user, CASE_TYPES.map((caseType) => caseType.type))
   const presetType = allowedCaseTypes.includes(requestedPresetType) ? requestedPresetType : ''
   const visibleCaseTypes = CASE_TYPES.filter((caseType) => allowedCaseTypes.includes(caseType.type))
 

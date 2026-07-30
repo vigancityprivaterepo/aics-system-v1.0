@@ -12,6 +12,7 @@ import {
   ClipboardIcon, QrCodeIcon, DatabaseIcon, ChevronDownIcon,
 } from '../ui/Icons'
 import MyProfileModal from '../shared/MyProfileModal'
+import { allowedCaseTypesForUser, canAccessAllCases } from '../../utils/accessRules'
 
 // ── Case sub-types ────────────────────────────────────────────────────────────
 const CASE_CHILDREN = [
@@ -241,8 +242,9 @@ function DatabaseGroup({ onNavigate, isCHO = false }) {
 }
 
 // ── Sidebar content ───────────────────────────────────────────────────────────
-function SidebarNav({ closeSidebar, isAdmin, isCityHealthOffice, pendingByType, portalSubmittedCount }) {
-  const allowedCaseTypes = isAdmin ? null : ['medical', 'hospital']
+function SidebarNav({ closeSidebar, user, isAdmin, isCityHealthOffice, pendingByType, portalSubmittedCount }) {
+  const visibleCaseTypes = allowedCaseTypesForUser(user, CASE_CHILDREN.map((child) => child.type))
+  const allowedCaseTypes = canAccessAllCases(user) ? null : visibleCaseTypes
   if (isCityHealthOffice) {
     return (
       <nav
@@ -374,6 +376,7 @@ export default function AppLayout() {
         {/* Nav */}
         <SidebarNav
           closeSidebar={closeSidebar}
+          user={user}
           isAdmin={user?.role === 'admin'}
           isCityHealthOffice={isCityHealthOffice}
           pendingByType={pendingByType}

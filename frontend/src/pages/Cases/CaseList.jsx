@@ -5,11 +5,11 @@ import api from '../../lib/api'
 import { formatDate } from '../../lib/utils'
 import StatusBadge from '../../components/ui/StatusBadge'
 import { useAuthStore } from '../../store/authStore'
+import { allowedCaseTypesForUser } from '../../utils/accessRules'
 import { PlusIcon, SearchIcon, FolderIcon, EditIcon, TrashIcon, ChevronLeftIcon, ChevronRightIcon, QrCodeIcon } from '../../components/ui/Icons'
 
 const TYPE_LABEL = { medicine: 'Medicine', burial: 'Burial', hospital: 'Hospital', medical: 'Medical', eyeglass: 'Eyeglass', plain: 'Plain AICS' }
 const ALL_CASE_TYPES = ['medicine', 'medical', 'hospital', 'burial', 'eyeglass', 'plain']
-const LIMITED_CASE_TYPES = ['medical', 'hospital']
 const QUEUE_LABEL = {
   needs_intake: 'Needs Intake',
   needs_encoding: 'Needs Encoding',
@@ -52,7 +52,7 @@ export default function CaseList() {
   const ownerParam = searchParams.get('owner') ?? ''
   const navigate = useNavigate()
   const user = useAuthStore((state) => state.user)
-  const allowedCaseTypes = user?.role === 'admin' ? ALL_CASE_TYPES : LIMITED_CASE_TYPES
+  const allowedCaseTypes = allowedCaseTypesForUser(user, ALL_CASE_TYPES)
 
   const [cases, setCases] = useState([])
   const [loading, setLoading] = useState(true)
