@@ -4,6 +4,7 @@ import { HttpError } from '../utils/httpError.js'
 import { ACTIVE_APPROVAL_STATUSES, EDIT_LOCKED_STATUSES, STATUS_FLOW } from '../types/caseTypes.js'
 import { REQUIREMENT_DEFINITIONS, emptyRequirementMap } from '../utils/requirements.js'
 const NON_ADMIN_ALLOWED_CASE_TYPES: AssistanceType[] = ['hospital', 'medical']
+const APPROVAL_CASE_ACCESS_LEVELS = new Set(['reviewer', 'recommender', 'approver'])
 const FULL_CASE_ACCESS_POSITIONS = new Set([
   'Administrative Aide I',
   'Administrative Aide II',
@@ -24,9 +25,10 @@ const FULL_CASE_ACCESS_POSITIONS = new Set([
 export function userCanAccessAllCaseTypes(user: Express.AuthUser | undefined): boolean {
   if (!user) return false
   if (user.role === 'admin') return true
-  return user.role === 'employee' && FULL_CASE_ACCESS_POSITIONS.has(String(user.position ?? '').trim())
+  if (user.role !== 'employee') return false
+  if (FULL_CASE_ACCESS_POSITIONS.has(String(user.position ?? '').trim())) return true
+  return user.approvalLevel.some((level) => APPROVAL_CASE_ACCESS_LEVELS.has(level))
 }
-
 export function allowedCaseTypesForUser(user: Express.AuthUser | undefined): AssistanceType[] | undefined {
   if (!user) return []
   if (userCanAccessAllCaseTypes(user)) return undefined

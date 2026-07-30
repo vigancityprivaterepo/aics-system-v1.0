@@ -1,3 +1,4 @@
+const APPROVAL_CASE_ACCESS_LEVELS = new Set(['reviewer', 'recommender', 'approver'])
 const FULL_CASE_ACCESS_POSITIONS = new Set([
   'Administrative Aide I',
   'Administrative Aide II',
@@ -20,7 +21,9 @@ export const LIMITED_CASE_TYPES = ['medical', 'hospital']
 export function canAccessAllCases(user) {
   if (!user) return false
   if (user.role === 'admin') return true
-  return user.role === 'employee' && FULL_CASE_ACCESS_POSITIONS.has(String(user.position ?? '').trim())
+  if (user.role !== 'employee') return false
+  if (FULL_CASE_ACCESS_POSITIONS.has(String(user.position ?? '').trim())) return true
+  return Array.isArray(user.approvalLevel) && user.approvalLevel.some((level) => APPROVAL_CASE_ACCESS_LEVELS.has(level))
 }
 
 export function canAccessCases(user) {
