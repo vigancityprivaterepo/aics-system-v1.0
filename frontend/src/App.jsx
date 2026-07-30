@@ -27,7 +27,7 @@ import { useAuthStore } from './store/authStore'
 
 function HomeRedirect() {
   const user = useAuthStore((state) => state.user)
-  return <Navigate to={user?.role === 'city_health_office' ? '/medicines' : '/dashboard'} replace />
+  return <Navigate to={user?.role === 'city_health_office' ? '/vehicle-requests' : '/dashboard'} replace />
 }
 
 function PlaceholderPage({ title }) {
@@ -49,18 +49,8 @@ function AppRoutes() {
         <Route element={<AppLayout />}>
           <Route index element={<HomeRedirect />} />
 
-          <Route element={<ProtectedRoute roles={['admin', 'employee']} redirectTo="/medicines" />}>
+          <Route element={<ProtectedRoute roles={['admin', 'employee']} redirectTo="/cases?type=medical" />}>
             <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/cases" element={<CaseList />} />
-            <Route path="/cases/new" element={<NewCase />} />
-            <Route path="/cases/:id" element={<CaseDetailLayout />}>
-              <Route index element={<Navigate to="profile" replace />} />
-              <Route path="profile" element={<TabClientProfile />} />
-              <Route path="case-study" element={<TabCaseStudy />} />
-              <Route path="case-edit" element={<TabCaseEdit />} />
-              <Route path="reports" element={<TabReports />} />
-              <Route path="report" element={<Navigate to="../reports" replace />} />
-            </Route>
             <Route path="/clients" element={<ClientList />} />
             <Route path="/clients/new" element={<ClientForm />} />
             <Route path="/clients/:id" element={<ClientProfile />} />
@@ -73,8 +63,24 @@ function AppRoutes() {
             </Route>
           </Route>
 
-          <Route element={<ProtectedRoute roles={['admin', 'employee', 'city_health_office']} redirectTo="/medicines" />}>
+          <Route element={<ProtectedRoute roles={['admin', 'employee']} redirectTo="/vehicle-requests" />}>
+            <Route path="/cases" element={<CaseList />} />
+            <Route path="/cases/new" element={<NewCase />} />
+            <Route path="/cases/:id" element={<CaseDetailLayout />}>
+              <Route index element={<Navigate to="profile" replace />} />
+              <Route path="profile" element={<TabClientProfile />} />
+              <Route path="case-study" element={<TabCaseStudy />} />
+              <Route path="case-edit" element={<TabCaseEdit />} />
+              <Route path="reports" element={<TabReports />} />
+              <Route path="report" element={<Navigate to="../reports" replace />} />
+            </Route>
+          </Route>
+
+          <Route element={<ProtectedRoute roles={['admin', 'employee', 'city_health_office']} redirectTo="/vehicle-requests" />}>
             <Route path="/medicines" element={<MedicineDatabase />} />
+          </Route>
+
+          <Route element={<ProtectedRoute roles={['admin', 'employee', 'city_health_office']} redirectTo="/vehicle-requests" />}>
             <Route path="/vehicle-requests" element={<VehicleRequestsPage />} />
           </Route>
 

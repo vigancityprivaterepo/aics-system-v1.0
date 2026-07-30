@@ -7,7 +7,7 @@ import { HttpError } from '../utils/httpError.js'
 import { requireRole } from '../middleware/auth.js'
 
 const router = Router()
-const adminOrCho = requireRole(['admin', 'city_health_office'])
+const adminOnly = requireRole(['admin'])
 
 const csvUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } })
 
@@ -64,7 +64,7 @@ const medicineSchema = z.object({
   isAvailable: z.boolean().optional().default(true),
 })
 
-router.post('/bulk-import', adminOrCho, csvUpload.single('file'), asyncHandler(async (req, res) => {
+router.post('/bulk-import', adminOnly, csvUpload.single('file'), asyncHandler(async (req, res) => {
   if (!req.file) throw new HttpError(400, 'No file uploaded')
 
   const text = req.file.buffer.toString('utf-8')
@@ -216,7 +216,7 @@ router.get('/', asyncHandler(async (req, res) => {
   })
 }))
 
-router.post('/', adminOrCho, asyncHandler(async (req, res) => {
+router.post('/', adminOnly, asyncHandler(async (req, res) => {
   const body = medicineSchema.parse(req.body)
 
   const created = await prisma.medicineItem.create({
@@ -243,7 +243,7 @@ router.post('/', adminOrCho, asyncHandler(async (req, res) => {
   })
 }))
 
-router.put('/:id', adminOrCho, asyncHandler(async (req, res) => {
+router.put('/:id', adminOnly, asyncHandler(async (req, res) => {
   const medicineId = paramId(req.params.id)
   const body = medicineSchema.parse(req.body)
 
@@ -275,7 +275,7 @@ router.put('/:id', adminOrCho, asyncHandler(async (req, res) => {
   })
 }))
 
-router.patch('/:id/availability', adminOrCho, asyncHandler(async (req, res) => {
+router.patch('/:id/availability', adminOnly, asyncHandler(async (req, res) => {
   const medicineId = paramId(req.params.id)
   const schema = z.object({ isAvailable: z.boolean() })
   const { isAvailable } = schema.parse(req.body)
@@ -295,12 +295,12 @@ router.patch('/:id/availability', adminOrCho, asyncHandler(async (req, res) => {
   })
 }))
 
-router.delete('/', adminOrCho, asyncHandler(async (req, res) => {
+router.delete('/', adminOnly, asyncHandler(async (req, res) => {
   const result = await prisma.medicineItem.deleteMany({})
   res.json({ deleted: result.count })
 }))
 
-router.delete('/:id', adminOrCho, asyncHandler(async (req, res) => {
+router.delete('/:id', adminOnly, asyncHandler(async (req, res) => {
   const medicineId = paramId(req.params.id)
   const existing = await prisma.medicineItem.findUnique({ where: { id: medicineId } })
   if (!existing) throw new HttpError(404, 'Medicine not found')

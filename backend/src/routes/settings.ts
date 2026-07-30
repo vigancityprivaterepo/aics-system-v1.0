@@ -13,6 +13,21 @@ const adminOnly = requireRole(['admin'])
 const ASSISTANCE_TYPES = ['medicine', 'burial', 'hospital', 'medical', 'eyeglass', 'plain'] as const
 const NARRATIVE_FIELDS = ['presenting_problem', 'findings'] as const
 
+const SERIES_CONFIG = {
+  client: { prefixField: 'clientPrefix', sequenceField: 'clientStartSequence', label: 'Client ID' },
+  medicine: { prefixField: 'medicinePrefix', sequenceField: 'medicineStartSequence', label: 'Medicine' },
+  burial: { prefixField: 'burialPrefix', sequenceField: 'burialStartSequence', label: 'Burial' },
+  hospital: { prefixField: 'hospitalPrefix', sequenceField: 'hospitalStartSequence', label: 'Hospital' },
+  medical: { prefixField: 'medicalPrefix', sequenceField: 'medicalStartSequence', label: 'Medical' },
+  eyeglass: { prefixField: 'eyeglassPrefix', sequenceField: 'eyeglassStartSequence', label: 'Eyeglass' },
+  plain: { prefixField: 'plainPrefix', sequenceField: 'plainStartSequence', label: 'Plain AICS' },
+} as const
+
+const seriesParamSchema = z.enum(['client', 'medicine', 'burial', 'hospital', 'medical', 'eyeglass', 'plain'])
+const caseNumberSeriesSchema = z.object({
+  prefix: z.string().min(1).max(10).regex(/^[A-Z0-9]+$/i),
+  startSequence: z.number().int().min(1).max(999999),
+})
 function paramValue(value: string | string[] | undefined) {
   return Array.isArray(value) ? (value[0] ?? '') : (value ?? '')
 }
@@ -108,6 +123,47 @@ const updateSchema = z.object({
   approvedByUserId: z.string().uuid().nullable().optional(),
 })
 
+
+router.patch('/case-number-series/:series', adminOnly, asyncHandler(async (req, res) => {
+  const seriesKey = seriesParamSchema.parse(paramValue(req.params.series))
+  const body = caseNumberSeriesSchema.parse({
+    ...req.body,
+    startSequence: Number(req.body?.startSequence),
+  })
+  const config = SERIES_CONFIG[seriesKey]
+  const data = {
+    [config.prefixField]: body.prefix.toUpperCase(),
+    [config.sequenceField]: body.startSequence,
+  }
+
+  const settings = await prisma.systemSettings.upsert({
+    where: { id: 'singleton' },
+    create: { id: 'singleton', ...data },
+    update: data,
+    include: {
+      reviewedByUser: { select: { id: true, name: true, approvalLevel: true } },
+      recommendingUser: { select: { id: true, name: true, approvalLevel: true } },
+      approvedByUser: { select: { id: true, name: true, approvalLevel: true } },
+    },
+  })
+
+  await logAdminAudit(prisma, {
+    actorId: req.user?.id,
+    action: 'settings.case_number_series.update',
+    targetType: 'system_settings',
+    targetId: settings.id,
+    summary: `Updated ${config.label} case number series`,
+    details: {
+      series: seriesKey,
+      prefixField: config.prefixField,
+      sequenceField: config.sequenceField,
+      prefix: body.prefix.toUpperCase(),
+      startSequence: body.startSequence,
+    },
+  })
+
+  res.json(settings)
+}))
 router.put('/', requireRole(['admin']), asyncHandler(async (req, res) => {
   const body = updateSchema.parse(req.body)
   const assignees = [

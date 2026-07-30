@@ -84,7 +84,7 @@ function NavItemWithBadge({ to, Icon, label, onClick, badge = 0, end = false }) 
 }
 
 // ── Collapsible Cases group ───────────────────────────────────────────────────
-function CasesGroup({ onNavigate, pendingByType = {} }) {
+function CasesGroup({ onNavigate, pendingByType = {}, allowedTypes = null }) {
   const location = useLocation()
   const activeType = location.pathname === '/cases'
     ? new URLSearchParams(location.search).get('type')
@@ -104,7 +104,7 @@ function CasesGroup({ onNavigate, pendingByType = {} }) {
         aria-label="Case types"
       >
         <div className="mt-0.5 space-y-0.5">
-          {CASE_CHILDREN.map((child) => {
+          {CASE_CHILDREN.filter((child) => !allowedTypes || allowedTypes.includes(child.type)).map((child) => {
             const isActive = isChildActive(child.type)
             if (!child.available) {
               return (
@@ -242,6 +242,7 @@ function DatabaseGroup({ onNavigate, isCHO = false }) {
 
 // ── Sidebar content ───────────────────────────────────────────────────────────
 function SidebarNav({ closeSidebar, isAdmin, isCityHealthOffice, pendingByType, portalSubmittedCount }) {
+  const allowedCaseTypes = isAdmin ? null : ['medical', 'hospital']
   if (isCityHealthOffice) {
     return (
       <nav
@@ -277,7 +278,7 @@ function SidebarNav({ closeSidebar, isAdmin, isCityHealthOffice, pendingByType, 
         />
         <NavItem to="/documents/verify" Icon={QrCodeIcon} label="QR Verifier" onClick={closeSidebar} />
         <NavItem to="/vehicle-requests" Icon={Ambulance} label="Vehicle Requests" onClick={closeSidebar} />
-        <CasesGroup onNavigate={closeSidebar} pendingByType={pendingByType} />
+        <CasesGroup onNavigate={closeSidebar} pendingByType={pendingByType} allowedTypes={allowedCaseTypes} />
       </div>
 
       {/* ── DATA ── */}
@@ -469,4 +470,3 @@ export default function AppLayout() {
     </div>
   )
 }
-

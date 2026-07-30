@@ -197,6 +197,31 @@ export default function SettingsPage() {
     })).catch(() => {})
   }, [isAdmin])
 
+  const mergeSettings = (data) => {
+    setFmt((prev) => ({
+      ...prev,
+      locationCode:   data.locationCode   ?? prev.locationCode,
+      agencyCode:     data.agencyCode     ?? prev.agencyCode,
+      clientPrefix:   data.clientPrefix   ?? prev.clientPrefix,
+      medicinePrefix: data.medicinePrefix ?? prev.medicinePrefix,
+      burialPrefix:   data.burialPrefix   ?? prev.burialPrefix,
+      hospitalPrefix: data.hospitalPrefix ?? prev.hospitalPrefix,
+      medicalPrefix:  data.medicalPrefix  ?? prev.medicalPrefix,
+      eyeglassPrefix: data.eyeglassPrefix ?? prev.eyeglassPrefix,
+      plainPrefix:    data.plainPrefix    ?? prev.plainPrefix,
+      sequenceDigits: data.sequenceDigits ?? prev.sequenceDigits,
+      clientStartSequence: data.clientStartSequence ?? prev.clientStartSequence,
+      medicineStartSequence: data.medicineStartSequence ?? prev.medicineStartSequence,
+      burialStartSequence: data.burialStartSequence ?? prev.burialStartSequence,
+      hospitalStartSequence: data.hospitalStartSequence ?? prev.hospitalStartSequence,
+      medicalStartSequence: data.medicalStartSequence ?? prev.medicalStartSequence,
+      eyeglassStartSequence: data.eyeglassStartSequence ?? prev.eyeglassStartSequence,
+      plainStartSequence: data.plainStartSequence ?? prev.plainStartSequence,
+      reviewedByUserId:   data.reviewedByUserId   ?? null,
+      recommendingUserId: data.recommendingUserId ?? null,
+      approvedByUserId:   data.approvedByUserId   ?? null,
+    }))
+  }
   const loadBackups = async ({ silent = false } = {}) => {
     if (!silent) setBackupsLoading(true)
     try {
@@ -218,51 +243,41 @@ export default function SettingsPage() {
     e.preventDefault()
     setFmtSaving(true)
     try {
+      const current = await api.get('/settings')
       const { data } = await api.put('/settings', {
-        ...fmt,
+        ...current.data,
+        locationCode: fmt.locationCode,
+        agencyCode: fmt.agencyCode,
         sequenceDigits: Number(fmt.sequenceDigits),
-        clientStartSequence: Number(fmt.clientStartSequence),
-        medicineStartSequence: Number(fmt.medicineStartSequence),
-        burialStartSequence: Number(fmt.burialStartSequence),
-        hospitalStartSequence: Number(fmt.hospitalStartSequence),
-        medicalStartSequence: Number(fmt.medicalStartSequence),
-        eyeglassStartSequence: Number(fmt.eyeglassStartSequence),
-        plainStartSequence: Number(fmt.plainStartSequence),
         reviewedByUserId: fmt.reviewedByUserId || null,
         recommendingUserId: fmt.recommendingUserId || null,
         approvedByUserId: fmt.approvedByUserId || null,
       })
-      setFmt((prev) => ({
-        ...prev,
-        locationCode:   data.locationCode   ?? prev.locationCode,
-        agencyCode:     data.agencyCode     ?? prev.agencyCode,
-        clientPrefix:   data.clientPrefix   ?? prev.clientPrefix,
-        medicinePrefix: data.medicinePrefix ?? prev.medicinePrefix,
-        burialPrefix:   data.burialPrefix   ?? prev.burialPrefix,
-        hospitalPrefix: data.hospitalPrefix ?? prev.hospitalPrefix,
-        medicalPrefix:  data.medicalPrefix  ?? prev.medicalPrefix,
-        eyeglassPrefix: data.eyeglassPrefix ?? prev.eyeglassPrefix,
-        plainPrefix:    data.plainPrefix    ?? prev.plainPrefix,
-        sequenceDigits: data.sequenceDigits ?? prev.sequenceDigits,
-        clientStartSequence: data.clientStartSequence ?? prev.clientStartSequence,
-        medicineStartSequence: data.medicineStartSequence ?? prev.medicineStartSequence,
-        burialStartSequence: data.burialStartSequence ?? prev.burialStartSequence,
-        hospitalStartSequence: data.hospitalStartSequence ?? prev.hospitalStartSequence,
-        medicalStartSequence: data.medicalStartSequence ?? prev.medicalStartSequence,
-        eyeglassStartSequence: data.eyeglassStartSequence ?? prev.eyeglassStartSequence,
-        plainStartSequence: data.plainStartSequence ?? prev.plainStartSequence,
-        reviewedByUserId:   data.reviewedByUserId   ?? null,
-        recommendingUserId: data.recommendingUserId ?? null,
-        approvedByUserId:   data.approvedByUserId   ?? null,
-      }))
-      toast.success('Case number format saved.')
+      mergeSettings(data)
+      toast.success('Global format and approval settings saved.')
     } catch (err) {
-      toast.error(err.response?.data?.message ?? 'Failed to save format.')
+      toast.error(err.response?.data?.message ?? 'Failed to save global settings.')
     } finally {
       setFmtSaving(false)
     }
   }
 
+  const saveSelectedCaseSeries = async (e) => {
+    e.preventDefault()
+    setFmtSaving(true)
+    try {
+      const { data } = await api.patch(`/settings/case-number-series/${selectedSeries.key}`, {
+        prefix: String(fmt[selectedSeries.prefixField] || '').toUpperCase(),
+        startSequence: Number(fmt[selectedSeries.sequenceField]),
+      })
+      mergeSettings(data)
+      toast.success(`${selectedSeries.label} case number series saved.`)
+    } catch (err) {
+      toast.error(err.response?.data?.message ?? 'Failed to save case number series.')
+    } finally {
+      setFmtSaving(false)
+    }
+  }
   const formatSeq = (value) => String(Number(value) || 1).padStart(Number(fmt.sequenceDigits) || 3, '0')
   const seqClient = formatSeq(fmt.clientStartSequence)
   const seqMedicine = formatSeq(fmt.medicineStartSequence)
@@ -813,7 +828,7 @@ export default function SettingsPage() {
             <h2 className="text-base font-semibold text-slate-900">Case Number Format</h2>
             <p className="text-sm text-slate-500">Configure the ID and case number codes generated for new records. Changes apply to new records only.</p>
           </div>
-          <form onSubmit={saveFmt} className="space-y-5">
+          <form onSubmit={saveSelectedCaseSeries} className="space-y-5">
             {/* Global format settings */}
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
               <div>
@@ -874,7 +889,7 @@ export default function SettingsPage() {
                 <span className="mr-2 text-xs font-medium text-slate-400">Preview</span>
                 <span className="font-mono text-sm font-bold text-brand-primary">{selectedPreview}</span>
               </div>
-              <p className="mt-2 text-xs text-slate-400">Existing higher numbers are still skipped automatically.</p>
+              <p className="mt-2 text-xs text-slate-400">Only the selected series is saved. Existing higher numbers are still skipped automatically.</p>
             </div>
             <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Approval Hierarchy Assignment</p>
@@ -935,9 +950,12 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            <div className="flex justify-end">
+            <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+              <button type="button" disabled={fmtSaving} onClick={saveFmt} className="portal-button-secondary">
+                {fmtSaving ? 'Saving...' : 'Save Global Settings'}
+              </button>
               <button type="submit" disabled={fmtSaving} className="portal-button-primary">
-                {fmtSaving ? 'Saving...' : 'Save Format'}
+                {fmtSaving ? 'Saving...' : `Save ${selectedSeries.label} Series`}
               </button>
             </div>
           </form>

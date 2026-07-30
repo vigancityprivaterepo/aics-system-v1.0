@@ -2,7 +2,7 @@ import { Navigate, Outlet } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 
 function defaultRedirectForRole(role) {
-  return role === 'city_health_office' ? '/medicines' : '/dashboard'
+  return role === 'city_health_office' ? '/vehicle-requests' : '/dashboard'
 }
 
 export default function ProtectedRoute({ roles, redirectTo }) {

@@ -4,9 +4,12 @@ import toast from 'react-hot-toast'
 import api from '../../lib/api'
 import { formatDate } from '../../lib/utils'
 import StatusBadge from '../../components/ui/StatusBadge'
+import { useAuthStore } from '../../store/authStore'
 import { PlusIcon, SearchIcon, FolderIcon, EditIcon, TrashIcon, ChevronLeftIcon, ChevronRightIcon, QrCodeIcon } from '../../components/ui/Icons'
 
 const TYPE_LABEL = { medicine: 'Medicine', burial: 'Burial', hospital: 'Hospital', medical: 'Medical', eyeglass: 'Eyeglass', plain: 'Plain AICS' }
+const ALL_CASE_TYPES = ['medicine', 'medical', 'hospital', 'burial', 'eyeglass', 'plain']
+const LIMITED_CASE_TYPES = ['medical', 'hospital']
 const QUEUE_LABEL = {
   needs_intake: 'Needs Intake',
   needs_encoding: 'Needs Encoding',
@@ -48,6 +51,8 @@ export default function CaseList() {
   const overdueParam = searchParams.get('overdue') === 'true'
   const ownerParam = searchParams.get('owner') ?? ''
   const navigate = useNavigate()
+  const user = useAuthStore((state) => state.user)
+  const allowedCaseTypes = user?.role === 'admin' ? ALL_CASE_TYPES : LIMITED_CASE_TYPES
 
   const [cases, setCases] = useState([])
   const [loading, setLoading] = useState(true)
@@ -64,6 +69,12 @@ export default function CaseList() {
   const LIMIT = 15
   const totalPages = Math.max(1, Math.ceil(total / LIMIT))
   const filterType = typeParam || filterTypeInput
+
+  useEffect(() => {
+    if (typeParam && !allowedCaseTypes.includes(typeParam)) {
+      navigate('/cases?type=medical', { replace: true })
+    }
+  }, [allowedCaseTypes, navigate, typeParam])
 
   const fetchCases = async (targetPage = page, overrides = {}) => {
     try {
@@ -190,12 +201,9 @@ export default function CaseList() {
           {!typeParam && (
             <select value={filterTypeInput} onChange={(e) => { setLoading(true); setFilterTypeInput(e.target.value); setPage(1) }} className="portal-input w-40" id="filter-type">
               <option value="">All Types</option>
-              <option value="medicine">Medicine</option>
-              <option value="medical">Medical</option>
-              <option value="hospital">Hospital</option>
-              <option value="burial">Burial</option>
-              <option value="eyeglass">Eyeglass</option>
-              <option value="plain">Plain AICS</option>
+              {allowedCaseTypes.map((type) => (
+                <option key={type} value={type}>{TYPE_LABEL[type]}</option>
+              ))}
             </select>
           )}
           <select value={filterQueue} onChange={(e) => { setLoading(true); setFilterQueue(e.target.value); setPage(1) }} className="portal-input w-52" id="filter-queue">

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import api from '../../lib/api'
-import { formatCurrency } from '../../lib/utils'
+import { useAuthStore } from '../../store/authStore'
 import { PlusIcon, SearchIcon, EditIcon, TrashIcon, PillIcon } from '../../components/ui/Icons'
 import { ChevronLeftIcon, ChevronRightIcon } from '../../components/ui/Icons'
 
@@ -15,6 +15,8 @@ function displayOptional(value) {
 }
 
 export default function MedicineDatabase() {
+  const user = useAuthStore((state) => state.user)
+  const canManageMedicines = user?.role === 'admin'
   const [medicines, setMedicines] = useState([])
   const [total, setTotal] = useState(0)
   const [totalPages, setTotalPages] = useState(1)
@@ -104,6 +106,7 @@ export default function MedicineDatabase() {
   }, [page, search, category])
 
   const handleSave = async () => {
+    if (!canManageMedicines) return
     try {
       if (editing) {
         await api.put(`/medicines/${editing.id}`, form)
@@ -122,12 +125,14 @@ export default function MedicineDatabase() {
   }
 
   const handleEdit = (m) => {
+    if (!canManageMedicines) return
     setEditing(m)
     setForm({ genericName: m.genericName, brandName: m.brandName ?? '', unit: m.unit ?? '', strength: m.strength ?? '', category: m.category ?? '', isAvailable: m.isAvailable !== false })
     setShowForm(true)
   }
 
   const handleToggleAvailability = async (m) => {
+    if (!canManageMedicines) return
     const nextStatus = m.isAvailable === false ? true : false
     setMedicines(prev => prev.map(item => item.id === m.id ? { ...item, isAvailable: nextStatus } : item))
     try {
@@ -141,6 +146,7 @@ export default function MedicineDatabase() {
 
   // Count data rows in CSV for confirmation preview (client-side)
   const previewCsv = (file) => {
+    if (!canManageMedicines) return
     const reader = new FileReader()
     reader.onload = (e) => {
       const text = (e.target.result || '').replace(/^\uFEFF/, '')
@@ -153,7 +159,7 @@ export default function MedicineDatabase() {
   }
 
   const handleImport = async () => {
-    if (!importModal?.file) return
+    if (!canManageMedicines || !importModal?.file) return
     setImporting(true)
     try {
       const formData = new FormData()
@@ -178,6 +184,7 @@ export default function MedicineDatabase() {
   }
 
   const handleDelete = async (id) => {
+    if (!canManageMedicines) return
     if (!window.confirm('Delete this medicine?')) return
     try {
       await api.delete(`/medicines/${id}`)
@@ -189,6 +196,7 @@ export default function MedicineDatabase() {
   }
 
   const handleDeleteAll = async () => {
+    if (!canManageMedicines) return
     setDeletingAll(true)
     try {
       const { data } = await api.delete('/medicines')
@@ -213,6 +221,7 @@ export default function MedicineDatabase() {
           <h1 className="portal-page-title">Medicine Database</h1>
           <p className="portal-page-subtitle">{total.toLocaleString()} entries</p>
         </div>
+        {canManageMedicines && (
         <div className="flex flex-wrap items-center gap-2">
           <button onClick={() => setDeleteAllModal(true)}
             className="rounded-lg border border-red-200 bg-white px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors flex items-center gap-2">
@@ -239,10 +248,11 @@ export default function MedicineDatabase() {
             Add Medicine
           </button>
         </div>
+        )}
       </div>
 
       {/* Add/Edit Form */}
-      {showForm && (
+      {canManageMedicines && showForm && (
         <div className="card mb-4 border-2 border-brand-green/30 animate-slide-up">
           <div className="form-section-title">{editing ? 'Edit Medicine' : 'Add New Medicine'}</div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -317,7 +327,7 @@ export default function MedicineDatabase() {
       </div>
 
       {/* Delete All Confirmation Modal */}
-      {deleteAllModal && (
+      {canManageMedicines && deleteAllModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
           <div className="w-full max-w-sm rounded-xl bg-white shadow-2xl">
             <div className="rounded-t-xl bg-gradient-to-r from-red-700 to-red-600 px-6 py-4">
@@ -348,7 +358,7 @@ export default function MedicineDatabase() {
       )}
 
       {/* CSV Import Confirmation Modal */}
-      {importModal && (
+      {canManageMedicines && importModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
           <div className="w-full max-w-sm rounded-xl bg-white shadow-2xl">
             <div className="rounded-t-xl bg-gradient-to-r from-[#064e3b] to-[#065f46] px-6 py-4">
@@ -366,7 +376,7 @@ export default function MedicineDatabase() {
                 <p>Drug Category to Category</p>
                 <p>Strength / Concentration to Strength / Conc.</p>
                 <p>Dosage Form to Dosage Form</p>
-                <p className="text-slate-500 mt-1">Status defaults to Available - CHO can update availability anytime.</p>
+                <p className="text-slate-500 mt-1">Status defaults to Available.</p>
               </div>
               <div className="flex justify-end gap-3 pt-1">
                 <button type="button" onClick={() => setImportModal(null)}
@@ -422,11 +432,12 @@ export default function MedicineDatabase() {
                     <button
                       type="button"
                       onClick={() => handleToggleAvailability(m)}
-                      title="Click to toggle availability status"
+                      disabled={!canManageMedicines}
+                      title={canManageMedicines ? 'Click to toggle availability status' : 'Read only'}
                       className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all shadow-sm ${
                         m.isAvailable !== false
-                          ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200 border border-emerald-300'
-                          : 'bg-rose-100 text-rose-800 hover:bg-rose-200 border border-rose-300'
+                          ? `bg-emerald-100 text-emerald-800 border border-emerald-300 ${canManageMedicines ? 'hover:bg-emerald-200' : 'cursor-default'}`
+                          : `bg-rose-100 text-rose-800 border border-rose-300 ${canManageMedicines ? 'hover:bg-rose-200' : 'cursor-default'}`
                       }`}
                     >
                       <span className={`h-2 w-2 rounded-full ${m.isAvailable !== false ? 'bg-emerald-500' : 'bg-rose-500'}`} />
@@ -434,10 +445,14 @@ export default function MedicineDatabase() {
                     </button>
                   </td>
                   <td className="table-cell text-center">
-                    <div className="flex justify-center gap-2">
-                      <button onClick={() => handleEdit(m)} className="text-brand-primary hover:text-brand-dark"><EditIcon className="h-4 w-4" /></button>
-                      <button onClick={() => handleDelete(m.id)} className="text-red-400 hover:text-red-600"><TrashIcon className="h-4 w-4" /></button>
-                    </div>
+                    {canManageMedicines ? (
+                      <div className="flex justify-center gap-2">
+                        <button onClick={() => handleEdit(m)} className="text-brand-primary hover:text-brand-dark"><EditIcon className="h-4 w-4" /></button>
+                        <button onClick={() => handleDelete(m.id)} className="text-red-400 hover:text-red-600"><TrashIcon className="h-4 w-4" /></button>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-slate-400">Read only</span>
+                    )}
                   </td>
                 </tr>
               ))}

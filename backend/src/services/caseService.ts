@@ -3,6 +3,21 @@ import { prisma } from '../utils/prisma.js'
 import { HttpError } from '../utils/httpError.js'
 import { ACTIVE_APPROVAL_STATUSES, EDIT_LOCKED_STATUSES, STATUS_FLOW } from '../types/caseTypes.js'
 import { REQUIREMENT_DEFINITIONS, emptyRequirementMap } from '../utils/requirements.js'
+const NON_ADMIN_ALLOWED_CASE_TYPES: AssistanceType[] = ['hospital', 'medical']
+
+export function assertAllowedCaseTypeForUser(
+  assistanceType: AssistanceType | undefined,
+  user: Express.AuthUser | undefined,
+  action = 'This case type',
+) {
+  if (!user) throw new HttpError(401, 'Unauthorized')
+  if (user.role === 'admin') return
+  if (user.role !== 'employee') {
+    throw new HttpError(403, 'Cases are not available for your account.')
+  }
+  if (assistanceType && NON_ADMIN_ALLOWED_CASE_TYPES.includes(assistanceType)) return
+  throw new HttpError(403, `${action} is limited to medical and hospital cases for your account.`)
+}
 
 export function paramId(value: string | string[] | undefined): string {
   if (Array.isArray(value)) return value[0] ?? ''
@@ -44,8 +59,8 @@ export function assertCaseReadable(
 ) {
   if (!user) throw new HttpError(401, 'Unauthorized')
   if (user.role === 'admin') return
+  assertAllowedCaseTypeForUser(caseData.assistanceType, user, scope)
   if (caseData.socialWorkerId && caseData.socialWorkerId === user.id) return
-  if (user.role === 'city_health_office' && caseData.assistanceType === 'medicine') return
   if (Array.isArray(caseData.approvals) && caseData.approvals.some((approval) => approval.actedByUserId === user.id)) return
 
   const normalizedStatus = normalizeWorkflowStatus(caseData.status)

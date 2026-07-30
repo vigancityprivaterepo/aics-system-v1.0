@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import api from '../../lib/api'
 import ClientSearchBar from '../../components/ClientSearchBar'
+import { useAuthStore } from '../../store/authStore'
 import {
   PillIcon, CrossIcon, ArrowRightIcon, PlusIcon, ChevronLeftIcon,
   HospitalIcon, GlassesIcon, HeadstonIcon, FileTextIcon,
@@ -18,11 +19,16 @@ const CASE_TYPES = [
 ]
 
 const TYPE_LABEL = { medicine: 'Medicine', burial: 'Burial', hospital: 'Hospital', medical: 'Medical', eyeglass: 'Eyeglass', plain: 'Plain AICS' }
+const LIMITED_CASE_TYPES = ['medical', 'hospital']
 
 export default function NewCase() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const presetType = searchParams.get('type') ?? ''
+  const requestedPresetType = searchParams.get('type') ?? ''
+  const user = useAuthStore((state) => state.user)
+  const allowedCaseTypes = user?.role === 'admin' ? CASE_TYPES.map((caseType) => caseType.type) : LIMITED_CASE_TYPES
+  const presetType = allowedCaseTypes.includes(requestedPresetType) ? requestedPresetType : ''
+  const visibleCaseTypes = CASE_TYPES.filter((caseType) => allowedCaseTypes.includes(caseType.type))
 
   // steps: 'type' | 'client'
   const [step, setStep] = useState(presetType ? 'client' : 'type')
@@ -98,7 +104,7 @@ export default function NewCase() {
         <div className="card">
           <div className="form-section-title mb-4">Select Assistance Type</div>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            {CASE_TYPES.map((caseType) => (
+            {visibleCaseTypes.map((caseType) => (
               <button
                 key={caseType.type}
                 onClick={() => caseType.available && handleSelectType(caseType.type)}

@@ -9,7 +9,7 @@ import { findCaseWithDetails, getApprovalSettings } from '../queries/caseQueries
 import { serializeCase, normalizeWorkflowStatus } from '../serializers/caseSerializer.js'
 import { resolveApprovalAssignees } from '../services/approvalService.js'
 import { assessCaseWorkflow } from '../services/caseWorkflowService.js'
-import { assertCaseReadable, assertEditableCase, ensureRequirementRows, paramId } from '../services/caseService.js'
+import { assertAllowedCaseTypeForUser, assertCaseReadable, assertEditableCase, ensureRequirementRows, paramId } from '../services/caseService.js'
 import { APPROVAL_STAGE_META, APPROVAL_STAGE_ORDER } from '../types/caseTypes.js'
 import { updateCaseSchema } from '../schemas/caseSchemas.js'
 import { statusToApprovalStage } from '../services/approvalService.js'
@@ -55,8 +55,16 @@ export async function listCases(req: Request, res: Response) {
   const limit = Math.min(Number(req.query.limit ?? 15), 100)
   const page = Math.max(Number(req.query.page ?? 1), 1)
 
+  if (type) {
+    assertAllowedCaseTypeForUser(type as AssistanceType, req.user, 'Case list')
+  }
+
+  const allowedAssistanceTypes = req.user.role === 'admin'
+    ? undefined
+    : ([AssistanceType.hospital, AssistanceType.medical] as AssistanceType[])
+
   const where: Prisma.CaseWhereInput = {
-    ...(type ? { assistanceType: type as AssistanceType } : {}),
+    ...(type ? { assistanceType: type as AssistanceType } : allowedAssistanceTypes ? { assistanceType: { in: allowedAssistanceTypes } } : {}),
     ...(status
       ? {
           status:
@@ -228,6 +236,7 @@ export async function createCase(req: Request, res: Response) {
   const { createCaseSchema } = await import('../schemas/caseSchemas.js')
   const body = createCaseSchema.parse(req.body)
   const { clientId, assistanceType } = body
+  assertAllowedCaseTypeForUser(assistanceType, req.user, 'Case creation')
 
   const client = await prisma.client.findUnique({ where: { id: clientId } })
   if (!client) throw new HttpError(404, 'Client not found')
@@ -436,6 +445,7 @@ export async function deleteCase(req: Request, res: Response) {
   const caseId = paramId(req.params.id)
   const caseData = await prisma.case.findUnique({ where: { id: caseId } })
   if (!caseData) throw new HttpError(404, 'Case not found')
+  assertCaseReadable(caseData, req.user, 'Case delete')
 
   // NOTE: CaseStatusLog has onDelete: Cascade, so audit entries are deleted
   // along with the case. Permanent delete auditing would require a separate
