@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import api from '../../lib/api'
 import { formatDate } from '../../lib/utils'
+import { VIGAN_BARANGAYS } from '../../lib/constants'
 import { useAuthStore } from '../../store/authStore'
 import { ChevronLeftIcon, IdCardIcon, EditIcon, TrashIcon, ClipboardIcon, ArrowRightIcon } from '../../components/ui/Icons'
 import StatusBadge from '../../components/ui/StatusBadge'
@@ -86,6 +87,10 @@ function toEditForm(client) {
     sex: client.sex ?? '',
     civilStatus: client.civilStatus ?? '',
     clientCategory: client.clientCategory ?? 'walk-in',
+    barangay: client.barangay ?? '',
+    municipality: client.municipality ?? 'Vigan City',
+    province: client.province ?? 'Ilocos Sur',
+    region: client.region ?? 'Region I',
     contactNumber: client.contactNumber ?? '',
     occupation: client.occupation ?? '',
     religion: client.religion ?? '',
@@ -124,6 +129,10 @@ export default function ClientProfile() {
     sex: '',
     civilStatus: '',
     clientCategory: 'walk-in',
+    barangay: '',
+    municipality: 'Vigan City',
+    province: 'Ilocos Sur',
+    region: 'Region I',
     contactNumber: '',
     occupation: '',
     religion: '',
@@ -213,6 +222,10 @@ export default function ClientProfile() {
       sex: form.sex || null,
       civilStatus: form.civilStatus || null,
       clientCategory: form.clientCategory || 'walk-in',
+      barangay: form.barangay || null,
+      municipality: form.municipality.trim() || null,
+      province: form.province.trim() || null,
+      region: form.region.trim() || null,
       contactNumber: form.contactNumber.trim() || null,
       occupation: form.occupation.trim() || null,
       religion: form.religion.trim() || null,
@@ -531,10 +544,41 @@ export default function ClientProfile() {
                 />
               </div>
               <div className="sm:col-span-2">
-                <label className="portal-label">Address</label>
+                <label className="portal-label">Barangay</label>
+                <select
+                  className="portal-input"
+                  value={form.barangay}
+                  onChange={(e) => setForm((prev) => ({ ...prev, barangay: e.target.value }))}
+                >
+                  <option value="">Select barangay</option>
+                  {form.barangay && !VIGAN_BARANGAYS.includes(form.barangay) && <option value={form.barangay}>{form.barangay}</option>}
+                  {VIGAN_BARANGAYS.map((barangay) => <option key={barangay} value={barangay}>{barangay}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="portal-label">City / Municipality</label>
                 <input
-                  className="portal-input bg-slate-50 text-slate-500"
-                  value={[client.barangay, client.municipality, client.province, client.region].filter(Boolean).join(', ') || '-'}
+                  className="portal-input bg-slate-50 text-slate-500 cursor-not-allowed"
+                  value={form.municipality}
+                  onChange={(e) => setForm((prev) => ({ ...prev, municipality: e.target.value }))}
+                  readOnly
+                />
+              </div>
+              <div>
+                <label className="portal-label">Province</label>
+                <input
+                  className="portal-input bg-slate-50 text-slate-500 cursor-not-allowed"
+                  value={form.province}
+                  onChange={(e) => setForm((prev) => ({ ...prev, province: e.target.value }))}
+                  readOnly
+                />
+              </div>
+              <div>
+                <label className="portal-label">Region</label>
+                <input
+                  className="portal-input bg-slate-50 text-slate-500 cursor-not-allowed"
+                  value={form.region}
+                  onChange={(e) => setForm((prev) => ({ ...prev, region: e.target.value }))}
                   readOnly
                 />
               </div>
