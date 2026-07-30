@@ -78,17 +78,6 @@ export async function updateStatus(req: Request, res: Response) {
     const expectedLevel = requiredApprovalLevel(currentStage)
     stageAssignee = stageAssignees[currentStage]
 
-    if (!stageAssignee) {
-      throw new HttpError(400, `No active user found with ${expectedLevel} approval level for ${APPROVAL_STAGE_META[currentStage].label}.`)
-    }
-    if (!stageAssignee.isActive) {
-      throw new HttpError(400, `Assigned ${APPROVAL_STAGE_META[currentStage].label.toLowerCase()} user must be active.`)
-    }
-    const assigneeLevels = parseApprovalLevels(stageAssignee.approvalLevel)
-    if (!assigneeLevels.includes(expectedLevel)) {
-      throw new HttpError(403, `Assigned approver must have ${expectedLevel} approval level.`)
-    }
-
     const actingUser = await prisma.user.findUnique({
       where: { id: req.user!.id },
       select: { id: true, name: true, approvalLevel: true, isActive: true, eSignatureUrl: true, position: true },
@@ -98,16 +87,29 @@ export async function updateStatus(req: Request, res: Response) {
     if (!actorLevels.includes(expectedLevel)) {
       throw new HttpError(403, `Only users with ${expectedLevel} approval level can perform this action.`)
     }
-    if (actingUser.id !== stageAssignee.id) {
-      throw new HttpError(403, `Only the assigned ${APPROVAL_STAGE_META[currentStage].label.toLowerCase()} may perform this action.`)
+
+    if (stageAssignee) {
+      if (!stageAssignee.isActive) {
+        throw new HttpError(400, `Assigned ${APPROVAL_STAGE_META[currentStage].label.toLowerCase()} user must be active.`)
+      }
+      const assigneeLevels = parseApprovalLevels(stageAssignee.approvalLevel)
+      if (!assigneeLevels.includes(expectedLevel)) {
+        throw new HttpError(403, `Assigned approver must have ${expectedLevel} approval level.`)
+      }
+      if (actingUser.id !== stageAssignee.id) {
+        throw new HttpError(403, `Only the assigned ${APPROVAL_STAGE_META[currentStage].label.toLowerCase()} may perform this action.`)
+      }
     }
 
-
     stageAssignee = {
-      ...stageAssignee,
+      ...(stageAssignee ?? {}),
       id: actingUser.id,
       name: actingUser.name,
+      approvalLevel: actingUser.approvalLevel,
+      isActive: actingUser.isActive,
+      position: actingUser.position,
       eSignatureUrl: actingUser.eSignatureUrl,
+      signatureParam: stageAssignee?.signatureParam ?? null,
     }
   }
 
