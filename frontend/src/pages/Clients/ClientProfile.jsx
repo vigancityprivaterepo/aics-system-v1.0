@@ -710,7 +710,8 @@ export default function ClientProfile() {
                       </button>
                     </td>
                   </tr>
-                )) : (
+                )
+              }) : (
                   <tr>
                     <td colSpan="5" className="px-3 py-4 text-center text-slate-400">No household members added.</td>
                   </tr>
