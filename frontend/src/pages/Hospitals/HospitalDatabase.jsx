@@ -6,6 +6,20 @@ import { ChevronLeftIcon, ChevronRightIcon } from '../../components/ui/Icons'
 
 const PAGE_SIZE = 20
 
+
+function Modal({ onClose, children }) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
+    >
+      <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl animate-slide-up">
+        {children}
+      </div>
+    </div>
+  )
+}
+
 function displayOptional(value) {
   const normalized = String(value ?? '').trim()
   if (!normalized || ['\u00e2\u20ac\u201d', '\u2014', '\u2013'].includes(normalized)) return '-'
@@ -234,7 +248,7 @@ export default function HospitalDatabase() {
             />
           </label>
           <button
-            onClick={() => { setShowForm(!showForm); setEditing(null); resetForm() }}
+            onClick={() => { setShowForm(true); setEditing(null); resetForm() }}
             className="portal-button-green"
           >
             <PlusIcon className="h-4 w-4" />
@@ -245,9 +259,17 @@ export default function HospitalDatabase() {
 
       {/* Add/Edit Form */}
       {showForm && (
-        <div className="card mb-4 border-2 border-brand-green/30 animate-slide-up">
-          <div className="form-section-title">{editing ? 'Edit Facility' : 'Add New Facility'}</div>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <Modal onClose={() => { setShowForm(false); setEditing(null); resetForm() }}>
+            <div className="rounded-t-2xl bg-gradient-to-r from-[#064e3b] to-[#065f46] px-6 py-4 flex items-center justify-between">
+              <h2 className="font-display text-lg font-bold text-white">{editing ? 'Edit Facility' : 'Add New Facility'}</h2>
+              <button onClick={() => { setShowForm(false); setEditing(null); resetForm() }} className="text-white/70 hover:text-white transition-colors" type="button">
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="px-6 py-6 space-y-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <label className="portal-label">Province *</label>
               <input value={form.province} onChange={e => setForm({ ...form, province: e.target.value })} className="portal-input" placeholder="e.g. Ilocos Sur" />
@@ -268,12 +290,13 @@ export default function HospitalDatabase() {
               <label className="portal-label">Full Address</label>
               <input value={form.fullAddress} onChange={e => setForm({ ...form, fullAddress: e.target.value })} className="portal-input" placeholder="Street, Barangay, City, Province, ZIP" />
             </div>
-          </div>
-          <div className="mt-4 flex gap-2">
-            <button onClick={handleSave} className="portal-button-primary">Save Facility</button>
-            <button onClick={() => { setShowForm(false); setEditing(null); resetForm() }} className="portal-button-secondary">Cancel</button>
-          </div>
-        </div>
+              </div>
+              <div className="flex justify-end gap-3 pt-2 border-t border-slate-100">
+                <button onClick={() => { setShowForm(false); setEditing(null); resetForm() }} className="rounded-lg border border-slate-200 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 transition-colors" type="button">Cancel</button>
+                <button onClick={handleSave} className="portal-button-primary" type="button">Save Facility</button>
+              </div>
+            </div>
+        </Modal>
       )}
 
       {/* Filters */}

@@ -8,6 +8,7 @@ import { requireRole } from '../middleware/auth.js'
 
 const router = Router()
 const adminOnly = requireRole(['admin'])
+const canManageHospitals = requireRole(['admin', 'employee'])
 
 const csvUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } })
 
@@ -55,7 +56,7 @@ const hospitalSchema = z.object({
 })
 
 // POST /hospitals/bulk-import
-router.post('/bulk-import', adminOnly, csvUpload.single('file'), asyncHandler(async (req, res) => {
+router.post('/bulk-import', canManageHospitals, csvUpload.single('file'), asyncHandler(async (req, res) => {
   if (!req.file) throw new HttpError(400, 'No file uploaded')
 
   const text = req.file.buffer.toString('utf-8')
@@ -186,14 +187,14 @@ router.get('/', asyncHandler(async (req, res) => {
 }))
 
 // POST /hospitals
-router.post('/', adminOnly, asyncHandler(async (req, res) => {
+router.post('/', canManageHospitals, asyncHandler(async (req, res) => {
   const body = hospitalSchema.parse(req.body)
   const created = await prisma.hospitalFacility.create({ data: body })
   res.status(201).json(created)
 }))
 
 // PUT /hospitals/:id
-router.put('/:id', adminOnly, asyncHandler(async (req, res) => {
+router.put('/:id', canManageHospitals, asyncHandler(async (req, res) => {
   const id = paramId(req.params.id)
   const body = hospitalSchema.parse(req.body)
   const existing = await prisma.hospitalFacility.findUnique({ where: { id } })
@@ -218,3 +219,4 @@ router.delete('/:id', adminOnly, asyncHandler(async (req, res) => {
 }))
 
 export default router
+

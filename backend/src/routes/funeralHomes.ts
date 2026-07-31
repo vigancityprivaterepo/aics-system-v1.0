@@ -8,6 +8,7 @@ import { requireRole } from '../middleware/auth.js'
 
 const router = Router()
 const adminOnly = requireRole(['admin'])
+const canManageFuneralHomes = requireRole(['admin', 'employee'])
 const csvUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } })
 
 function parseCsv(raw: string): string[][] {
@@ -57,7 +58,7 @@ function cleanOptionalText(value: string | null | undefined, maxLength: number) 
 }
 
 // POST /funeral-homes/bulk-import
-router.post('/bulk-import', adminOnly, csvUpload.single('file'), asyncHandler(async (req, res) => {
+router.post('/bulk-import', canManageFuneralHomes, csvUpload.single('file'), asyncHandler(async (req, res) => {
   if (!req.file) throw new HttpError(400, 'No file uploaded')
 
   const text = req.file.buffer.toString('utf-8')
@@ -162,7 +163,7 @@ router.get('/', asyncHandler(async (req, res) => {
 }))
 
 // POST /funeral-homes
-router.post('/', adminOnly, asyncHandler(async (req, res) => {
+router.post('/', canManageFuneralHomes, asyncHandler(async (req, res) => {
   const body = funeralHomeSchema.parse(req.body)
   const home = await prisma.funeralHome.create({
     data: {
@@ -175,7 +176,7 @@ router.post('/', adminOnly, asyncHandler(async (req, res) => {
 }))
 
 // PUT /funeral-homes/:id
-router.put('/:id', adminOnly, asyncHandler(async (req, res) => {
+router.put('/:id', canManageFuneralHomes, asyncHandler(async (req, res) => {
   const id = paramId(req.params.id)
   const body = funeralHomeSchema.parse(req.body)
   const existing = await prisma.funeralHome.findUnique({ where: { id } })
@@ -201,3 +202,4 @@ router.delete('/:id', adminOnly, asyncHandler(async (req, res) => {
 }))
 
 export default router
+
