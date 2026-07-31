@@ -281,29 +281,44 @@ export default function ClientForm() {
                       <td className="px-3 py-2"><input value={member.name} onChange={(event) => updateFamilyMember(index, 'name', event.target.value)} className="portal-input" placeholder="Full name" /></td>
                       <td className="px-3 py-2"><input type="number" min="0" value={member.age} onChange={(event) => updateFamilyMember(index, 'age', event.target.value)} className="portal-input" placeholder="Age" /></td>
                       <td className="px-3 py-2">
-                        <select
-                          value={selectVal}
-                          onChange={(event) => {
-                            const val = event.target.value
-                            if (val === 'Other') {
-                              updateFamilyMember(index, 'relationship', 'Other')
-                            } else {
-                              updateFamilyMember(index, 'relationship', val)
-                              updateFamilyMember(index, 'relationshipOther', '')
-                            }
-                          }}
-                          className="portal-input"
-                        >
-                          <option value="">Select</option>
-                          {RELATIONSHIP_OPTIONS.map((relationship) => <option key={relationship} value={relationship}>{relationship}</option>)}
-                        </select>
-                        {selectVal === 'Other' && (
-                          <input
-                            value={otherVal}
-                            onChange={(e) => updateFamilyMember(index, 'relationshipOther', e.target.value)}
-                            className="portal-input mt-1.5"
-                            placeholder="Specify (e.g. Live-in Partner)"
-                          />
+                        {selectVal === 'Other' ? (
+                          <div className="relative flex items-center">
+                            <input
+                              value={otherVal}
+                              onChange={(e) => updateFamilyMember(index, 'relationshipOther', e.target.value)}
+                              className="portal-input pr-7"
+                              placeholder="Specify (e.g. Live-in Partner)"
+                              autoFocus
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                updateFamilyMember(index, 'relationship', '')
+                                updateFamilyMember(index, 'relationshipOther', '')
+                              }}
+                              className="absolute right-2 text-slate-400 hover:text-slate-600 focus:outline-none text-xs"
+                              title="Back to dropdown list"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ) : (
+                          <select
+                            value={selectVal}
+                            onChange={(event) => {
+                              const val = event.target.value
+                              if (val === 'Other') {
+                                updateFamilyMember(index, 'relationship', 'Other')
+                              } else {
+                                updateFamilyMember(index, 'relationship', val)
+                                updateFamilyMember(index, 'relationshipOther', '')
+                              }
+                            }}
+                            className="portal-input"
+                          >
+                            <option value="">Select</option>
+                            {RELATIONSHIP_OPTIONS.map((relationship) => <option key={relationship} value={relationship}>{relationship}</option>)}
+                          </select>
                         )}
                       </td>
                       <td className="px-3 py-2"><input value={member.occupation} onChange={(event) => updateFamilyMember(index, 'occupation', event.target.value)} className="portal-input" placeholder="Occupation" /></td>

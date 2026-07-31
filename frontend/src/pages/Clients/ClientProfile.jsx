@@ -653,34 +653,56 @@ export default function ClientProfile() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {(form.familyComposition || []).length ? form.familyComposition.map((member, index) => (
-                  <tr key={index}>
-                    <td className="px-3 py-2"><input value={member.name || ''} onChange={(e) => updateFamilyMember(index, 'name', e.target.value)} className="portal-input" /></td>
-                    <td className="px-3 py-2"><input type="number" min="0" value={member.age ?? ''} onChange={(e) => updateFamilyMember(index, 'age', e.target.value)} className="portal-input" /></td>
-                    <td className="px-3 py-2">
-                      <select
-                        value={member.relationship || ''}
-                        onChange={(e) => {
-                          const val = e.target.value
-                          if (val !== 'Other') {
-                            updateFamilyMember(index, 'relationshipOther', '')
-                          }
-                          updateFamilyMember(index, 'relationship', val)
-                        }}
-                        className="portal-input"
-                      >
-                        <option value="">Select</option>
-                        {RELATIONSHIP_OPTIONS.map((relationship) => <option key={relationship} value={relationship}>{relationship}</option>)}
-                      </select>
-                      {member.relationship === 'Other' && (
-                        <input
-                          value={member.relationshipOther || ''}
-                          onChange={(e) => updateFamilyMember(index, 'relationshipOther', e.target.value)}
-                          className="portal-input mt-1.5"
-                          placeholder="Specify (e.g. Live-in Partner)"
-                        />
-                      )}
-                    </td>
+                {(form.familyComposition || []).length ? form.familyComposition.map((member, index) => {
+                  const isStandard = STANDARD_RELATIONSHIPS.includes(member.relationship)
+                  const selectVal = isStandard ? member.relationship : (member.relationship ? 'Other' : '')
+                  const otherVal = !isStandard && member.relationship !== 'Other' ? (member.relationshipOther || member.relationship) : (member.relationshipOther || '')
+
+                  return (
+                    <tr key={index}>
+                      <td className="px-3 py-2"><input value={member.name || ''} onChange={(e) => updateFamilyMember(index, 'name', e.target.value)} className="portal-input" /></td>
+                      <td className="px-3 py-2"><input type="number" min="0" value={member.age ?? ''} onChange={(e) => updateFamilyMember(index, 'age', e.target.value)} className="portal-input" /></td>
+                      <td className="px-3 py-2">
+                        {selectVal === 'Other' ? (
+                          <div className="relative flex items-center">
+                            <input
+                              value={otherVal}
+                              onChange={(e) => updateFamilyMember(index, 'relationshipOther', e.target.value)}
+                              className="portal-input pr-7"
+                              placeholder="Specify (e.g. Live-in Partner)"
+                              autoFocus
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                updateFamilyMember(index, 'relationship', '')
+                                updateFamilyMember(index, 'relationshipOther', '')
+                              }}
+                              className="absolute right-2 text-slate-400 hover:text-slate-600 focus:outline-none text-xs"
+                              title="Back to dropdown list"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ) : (
+                          <select
+                            value={selectVal}
+                            onChange={(e) => {
+                              const val = e.target.value
+                              if (val === 'Other') {
+                                updateFamilyMember(index, 'relationship', 'Other')
+                              } else {
+                                updateFamilyMember(index, 'relationship', val)
+                                updateFamilyMember(index, 'relationshipOther', '')
+                              }
+                            }}
+                            className="portal-input"
+                          >
+                            <option value="">Select</option>
+                            {RELATIONSHIP_OPTIONS.map((relationship) => <option key={relationship} value={relationship}>{relationship}</option>)}
+                          </select>
+                        )}
+                      </td>
                     <td className="px-3 py-2"><input value={member.occupation || ''} onChange={(e) => updateFamilyMember(index, 'occupation', e.target.value)} className="portal-input" /></td>
                     <td className="px-3 py-2 text-center">
                       <button type="button" onClick={() => removeFamilyMember(index)} className="rounded border border-rose-200 p-2 text-rose-600 hover:bg-rose-50" title="Remove member">
