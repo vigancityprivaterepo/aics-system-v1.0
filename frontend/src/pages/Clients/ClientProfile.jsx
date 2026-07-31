@@ -74,9 +74,10 @@ function buildCaseDescription(h) {
   }
 }
 
-const defaultFamilyMember = { name: '', age: '', relationship: '', occupation: '' }
+const defaultFamilyMember = { name: '', age: '', relationship: '', relationshipOther: '', occupation: '' }
 const RELIGION_OPTIONS = ['Roman Catholic', 'Iglesia ni Cristo', 'Islam', 'Born Again Christian', 'Evangelical', 'Protestant', 'Aglipayan', 'Seventh-day Adventist', "Jehovah's Witness", 'Other']
-const RELATIONSHIP_OPTIONS = ['Spouse', 'Son', 'Daughter', 'Father', 'Mother', 'Brother', 'Sister', 'Grandson', 'Granddaughter', 'Grandfather', 'Grandmother', 'Uncle', 'Aunt', 'Nephew', 'Niece', 'Son-in-Law', 'Daughter-in-Law', 'Father-in-Law', 'Mother-in-Law', 'Other']
+const STANDARD_RELATIONSHIPS = ['Spouse', 'Son', 'Daughter', 'Father', 'Mother', 'Brother', 'Sister', 'Grandson', 'Granddaughter', 'Grandfather', 'Grandmother', 'Uncle', 'Aunt', 'Nephew', 'Niece', 'Son-in-Law', 'Daughter-in-Law', 'Father-in-Law', 'Mother-in-Law']
+const RELATIONSHIP_OPTIONS = [...STANDARD_RELATIONSHIPS, 'Other']
 
 function toEditForm(client) {
   return {
@@ -94,7 +95,16 @@ function toEditForm(client) {
     contactNumber: client.contactNumber ?? '',
     occupation: client.occupation ?? '',
     religion: client.religion ?? '',
-    familyComposition: Array.isArray(client.familyComposition) ? client.familyComposition : [],
+    familyComposition: Array.isArray(client.familyComposition)
+      ? client.familyComposition.map((m) => {
+          const isStd = STANDARD_RELATIONSHIPS.includes(m.relationship)
+          return {
+            ...m,
+            relationshipOther: isStd ? '' : (m.relationship || ''),
+            relationship: isStd ? m.relationship : 'Other',
+          }
+        })
+      : [],
   }
 }
 
@@ -230,12 +240,18 @@ export default function ClientProfile() {
       occupation: form.occupation.trim() || null,
       religion: form.religion.trim() || null,
       familyComposition: (form.familyComposition || [])
-        .map((member) => ({
-          name: String(member.name || '').trim(),
-          age: member.age === '' ? null : member.age,
-          relationship: String(member.relationship || '').trim(),
-          occupation: String(member.occupation || '').trim(),
-        }))
+        .map((member) => {
+          let finalRel = String(member.relationship || '').trim()
+          if (member.relationship === 'Other') {
+            finalRel = String(member.relationshipOther || '').trim() || 'Other'
+          }
+          return {
+            name: String(member.name || '').trim(),
+            age: member.age === '' ? null : member.age,
+            relationship: finalRel,
+            occupation: String(member.occupation || '').trim(),
+          }
+        })
         .filter((member) => member.name || member.relationship || member.occupation || member.age !== null),
     }
 
@@ -641,7 +657,30 @@ export default function ClientProfile() {
                   <tr key={index}>
                     <td className="px-3 py-2"><input value={member.name || ''} onChange={(e) => updateFamilyMember(index, 'name', e.target.value)} className="portal-input" /></td>
                     <td className="px-3 py-2"><input type="number" min="0" value={member.age ?? ''} onChange={(e) => updateFamilyMember(index, 'age', e.target.value)} className="portal-input" /></td>
-                    <td className="px-3 py-2"><select value={member.relationship || ''} onChange={(e) => updateFamilyMember(index, 'relationship', e.target.value)} className="portal-input"><option value="">Select</option>{RELATIONSHIP_OPTIONS.map((relationship) => <option key={relationship} value={relationship}>{relationship}</option>)}</select></td>
+                    <td className="px-3 py-2">
+                      <select
+                        value={member.relationship || ''}
+                        onChange={(e) => {
+                          const val = e.target.value
+                          if (val !== 'Other') {
+                            updateFamilyMember(index, 'relationshipOther', '')
+                          }
+                          updateFamilyMember(index, 'relationship', val)
+                        }}
+                        className="portal-input"
+                      >
+                        <option value="">Select</option>
+                        {RELATIONSHIP_OPTIONS.map((relationship) => <option key={relationship} value={relationship}>{relationship}</option>)}
+                      </select>
+                      {member.relationship === 'Other' && (
+                        <input
+                          value={member.relationshipOther || ''}
+                          onChange={(e) => updateFamilyMember(index, 'relationshipOther', e.target.value)}
+                          className="portal-input mt-1.5"
+                          placeholder="Specify (e.g. Live-in Partner)"
+                        />
+                      )}
+                    </td>
                     <td className="px-3 py-2"><input value={member.occupation || ''} onChange={(e) => updateFamilyMember(index, 'occupation', e.target.value)} className="portal-input" /></td>
                     <td className="px-3 py-2 text-center">
                       <button type="button" onClick={() => removeFamilyMember(index)} className="rounded border border-rose-200 p-2 text-rose-600 hover:bg-rose-50" title="Remove member">

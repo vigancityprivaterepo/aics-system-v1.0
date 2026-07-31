@@ -7,10 +7,10 @@ import { ChevronLeftIcon, PlusIcon, TrashIcon } from '../../components/ui/Icons'
 import { VIGAN_BARANGAYS } from '../../lib/constants'
 import DuplicateReviewModal from '../../components/clients/DuplicateReviewModal'
 
-
-const defaultFamilyMember = { name: '', age: '', relationship: '', occupation: '' }
+const defaultFamilyMember = { name: '', age: '', relationship: '', relationshipOther: '', occupation: '' }
 const RELIGION_OPTIONS = ['Roman Catholic', 'Iglesia ni Cristo', 'Islam', 'Born Again Christian', 'Evangelical', 'Protestant', 'Aglipayan', 'Seventh-day Adventist', "Jehovah's Witness", 'Other']
-const RELATIONSHIP_OPTIONS = ['Spouse', 'Son', 'Daughter', 'Father', 'Mother', 'Brother', 'Sister', 'Grandson', 'Granddaughter', 'Grandfather', 'Grandmother', 'Uncle', 'Aunt', 'Nephew', 'Niece', 'Son-in-Law', 'Daughter-in-Law', 'Father-in-Law', 'Mother-in-Law', 'Other']
+const STANDARD_RELATIONSHIPS = ['Spouse', 'Son', 'Daughter', 'Father', 'Mother', 'Brother', 'Sister', 'Grandson', 'Granddaughter', 'Grandfather', 'Grandmother', 'Uncle', 'Aunt', 'Nephew', 'Niece', 'Son-in-Law', 'Daughter-in-Law', 'Father-in-Law', 'Mother-in-Law']
+const RELATIONSHIP_OPTIONS = [...STANDARD_RELATIONSHIPS, 'Other']
 
 export default function ClientForm() {
   const navigate = useNavigate()
@@ -24,7 +24,6 @@ export default function ClientForm() {
     },
   })
 
-
   const addFamilyMember = () => setFamily((current) => [...current, { ...defaultFamilyMember }])
   const removeFamilyMember = (index) => setFamily((current) => current.filter((_, idx) => idx !== index))
   const updateFamilyMember = (index, field, value) => {
@@ -32,12 +31,19 @@ export default function ClientForm() {
   }
 
   const cleanFamily = () => family
-    .map((member) => ({
-      name: String(member.name || '').trim(),
-      age: member.age === '' ? null : member.age,
-      relationship: String(member.relationship || '').trim(),
-      occupation: String(member.occupation || '').trim(),
-    }))
+    .map((member) => {
+      const relSelect = member.relationship
+      let finalRel = String(relSelect || '').trim()
+      if (relSelect === 'Other') {
+        finalRel = String(member.relationshipOther || '').trim() || 'Other'
+      }
+      return {
+        name: String(member.name || '').trim(),
+        age: member.age === '' ? null : member.age,
+        relationship: finalRel,
+        occupation: String(member.occupation || '').trim(),
+      }
+    })
     .filter((member) => member.name || member.relationship || member.occupation || member.age !== null)
 
   const onSubmit = async (data) => {
@@ -241,7 +247,6 @@ export default function ClientForm() {
           </div>
         </div>
 
-
         {/* Family Composition */}
         <div className="card">
           <div className="form-section-title flex items-center justify-between">
@@ -266,19 +271,50 @@ export default function ClientForm() {
                   <tr>
                     <td colSpan="5" className="px-3 py-4 text-center text-slate-400">No household members added.</td>
                   </tr>
-                ) : family.map((member, index) => (
-                  <tr key={index}>
-                    <td className="px-3 py-2"><input value={member.name} onChange={(event) => updateFamilyMember(index, 'name', event.target.value)} className="portal-input" placeholder="Full name" /></td>
-                    <td className="px-3 py-2"><input type="number" min="0" value={member.age} onChange={(event) => updateFamilyMember(index, 'age', event.target.value)} className="portal-input" placeholder="Age" /></td>
-                    <td className="px-3 py-2"><select value={member.relationship} onChange={(event) => updateFamilyMember(index, 'relationship', event.target.value)} className="portal-input"><option value="">Select</option>{RELATIONSHIP_OPTIONS.map((relationship) => <option key={relationship} value={relationship}>{relationship}</option>)}</select></td>
-                    <td className="px-3 py-2"><input value={member.occupation} onChange={(event) => updateFamilyMember(index, 'occupation', event.target.value)} className="portal-input" placeholder="Occupation" /></td>
-                    <td className="px-3 py-2 text-center">
-                      <button type="button" onClick={() => removeFamilyMember(index)} className="rounded border border-rose-200 p-2 text-rose-600 hover:bg-rose-50" title="Remove member">
-                        <TrashIcon className="h-4 w-4" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                ) : family.map((member, index) => {
+                  const isStandard = STANDARD_RELATIONSHIPS.includes(member.relationship)
+                  const selectVal = isStandard ? member.relationship : (member.relationship ? 'Other' : '')
+                  const otherVal = !isStandard && member.relationship !== 'Other' ? (member.relationshipOther || member.relationship) : (member.relationshipOther || '')
+
+                  return (
+                    <tr key={index}>
+                      <td className="px-3 py-2"><input value={member.name} onChange={(event) => updateFamilyMember(index, 'name', event.target.value)} className="portal-input" placeholder="Full name" /></td>
+                      <td className="px-3 py-2"><input type="number" min="0" value={member.age} onChange={(event) => updateFamilyMember(index, 'age', event.target.value)} className="portal-input" placeholder="Age" /></td>
+                      <td className="px-3 py-2">
+                        <select
+                          value={selectVal}
+                          onChange={(event) => {
+                            const val = event.target.value
+                            if (val === 'Other') {
+                              updateFamilyMember(index, 'relationship', 'Other')
+                            } else {
+                              updateFamilyMember(index, 'relationship', val)
+                              updateFamilyMember(index, 'relationshipOther', '')
+                            }
+                          }}
+                          className="portal-input"
+                        >
+                          <option value="">Select</option>
+                          {RELATIONSHIP_OPTIONS.map((relationship) => <option key={relationship} value={relationship}>{relationship}</option>)}
+                        </select>
+                        {selectVal === 'Other' && (
+                          <input
+                            value={otherVal}
+                            onChange={(e) => updateFamilyMember(index, 'relationshipOther', e.target.value)}
+                            className="portal-input mt-1.5"
+                            placeholder="Specify (e.g. Live-in Partner)"
+                          />
+                        )}
+                      </td>
+                      <td className="px-3 py-2"><input value={member.occupation} onChange={(event) => updateFamilyMember(index, 'occupation', event.target.value)} className="portal-input" placeholder="Occupation" /></td>
+                      <td className="px-3 py-2 text-center">
+                        <button type="button" onClick={() => removeFamilyMember(index)} className="rounded border border-rose-200 p-2 text-rose-600 hover:bg-rose-50" title="Remove member">
+                          <TrashIcon className="h-4 w-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
@@ -308,5 +344,3 @@ export default function ClientForm() {
     </div>
   )
 }
-
-

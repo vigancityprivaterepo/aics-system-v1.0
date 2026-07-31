@@ -1,5 +1,6 @@
 services:
   postgres:
+    container_name: aics-system-postgres
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
@@ -15,6 +16,7 @@ services:
       retries: 10
 
   backend:
+    container_name: aics-system-backend
     build:
       context: .
       dockerfile: backend/Dockerfile
@@ -30,6 +32,7 @@ services:
       - "5101:5001"
 
   frontend:
+    container_name: aics-system-frontend
     build:
       context: ./frontend
     restart: unless-stopped
@@ -39,6 +42,7 @@ services:
       - "8081:80"
 
   portal:
+    container_name: aics-system-portal
     build:
       context: ./portal
       args:
