@@ -8,6 +8,7 @@ import { requireRole } from '../middleware/auth.js'
 
 const router = Router()
 const adminOnly = requireRole(['admin'])
+const canManageMedicine = requireRole(['admin', 'city_health_office'])
 
 const csvUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } })
 
@@ -216,7 +217,7 @@ router.get('/', asyncHandler(async (req, res) => {
   })
 }))
 
-router.post('/', adminOnly, asyncHandler(async (req, res) => {
+router.post('/', canManageMedicine, asyncHandler(async (req, res) => {
   const body = medicineSchema.parse(req.body)
 
   const created = await prisma.medicineItem.create({
@@ -243,7 +244,7 @@ router.post('/', adminOnly, asyncHandler(async (req, res) => {
   })
 }))
 
-router.put('/:id', adminOnly, asyncHandler(async (req, res) => {
+router.put('/:id', canManageMedicine, asyncHandler(async (req, res) => {
   const medicineId = paramId(req.params.id)
   const body = medicineSchema.parse(req.body)
 
@@ -275,7 +276,7 @@ router.put('/:id', adminOnly, asyncHandler(async (req, res) => {
   })
 }))
 
-router.patch('/:id/availability', adminOnly, asyncHandler(async (req, res) => {
+router.patch('/:id/availability', canManageMedicine, asyncHandler(async (req, res) => {
   const medicineId = paramId(req.params.id)
   const schema = z.object({ isAvailable: z.boolean() })
   const { isAvailable } = schema.parse(req.body)
@@ -300,7 +301,7 @@ router.delete('/', adminOnly, asyncHandler(async (req, res) => {
   res.json({ deleted: result.count })
 }))
 
-router.delete('/:id', adminOnly, asyncHandler(async (req, res) => {
+router.delete('/:id', canManageMedicine, asyncHandler(async (req, res) => {
   const medicineId = paramId(req.params.id)
   const existing = await prisma.medicineItem.findUnique({ where: { id: medicineId } })
   if (!existing) throw new HttpError(404, 'Medicine not found')
