@@ -6,7 +6,7 @@ export async function findCaseWithDetails(id: string) {
     include: {
       client: true,
       requirements: true,
-      medicines: { orderBy: { createdAt: 'asc' } },
+      medicines: { orderBy: { createdAt: 'asc' }, include: { medicine: { select: { isAvailable: true, updatedAt: true } } } },
       burialDetails: true,
       hospitalDetails: true,
       medicalDetails: true,

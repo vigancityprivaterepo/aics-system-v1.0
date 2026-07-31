@@ -1124,6 +1124,7 @@ export async function generateEyeglassEndorsementDocx(caseData: any): Promise<Bu
   return renderDoc(template, buildRenderData(caseData))
 }
 
+
 export async function generateEyeglassAcknowledgementDocx(caseData: any): Promise<Buffer> {
   const template = loadFirstAvailableTemplate(EYEGLASS_ACKNOWLEDGEMENT_CANDIDATES)
   return renderDoc(template, buildRenderData(caseData))
@@ -1134,3 +1135,202 @@ export async function generatePlainCaseStudyDocx(caseData: any): Promise<Buffer>
   return renderDoc(template, buildRenderData(caseData))
 }
 
+// ── CHO Certification for Unavailable Medicines ───────────────────────────────
+
+function buildChoCertData(caseData: any): {
+  unavailableMedicines: Array<{ name: string; date: string; time: string }>
+  givenDay: string
+  givenMonth: string
+  givenYear: string
+  choDoctorName: string
+  choPosition: string
+} | null {
+  const medicines: any[] = caseData.medicines ?? []
+
+  // Filter medicines that are NOT available in the CHO catalog
+  const unavailable = medicines.filter((m: any) => {
+    // If linked to a MedicineItem, check isAvailable; if no link assume available
+    if (m.medicine == null) return false
+    return m.medicine.isAvailable === false
+  })
+
+  if (unavailable.length === 0) return null
+
+  const unavailableMedicines = unavailable.map((m: any) => {
+    const raw: Date | null = m.medicine?.updatedAt ? new Date(m.medicine.updatedAt) : null
+    const date = raw
+      ? raw.toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'Asia/Manila' })
+      : '-'
+    const time = raw
+      ? raw.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Manila' })
+      : '-'
+    return { name: m.medicineName ?? '-', date, time }
+  })
+
+  const now = new Date()
+  const givenDay = String(now.getDate())
+  const givenMonth = now.toLocaleString('en-PH', { month: 'long', timeZone: 'Asia/Manila' })
+  const givenYear = String(now.getFullYear())
+
+  // CHO officer info – pulled from the approving official assigned in system settings (approvedBy)
+  // or from the case data's CHO doctor fields if present
+  const choDoctorName = fmt((caseData as any).choDoctorName
+    ?? (caseData as any).officialCityMayorName
+    ?? (caseData as any).approvedByName
+    ?? 'City Health Officer')
+  const choPosition = fmt((caseData as any).choPosition
+    ?? (caseData as any).approvedByTitle
+    ?? 'City Health Officer')
+
+  return { unavailableMedicines, givenDay, givenMonth, givenYear, choDoctorName, choPosition }
+}
+
+/**
+ * Generates a CHO Certification DOCX for medicines in a case that are NOT available
+ * in the regular CHO procurement catalog. Returns null if all medicines are available.
+ */
+export async function generateChoCertificationDocx(caseData: any): Promise<Buffer | null> {
+  const certData = buildChoCertData(caseData)
+  if (!certData) return null
+
+  const { unavailableMedicines, givenDay, givenMonth, givenYear, choDoctorName, choPosition } = certData
+
+  // Pad up to 5 medicine slots (blank if fewer)
+  const pad = (arr: typeof unavailableMedicines, len: number) => {
+    const copy = [...arr]
+    while (copy.length < len) copy.push({ name: '', date: '', time: '' })
+    return copy
+  }
+  const meds = pad(unavailableMedicines, 5)
+
+  const renderData: Record<string, any> = {
+    ifOneMedIsNotAvail:   meds[0].name,
+    ifTwoMedIsNotAvail:   meds[1].name,
+    ifThreeMedIsNotAvail: meds[2].name,
+    ifFourMedIsNotAvail:  meds[3].name,
+    ifFiveMedIsNotAvail:  meds[4].name,
+
+    dateofMedOneUnavail:   meds[0].name ? `${meds[0].date} ${meds[0].time}` : '',
+    dateofMedTwoUnavail:   meds[1].name ? `${meds[1].date} ${meds[1].time}` : '',
+    dateofMedThreeUnavail: meds[2].name ? `${meds[2].date} ${meds[2].time}` : '',
+    dateofMedFourUnavail:  meds[3].name ? `${meds[3].date} ${meds[3].time}` : '',
+    dateofMedFiveUnavail:  meds[4].name ? `${meds[4].date} ${meds[4].time}` : '',
+
+    // Generic alias used in template tags
+    dateofMedicineUnavail: meds[0].name ? `${meds[0].date} ${meds[0].time}` : '',
+
+    date:          givenDay,
+    month:         givenMonth,
+    year:          givenYear,
+    choDoctorName,
+    MD:            'M.D.',
+    position:      choPosition,
+  }
+
+  // Attempt to load a dedicated CHO cert template; fall back to a plain DOCX built in-memory
+  const CHO_CERT_CANDIDATES = [
+    path.join('Medicine Case Study', 'CHO Certification.fixed.docx'),
+    path.join('Medicine Case Study', 'CHO Certification.docx'),
+    'CHO Certification.docx',
+  ]
+
+  try {
+    const template = loadFirstAvailableTemplate(CHO_CERT_CANDIDATES)
+    return renderDoc(template, renderData)
+  } catch {
+    // No template file found — build a simple certification DOCX programmatically using docx library
+    return buildChoCertDocxProgrammatic(renderData, unavailableMedicines, givenDay, givenMonth, givenYear, choDoctorName, choPosition)
+  }
+}
+
+function buildChoCertDocxProgrammatic(
+  _renderData: Record<string, any>,
+  unavailableMedicines: Array<{ name: string; date: string; time: string }>,
+  givenDay: string,
+  givenMonth: string,
+  givenYear: string,
+  choDoctorName: string,
+  choPosition: string
+): Buffer {
+  // Build a minimal valid DOCX from scratch using raw Open XML
+  const certificationText = [
+    'CERTIFICATION',
+    '',
+    'This is to certify that the following medicine/s are not part of the regular procurement of the City Health Office:',
+    '',
+    ...unavailableMedicines
+      .filter((m) => m.name)
+      .map((m, i) => `${i + 1}. ${m.name}  :  ${m.date} ${m.time}`),
+    '',
+    `Given this ${givenDay} day of ${givenMonth}, ${givenYear}`,
+    '',
+    'Noted by:',
+    '',
+    `${choDoctorName}, M.D.`,
+    choPosition,
+  ]
+
+  const paragraphs = certificationText
+    .map((line) => {
+      const bold = line === 'CERTIFICATION' || line === 'Noted by:'
+      const center = line === 'CERTIFICATION'
+      const pPr = center ? '<w:pPr><w:jc w:val="center"/></w:pPr>' : ''
+      const rPr = bold ? '<w:rPr><w:b/><w:bCs/></w:rPr>' : ''
+      return `<w:p>${pPr}<w:r>${rPr}<w:t xml:space="preserve">${line.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</w:t></w:r></w:p>`
+    })
+    .join('')
+
+  const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas"
+            xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+            xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml"
+            xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <w:body>
+    ${paragraphs}
+    <w:sectPr>
+      <w:pgSz w:w="12240" w:h="15840"/>
+      <w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1800" w:header="720" w:footer="720" w:gutter="0"/>
+    </w:sectPr>
+  </w:body>
+</w:document>`
+
+  const relsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+</Relationships>`
+
+  const stylesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:docDefaults>
+    <w:rPrDefault>
+      <w:rPr>
+        <w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman"/>
+        <w:sz w:val="24"/>
+        <w:szCs w:val="24"/>
+      </w:rPr>
+    </w:rPrDefault>
+  </w:docDefaults>
+</w:styles>`
+
+  const contentTypesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+  <Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
+</Types>`
+
+  const rootRelsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+</Relationships>`
+
+  const zip = new PizZip()
+  zip.file('[Content_Types].xml', contentTypesXml)
+  zip.file('_rels/.rels', rootRelsXml)
+  zip.file('word/document.xml', documentXml)
+  zip.file('word/styles.xml', stylesXml)
+  zip.file('word/_rels/document.xml.rels', relsXml)
+
+  return zip.generate({ type: 'nodebuffer', compression: 'DEFLATE' }) as Buffer
+}

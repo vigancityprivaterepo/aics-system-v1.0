@@ -15,6 +15,7 @@ import {
   generateEyeglassEndorsementDocx,
   generateEyeglassAcknowledgementDocx,
   generatePlainCaseStudyDocx,
+  generateChoCertificationDocx,
 } from '../services/docxService.js'
 import { generateCaseReportPdf } from '../services/pdfService.js'
 import { buildConversionBasename, convertDocxBufferToHtml, convertDocxBufferToPdf } from '../services/officeConversionService.js'
@@ -168,4 +169,14 @@ export async function acknowledgementDocx(req: Request, res: Response) {
   if (caseData.assistanceType !== 'eyeglass') throw new HttpError(400, 'Acknowledgement is only available for eyeglass cases')
   const buffer = await generateEyeglassAcknowledgementDocx(serialized)
   sendDocx(res, buffer, `${caseData.caseNumber ?? caseData.client.caseNumber}-acknowledgement.docx`)
+}
+
+export async function choCertificationDocx(req: Request, res: Response) {
+  const { caseData, serialized } = await loadSerializedCase(paramId(req.params.id), req.user, 'cho certification docx')
+  if (caseData.assistanceType !== 'medicine') throw new HttpError(400, 'CHO Certification is only available for medicine cases')
+  const buffer = await generateChoCertificationDocx(serialized)
+  if (!buffer) {
+    throw new HttpError(400, 'All encoded medicines in this case are available in the regular CHO procurement. Certification remains blank.')
+  }
+  sendDocx(res, buffer, `${caseData.caseNumber ?? caseData.client.caseNumber}-cho-certification.docx`)
 }

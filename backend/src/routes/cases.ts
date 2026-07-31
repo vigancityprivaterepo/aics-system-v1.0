@@ -5,7 +5,7 @@ import { asyncHandler } from '../utils/asyncHandler.js'
 import { requireAuth } from '../middleware/auth.js'
 import { listCases, getCase, createCase, updateCase, deleteCase, pendingApprovalsByType } from '../controllers/caseController.js'
 import { updateStatus } from '../controllers/caseApprovalController.js'
-import { caseStudyDocx, caseStudyHtml, caseStudyPdf, guaranteeLetterPdf, guaranteeLetterDocx, endorsementDocx, acknowledgementDocx } from '../controllers/caseDocumentController.js'
+import { caseStudyDocx, caseStudyHtml, caseStudyPdf, guaranteeLetterPdf, guaranteeLetterDocx, endorsementDocx, acknowledgementDocx, choCertificationDocx } from '../controllers/caseDocumentController.js'
 import { sendGuaranteeLetterToOpenSign } from '../controllers/openSignController.js'
 import { getMedicines, saveMedicines, deleteMedicine } from '../controllers/caseMedicineController.js'
 import { getRequirements, updateRequirements, patchRequirement } from '../controllers/caseRequirementController.js'
@@ -70,6 +70,7 @@ router.post('/:id/guarantee-letter/opensign', asyncHandler(sendGuaranteeLetterTo
 router.get('/:id/report/gl-docx', asyncHandler(guaranteeLetterDocx))
 router.get('/:id/report/endorsement-docx', asyncHandler(endorsementDocx))
 router.get('/:id/report/acknowledgement-docx', asyncHandler(acknowledgementDocx))
+router.get('/:id/report/cho-cert-docx', asyncHandler(choCertificationDocx))
 
 export default router
 

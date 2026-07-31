@@ -46,6 +46,7 @@ export default function StepReports({ caseData }) {
         'gl-docx':             { endpoint: `/cases/${caseData.id}/report/gl-docx`,             mime: DOCX_MIME, label: 'guarantee-letter', ext: 'docx' },
         'endorsement-docx':    { endpoint: `/cases/${caseData.id}/report/endorsement-docx`,    mime: DOCX_MIME, label: 'endorsement',      ext: 'docx' },
         'acknowledgement-docx':{ endpoint: `/cases/${caseData.id}/report/acknowledgement-docx`,mime: DOCX_MIME, label: 'acknowledgement',   ext: 'docx' },
+        'cho-cert-docx':       { endpoint: `/cases/${caseData.id}/report/cho-cert-docx`,       mime: DOCX_MIME, label: 'cho-certification', ext: 'docx' },
       }
       const config = configMap[type]
       if (!config) return
@@ -199,6 +200,20 @@ export default function StepReports({ caseData }) {
                       <div>
                         <p className="font-semibold text-slate-800">Guarantee Letter DOCX</p>
                         <p className="text-xs text-slate-400">Editable guarantee letter (.docx)</p>
+                      </div>
+                    </button>
+                  )}
+                  {isMedicine && (caseData.medicines || []).some((m) => m.medicine?.isAvailable === false) && (
+                    <button
+                      onClick={() => { handleDownload('cho-cert-docx'); setOpen(false) }}
+                      className="w-full flex items-start gap-3 px-4 py-3 text-left text-sm hover:bg-slate-50 transition-colors border-t border-slate-100"
+                    >
+                      <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-purple-100 text-purple-700">
+                        <DownloadIcon className="h-3.5 w-3.5" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-slate-800">CHO Certification</p>
+                        <p className="text-xs text-slate-400">Certify unavailable CHO medicines (.docx)</p>
                       </div>
                     </button>
                   )}
