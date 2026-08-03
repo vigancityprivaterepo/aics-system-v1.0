@@ -8,13 +8,17 @@ import { generateCaseCaseNumber } from '../utils/caseNumber.js'
 import { findCaseWithDetails, getApprovalSettings } from '../queries/caseQueries.js'
 import { serializeCase, normalizeWorkflowStatus } from '../serializers/caseSerializer.js'
 import { resolveApprovalAssignees } from '../services/approvalService.js'
+import { activeReportSignatureStage, userCanUploadReportSignatureStage } from '../services/reportSignatureService.js'
 import { assessCaseWorkflow } from '../services/caseWorkflowService.js'
-import { allowedCaseTypesForUser, assertAllowedCaseTypeForUser, assertCaseReadable, assertEditableCase, ensureRequirementRows, paramId } from '../services/caseService.js'
+import { allowedCaseTypesForUser, assertAllowedCaseTypeForUser, assertCaseReadable, assertEditableCase, casePermissions, ensureRequirementRows, paramId } from '../services/caseService.js'
 import { APPROVAL_STAGE_META, APPROVAL_STAGE_ORDER } from '../types/caseTypes.js'
 import { updateCaseSchema } from '../schemas/caseSchemas.js'
 import { statusToApprovalStage } from '../services/approvalService.js'
 import { auditLog } from '../utils/auditLog.js'
 import { resetApprovalsAfterMaterialEdit, valuesDiffer } from '../services/workflowIntegrityService.js'
+import { normalizePlainAssistanceKinds } from '../utils/requirements.js'
+import { findRepeatAssistanceConflicts, repeatAssistanceConflict } from '../services/repeatAssistanceService.js'
+import { logger } from '../utils/logger.js'
 
 function formatApprovalSummary(stage: 'for_review' | 'recommending_approval' | 'for_approval', approval: {
   actedByName: string | null
@@ -39,6 +43,53 @@ function formatApprovalSummary(stage: 'for_review' | 'recommending_approval' | '
       stage === 'for_review'
         ? `${approval.actedByName} ${verb} this application on ${approval.actedAt.toISOString().slice(0, 10)}.`
         : `${approval.actedByName} ${verb} on ${approval.actedAt.toISOString().slice(0, 10)}.`,
+  }
+}
+
+function userCanManageCaseSigning(caseData: { socialWorkerId: string | null }, user: Express.AuthUser | undefined) {
+  if (!user) return false
+  if (user.role === 'admin') return true
+  if (caseData.socialWorkerId && caseData.socialWorkerId === user.id) return true
+  return ['reviewer', 'recommender', 'approver'].some((level) => user.approvalLevel.includes(level))
+}
+
+function withReportSignaturePermissions(serialized: any, caseData: any, user: Express.AuthUser | undefined) {
+  if (!serialized.reportSignature) return serialized
+  const activeStage = serialized.reportSignature.activeStageKey
+    ? serialized.reportSignature.stages.find((stage: any) => stage.key === serialized.reportSignature.activeStageKey) ?? null
+    : null
+  return {
+    ...serialized,
+    reportSignature: {
+      ...serialized.reportSignature,
+      canPrepare:
+        ['intake', 'encoding', 'requirements', 'for_review', 'recommending_approval', 'for_approval'].includes(String(caseData.status ?? '')) &&
+        userCanManageCaseSigning(caseData, user),
+      canUploadCurrentStage: userCanUploadReportSignatureStage(user, activeStage, caseData) &&
+        serialized.reportSignature.readyForCurrentStageSigning,
+      currentStageAssignedToCurrentUser: userCanUploadReportSignatureStage(user, activeStage, caseData),
+      activeStageKey: activeReportSignatureStage(caseData.status),
+    },
+  }
+}
+
+async function loadRepeatAssistanceCooldownDays() {
+  try {
+    const settings = await prisma.systemSettings.upsert({
+      where: { id: 'singleton' },
+      create: { id: 'singleton' },
+      update: {},
+      select: { repeatAssistanceCooldownDays: true },
+    })
+    return settings.repeatAssistanceCooldownDays
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error ?? '')
+    if (!message.toLowerCase().includes('repeatassistancecooldowndays') && !message.toLowerCase().includes('repeat_assistance_cooldown_days')) {
+      throw error
+    }
+
+    logger.warn('Falling back to default repeat assistance cooldown because the database schema is missing repeat_assistance_cooldown_days.', {})
+    return 90
   }
 }
 
@@ -140,6 +191,7 @@ export async function listCases(req: Request, res: Response) {
       clientName: `${c.client.lastName}, ${c.client.firstName}`,
       assistanceType: c.assistanceType,
       status: normalizeWorkflowStatus(c.status),
+      socialWorkerId: c.socialWorkerId,
       socialWorkerName: c.socialWorkerName,
       dateOfAssessment: c.dateOfAssessment?.toISOString().slice(0, 10) ?? null,
       amount: currencyFromDb(c.amount),
@@ -150,6 +202,7 @@ export async function listCases(req: Request, res: Response) {
         recommending_approval: recommendedSummary,
         for_approval: approvedSummary,
       },
+      permissions: casePermissions(c, req.user),
       ...workflow,
       workflow,
     }
@@ -179,13 +232,15 @@ export async function getCase(req: Request, res: Response) {
   if (!caseData) throw new HttpError(404, 'Case not found')
   assertCaseReadable(caseData, req.user, 'Case details')
 
-  await ensureRequirementRows(caseData.id, caseData.assistanceType)
+  const plainAssistanceKinds = normalizePlainAssistanceKinds((caseData.auditFlags as any)?.plain_assistance_kinds)
+  await ensureRequirementRows(caseData.id, caseData.assistanceType, plainAssistanceKinds)
   const refreshed = await findCaseWithDetails(caseData.id)
   if (!refreshed) throw new HttpError(404, 'Case not found')
 
   const settings = await getApprovalSettings()
   const assigneeByStage = await resolveApprovalAssignees(settings)
-  const serialized = serializeCase(refreshed, assigneeByStage)
+  const serialized = withReportSignaturePermissions(serializeCase(refreshed, assigneeByStage), refreshed, req.user)
+  const permissions = casePermissions(refreshed, req.user)
 
   const assigneeDisplayByStage = {
     for_review: assigneeByStage.for_review
@@ -225,7 +280,7 @@ export async function getCase(req: Request, res: Response) {
     }
   })
 
-  res.json({ ...serialized, approvalAssignees: assigneeDisplayByStage, currentApprovalStage: currentStage, reviewFlow })
+  res.json({ ...serialized, permissions, approvalAssignees: assigneeDisplayByStage, currentApprovalStage: currentStage, reviewFlow })
 }
 
 export async function createCase(req: Request, res: Response) {
@@ -238,53 +293,64 @@ export async function createCase(req: Request, res: Response) {
 
   const client = await prisma.client.findUnique({ where: { id: clientId } })
   if (!client) throw new HttpError(404, 'Client not found')
-
-  const newCaseNumber = await generateCaseCaseNumber(assistanceType)
-
-  const created = await prisma.case.create({
-    data: {
-      clientId,
-      caseNumber: newCaseNumber,
-      assistanceType,
-      status: 'intake',
-      socialWorkerId: req.user?.id,
-      socialWorkerName: req.user?.name,
-      socialWorkerEmpId: req.user?.employeeId,
-      dateOfAssessment: body.dateOfAssessment ? new Date(body.dateOfAssessment) : null,
-      presentingProblem: body.presentingProblem ?? null,
-      familyComposition: body.familyComposition ?? (Array.isArray((client as any).familyComposition) ? (client as any).familyComposition as any : undefined),
-      backgroundOfProblem: body.backgroundOfProblem ?? null,
-      assessment: body.assessment ?? null,
-      recommendation: body.recommendation ?? null,
-      hospitalClinic: body.hospitalClinic ?? null,
-      remarks: body.remarks ?? null,
-    },
-    include: { client: true },
+  const cooldownDays = await loadRepeatAssistanceCooldownDays()
+  const repeatConflicts = await findRepeatAssistanceConflicts(prisma, {
+    clientId,
+    cooldownDays,
   })
-
-  if (
-    assistanceType === 'burial' &&
-    (body.deceasedName || body.dateOfDeath || body.causeOfDeath || body.funeralHome || body.funeralHomeOwner || body.funeralOwnerAddress)
-  ) {
-    await prisma.burialDetail.create({
-      data: {
-        caseId: created.id,
-        deceasedName: body.deceasedName ?? null,
-        dateOfDeath: body.dateOfDeath ? new Date(body.dateOfDeath) : null,
-        causeOfDeath: body.causeOfDeath ?? null,
-        funeralHome: body.funeralHome ?? null,
-        funeralHomeOwner: body.funeralHomeOwner ?? null,
-        funeralOwnerAddress: body.funeralOwnerAddress ?? null,
-      },
-    })
+  if (repeatConflicts.hasConflicts) {
+    throw repeatAssistanceConflict(repeatConflicts)
   }
 
-  await auditLog(prisma, {
-    caseId: created.id,
-    changedById: req.user?.id,
-    fromStatus: 'intake',
-    toStatus: 'intake',
-    notes: 'Case intake submitted',
+  const created = await prisma.$transaction(async (tx) => {
+    const newCaseNumber = await generateCaseCaseNumber(assistanceType, tx)
+    const createdCase = await tx.case.create({
+      data: {
+        clientId,
+        caseNumber: newCaseNumber,
+        assistanceType,
+        status: 'intake',
+        socialWorkerId: req.user?.id,
+        socialWorkerName: req.user?.name,
+        socialWorkerEmpId: req.user?.employeeId,
+        dateOfAssessment: body.dateOfAssessment ? new Date(body.dateOfAssessment) : null,
+        presentingProblem: body.presentingProblem ?? null,
+        familyComposition: body.familyComposition ?? (Array.isArray((client as any).familyComposition) ? (client as any).familyComposition as any : undefined),
+        backgroundOfProblem: body.backgroundOfProblem ?? null,
+        assessment: body.assessment ?? null,
+        recommendation: body.recommendation ?? null,
+        hospitalClinic: body.hospitalClinic ?? null,
+        remarks: body.remarks ?? null,
+      },
+      include: { client: true },
+    })
+
+    if (
+      assistanceType === 'burial' &&
+      (body.deceasedName || body.dateOfDeath || body.causeOfDeath || body.funeralHome || body.funeralHomeOwner || body.funeralOwnerAddress)
+    ) {
+      await tx.burialDetail.create({
+        data: {
+          caseId: createdCase.id,
+          deceasedName: body.deceasedName ?? null,
+          dateOfDeath: body.dateOfDeath ? new Date(body.dateOfDeath) : null,
+          causeOfDeath: body.causeOfDeath ?? null,
+          funeralHome: body.funeralHome ?? null,
+          funeralHomeOwner: body.funeralHomeOwner ?? null,
+          funeralOwnerAddress: body.funeralOwnerAddress ?? null,
+        },
+      })
+    }
+
+    await auditLog(tx, {
+      caseId: createdCase.id,
+      changedById: req.user?.id,
+      fromStatus: 'intake',
+      toStatus: 'intake',
+      notes: 'Case intake submitted',
+    })
+
+    return createdCase
   })
 
   res.status(201).json({
@@ -420,6 +486,16 @@ export async function updateCase(req: Request, res: Response) {
         auditFlags: auditFlags as Prisma.InputJsonValue,
       },
     })
+
+    if (changedFields.length > 0) {
+      if (current.assistanceType === 'burial') {
+        await tx.burialDetail.updateMany({ where: { caseId }, data: { signedGlUrl: null, glUploadedAt: null } })
+      } else if (current.assistanceType === 'hospital') {
+        await tx.hospitalDetail.updateMany({ where: { caseId }, data: { signedGlUrl: null, glUploadedAt: null } })
+      } else if (current.assistanceType === 'medical') {
+        await tx.medicalDetail.updateMany({ where: { caseId }, data: { signedGlUrl: null, glUploadedAt: null } })
+      }
+    }
 
     const resetResult = await resetApprovalsAfterMaterialEdit(tx, {
       caseId: current.id,

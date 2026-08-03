@@ -24,7 +24,18 @@ pnpm-debug.log*
 
 # Office temp files
 ~$*
+~WRL*.tmp
 
 # Local uploads/runtime artifacts
 backend/uploads/**
 backend/backups/**
+
+# Temporary scratch and test artifacts
+.agents/
+.codex-temp/
+caveman/
+tmp/
+*.bak
+backend/tmp-*.mjs
+tmp-*.docx
+skills-lock.json

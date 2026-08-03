@@ -25,7 +25,7 @@ const RENDER_OPTIONS = {
 }
 
 export default function MedicineCaseStudyPreview({ caseData }) {
-  const [state, setState] = useState({ loading: true, error: false, message: '' })
+  const [state, setState] = useState({ loading: true, error: false, message: '', html: '' })
   const abCache = useRef(null)
   const cacheKeyRef = useRef(null)
   const containerRef = useRef(null)
@@ -33,18 +33,37 @@ export default function MedicineCaseStudyPreview({ caseData }) {
   const doRender = useCallback(async (arrayBuffer) => {
     if (!containerRef.current) return
     containerRef.current.innerHTML = ''
-    try {
-      await renderAsync(arrayBuffer, containerRef.current, null, RENDER_OPTIONS)
-      setState({ loading: false, error: false, message: '' })
-    } catch (error) {
-      console.error('[MedicineCaseStudyPreview] DOCX render failed', error)
-      setState({
-        loading: false,
-        error: true,
-        message: error instanceof Error ? error.message : String(error),
-      })
-    }
+    await renderAsync(arrayBuffer, containerRef.current, null, RENDER_OPTIONS)
   }, [])
+
+  const loadHtmlFallback = useCallback(async (caseId) => {
+    const res = await api.get(`/cases/${caseId}/report/html`, { responseType: 'text' })
+    setState({ loading: false, error: false, message: '', html: String(res.data ?? '') })
+  }, [])
+
+  const showPreview = useCallback(async (arrayBuffer, caseId, cancelledRef) => {
+    try {
+      await doRender(arrayBuffer)
+      if (cancelledRef.current) return
+      setState({ loading: false, error: false, message: '', html: '' })
+    } catch (error) {
+      if (cancelledRef.current) return
+      console.error('[MedicineCaseStudyPreview] DOCX render failed', error)
+
+      try {
+        await loadHtmlFallback(caseId)
+      } catch (htmlError) {
+        if (cancelledRef.current) return
+        console.error('[MedicineCaseStudyPreview] HTML fallback failed', htmlError)
+        setState({
+          loading: false,
+          error: true,
+          message: error instanceof Error ? error.message : String(error),
+          html: '',
+        })
+      }
+    }
+  }, [doRender, loadHtmlFallback])
 
   useEffect(() => {
     const cacheKey = [
@@ -54,21 +73,28 @@ export default function MedicineCaseStudyPreview({ caseData }) {
       caseData.medicineDetails?.conformeRelationship || '',
     ].join('|')
 
+    let cancelled = false
+    const cancelledRef = {
+      get current() {
+        return cancelled
+      },
+    }
+
     if (abCache.current && cacheKeyRef.current === cacheKey) {
-      doRender(abCache.current)
+      setState({ loading: true, error: false, message: '', html: '' })
+      showPreview(abCache.current, caseData.id, cancelledRef)
       return
     }
 
     abCache.current = null
     cacheKeyRef.current = cacheKey
-    let cancelled = false
-    setState({ loading: true, error: false, message: '' })
+    setState({ loading: true, error: false, message: '', html: '' })
 
     api.get(DOC.endpoint(caseData.id), { responseType: 'arraybuffer' })
-      .then((res) => {
+      .then(async (res) => {
         if (cancelled) return
         abCache.current = res.data
-        doRender(res.data)
+        await showPreview(res.data, caseData.id, cancelledRef)
       })
       .catch((error) => {
         if (cancelled) return
@@ -77,11 +103,12 @@ export default function MedicineCaseStudyPreview({ caseData }) {
           loading: false,
           error: true,
           message: error.response?.data?.message ?? error.message ?? 'Unable to load DOCX preview.',
+          html: '',
         })
       })
 
     return () => { cancelled = true }
-  }, [caseData.id, caseData.medicineDetails?.templateType, caseData.medicineDetails?.conformeName, caseData.medicineDetails?.conformeRelationship, doRender])
+  }, [caseData.id, caseData.medicineDetails?.templateType, caseData.medicineDetails?.conformeName, caseData.medicineDetails?.conformeRelationship, showPreview])
 
   const handleDownload = async () => {
     const DOCX_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
@@ -130,7 +157,15 @@ export default function MedicineCaseStudyPreview({ caseData }) {
             {state.message && <p className="max-w-xl text-xs text-slate-500">{state.message}</p>}
           </div>
         )}
-        <div ref={containerRef} />
+        {state.html ? (
+          <iframe
+            title={`${DOC.label} preview`}
+            srcDoc={state.html}
+            className="block h-[70vh] w-full bg-white"
+          />
+        ) : (
+          <div ref={containerRef} />
+        )}
       </div>
     </div>
   )

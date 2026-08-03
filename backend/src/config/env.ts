@@ -78,12 +78,14 @@ export const env = {
   semaphoreSenderId: process.env.SEMAPHORE_SENDER_ID ?? 'AICS',
   trustProxy: parseTrustProxy(process.env.TRUST_PROXY ?? (isProduction ? 'true' : 'false')),
   rateLimitMode: process.env.RATE_LIMIT_MODE ?? 'memory',
+  anthropicApiKey: process.env.ANTHROPIC_API_KEY ?? '',
+  anthropicModel: process.env.ANTHROPIC_MODEL ?? 'claude-sonnet-4-6',
+  googleClientId: process.env.GOOGLE_CLIENT_ID ?? '',
   openSignBaseUrl: process.env.OPENSIGN_BASE_URL ?? '',
   openSignApiToken: process.env.OPENSIGN_API_TOKEN ?? '',
   openSignCreateDocumentPath: process.env.OPENSIGN_CREATE_DOCUMENT_PATH ?? '/api/v1/createdocument',
   openSignWebhookSecret: process.env.OPENSIGN_WEBHOOK_SECRET ?? '',
   openSignWebhookUrl: process.env.OPENSIGN_WEBHOOK_URL ?? '',
-  googleClientId: process.env.GOOGLE_CLIENT_ID ?? '',
 }
 
 export function hasSmtpConfig() {
@@ -117,5 +119,3 @@ export function getProductionConfigErrors() {
 export function getRuntimeReadinessIssues() {
   return getProductionConfigErrors()
 }
-
-

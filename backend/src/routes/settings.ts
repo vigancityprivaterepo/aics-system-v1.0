@@ -6,6 +6,14 @@ import { requireRole } from '../middleware/auth.js'
 import { HttpError } from '../utils/httpError.js'
 import { createBackup, getBackupFile, listBackups, restoreBackup } from '../services/backupService.js'
 import { logAdminAudit } from '../services/adminAuditService.js'
+import {
+  buildModuleAccessConfig,
+  buildModuleAccessOverrides,
+  getAccessibleModulesForUser,
+  getModuleAccessConfig,
+  serializeModuleAccessConfig,
+  serializeModuleAccessOverrides,
+} from '../services/moduleAccessService.js'
 
 const router = Router()
 const APPROVAL_LEVEL_VALUES = ['reviewer', 'recommender', 'approver'] as const
@@ -41,7 +49,7 @@ function parseApprovalLevels(stored: string | null | undefined): string[] {
 }
 
 async function getOrCreate() {
-  return prisma.systemSettings.upsert({
+  const settings = await prisma.systemSettings.upsert({
     where: { id: 'singleton' },
     create: { id: 'singleton' },
     update: {},
@@ -51,6 +59,10 @@ async function getOrCreate() {
       approvedByUser: { select: { id: true, name: true, approvalLevel: true } },
     },
   })
+  return {
+    ...settings,
+    moduleAccessConfig: buildModuleAccessConfig(settings.moduleAccessConfig),
+  }
 }
 
 router.get('/', asyncHandler(async (_req, res) => {
@@ -121,6 +133,15 @@ const updateSchema = z.object({
   reviewedByUserId: z.string().uuid().nullable().optional(),
   recommendingUserId: z.string().uuid().nullable().optional(),
   approvedByUserId: z.string().uuid().nullable().optional(),
+  moduleAccessConfig: z.unknown().optional(),
+})
+
+const moduleAccessUpdateSchema = z.object({
+  moduleAccessConfig: z.unknown(),
+})
+
+const employeeModuleAccessUpdateSchema = z.object({
+  moduleAccessOverrides: z.unknown(),
 })
 
 
@@ -162,10 +183,82 @@ router.patch('/case-number-series/:series', adminOnly, asyncHandler(async (req, 
     },
   })
 
-  res.json(settings)
+  res.json({
+    ...settings,
+    moduleAccessConfig: buildModuleAccessConfig(settings.moduleAccessConfig),
+  })
 }))
+
+router.patch('/module-access', adminOnly, asyncHandler(async (req, res) => {
+  const body = moduleAccessUpdateSchema.parse(req.body)
+  const moduleAccessConfig = buildModuleAccessConfig(body.moduleAccessConfig)
+  const serializedConfig = serializeModuleAccessConfig(moduleAccessConfig)
+  const settings = await prisma.systemSettings.upsert({
+    where: { id: 'singleton' },
+    create: { id: 'singleton', moduleAccessConfig: serializedConfig },
+    update: { moduleAccessConfig: serializedConfig },
+  })
+
+  await logAdminAudit(prisma, {
+    actorId: req.user?.id,
+    action: 'settings.module_access.update',
+    targetType: 'system_settings',
+    targetId: settings.id,
+    summary: 'Updated module access by office',
+    details: { moduleAccessConfig },
+  })
+
+  res.json({ moduleAccessConfig })
+}))
+
+router.patch('/module-access/employees/:userId', adminOnly, asyncHandler(async (req, res) => {
+  const userId = z.string().uuid().parse(paramValue(req.params.userId))
+  const body = employeeModuleAccessUpdateSchema.parse(req.body)
+  const existingUser = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, name: true, role: true, department: true },
+  })
+  if (!existingUser) throw new HttpError(404, 'Employee not found.')
+  if (String(existingUser.role) === 'admin') {
+    throw new HttpError(400, 'Administrator access cannot be overridden.')
+  }
+
+  const moduleAccessOverrides = buildModuleAccessOverrides(body.moduleAccessOverrides)
+  const serializedOverrides = serializeModuleAccessOverrides(moduleAccessOverrides)
+  await prisma.user.update({
+    where: { id: userId },
+    data: { moduleAccessOverrides: serializedOverrides },
+  })
+
+  const moduleAccessConfig = await getModuleAccessConfig()
+  const accessibleModules = getAccessibleModulesForUser({
+    role: String(existingUser.role),
+    department: existingUser.department,
+    moduleAccessOverrides,
+  }, moduleAccessConfig)
+
+  await logAdminAudit(prisma, {
+    actorId: req.user?.id,
+    action: 'settings.employee_module_access.update',
+    targetType: 'user',
+    targetId: existingUser.id,
+    summary: `Updated module access overrides for ${existingUser.name}`,
+    details: { moduleAccessOverrides, accessibleModules },
+  })
+
+  res.json({ userId, moduleAccessOverrides, accessibleModules })
+}))
+
 router.put('/', requireRole(['admin']), asyncHandler(async (req, res) => {
   const body = updateSchema.parse(req.body)
+  const { moduleAccessConfig: rawModuleAccessConfig, ...settingsFields } = body
+  const moduleAccessConfig = rawModuleAccessConfig === undefined
+    ? null
+    : buildModuleAccessConfig(rawModuleAccessConfig)
+  const settingsData = {
+    ...settingsFields,
+    ...(moduleAccessConfig ? { moduleAccessConfig: serializeModuleAccessConfig(moduleAccessConfig) } : {}),
+  }
   const assignees = [
     { id: body.reviewedByUserId ?? null, requiredLevel: 'reviewer' as const, label: 'Reviewed by' },
     { id: body.recommendingUserId ?? null, requiredLevel: 'recommender' as const, label: 'Recommending Approval' },
@@ -195,8 +288,13 @@ router.put('/', requireRole(['admin']), asyncHandler(async (req, res) => {
 
   const settings = await prisma.systemSettings.upsert({
     where: { id: 'singleton' },
-    create: { id: 'singleton', ...body },
-    update: body,
+    create: {
+      id: 'singleton',
+      ...settingsData,
+    },
+    update: {
+      ...settingsData,
+    },
     include: {
       reviewedByUser: { select: { id: true, name: true, approvalLevel: true } },
       recommendingUser: { select: { id: true, name: true, approvalLevel: true } },
@@ -223,9 +321,13 @@ router.put('/', requireRole(['admin']), asyncHandler(async (req, res) => {
       medicalStartSequence: settings.medicalStartSequence,
       eyeglassStartSequence: settings.eyeglassStartSequence,
       plainStartSequence: settings.plainStartSequence,
+      ...(moduleAccessConfig ? { moduleAccessConfig } : {}),
     },
   })
-  res.json(settings)
+  res.json({
+    ...settings,
+    moduleAccessConfig: buildModuleAccessConfig(settings.moduleAccessConfig),
+  })
 }))
 
 router.get('/backups', adminOnly, asyncHandler(async (_req, res) => {

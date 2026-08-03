@@ -1,14 +1,12 @@
 import { useOutletContext } from 'react-router-dom'
 import StepCaseStudy from './StepCaseStudy'
 import StepRequirements from './StepRequirements'
-import ApprovalHierarchy from './ApprovalHierarchy'
 
 const EDITABLE_STATUSES = ['encoding', 'for_review', 'recommending_approval', 'for_approval']
-const APPROVAL_STATUSES = ['for_review', 'recommending_approval', 'for_approval', 'approved', 'released', 'rejected']
 const LOCKED_STATUSES = ['intake']
 
 export default function TabCaseStudy() {
-  const { caseData, onUpdate } = useOutletContext()
+  const { caseData, onUpdate, goToTab } = useOutletContext()
   const { status } = caseData
 
   if (LOCKED_STATUSES.includes(status)) {
@@ -20,7 +18,6 @@ export default function TabCaseStudy() {
   }
 
   const readOnly = !EDITABLE_STATUSES.includes(status)
-  const showApprovalHierarchy = APPROVAL_STATUSES.includes(status)
 
   return (
     <div className="space-y-4">
@@ -29,8 +26,7 @@ export default function TabCaseStudy() {
         onUpdate={onUpdate}
         locked={['approved', 'released', 'rejected'].includes(status)}
       />
-      <StepCaseStudy caseData={caseData} onUpdate={onUpdate} readOnly={readOnly} />
-      {showApprovalHierarchy && <ApprovalHierarchy reviewFlow={caseData.reviewFlow} />}
+      <StepCaseStudy caseData={caseData} onUpdate={onUpdate} readOnly={readOnly} onNext={() => goToTab('case-edit')} />
     </div>
   )
 }

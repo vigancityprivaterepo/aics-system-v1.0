@@ -1,15 +1,18 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
 import api from '../../../lib/api'
 import { FileTextIcon, PlusIcon, TrashIcon } from '../../../components/ui/Icons'
 import MedicineTable from '../../../components/MedicineTable'
 import NarrativePresetField from '../../../components/NarrativePresetField'
+import SearchablePresetInput from '../../../components/SearchablePresetInput'
+import { useAuthStore } from '../../../store/authStore'
+import { OCCUPATION_OPTIONS, RELATIONSHIP_OPTIONS } from '../../../constants/caseFormOptions'
+import { scrollToFirstError } from '../../../lib/formNavigation'
 import { formatCurrency } from '../../../lib/utils'
 
 const defaultMember = { name: '', age: '', relationship: '', civilStatus: '', occupation: '', monthlyIncome: '' }
 const CIVIL_STATUS_OPTIONS = ['Single', 'Married', 'Widowed', 'Separated', 'Annulled']
-const RELATIONSHIP_OPTIONS = ['Spouse', 'Son', 'Daughter', 'Father', 'Mother', 'Brother', 'Sister', 'Grandson', 'Granddaughter', 'Grandfather', 'Grandmother', 'Uncle', 'Aunt', 'Nephew', 'Niece', 'Son-in-Law', 'Daughter-in-Law', 'Father-in-Law', 'Mother-in-Law', 'Other']
 const GUARANTEE_LETTER_MAX = 10000
 const HOSPITAL_MEDICAL_GL_MAX = 30000
 const PLAIN_AICS_MAX = 35000
@@ -45,6 +48,14 @@ function amountLabelForType(assistanceType) {
   }
   return 'Amount (PHP)'
 }
+
+function normalizeMedicineRows(rows = []) {
+  return rows.map((row) => ({
+    ...row,
+    isAvailable: row?.isAvailable ?? row?.medicine?.isAvailable ?? true,
+  }))
+}
+
 function EncodingSectionHeader({ number, title, description }) {
   return (
     <div className="mb-4 flex items-start gap-3 border-b border-slate-200 pb-3">
@@ -56,18 +67,20 @@ function EncodingSectionHeader({ number, title, description }) {
     </div>
   )
 }
-export default function StepCaseStudy({ caseData, onUpdate, readOnly = false }) {
+export default function StepCaseStudy({ caseData, onUpdate, readOnly = false, onNext }) {
   const isMedicine = caseData.assistanceType === 'medicine'
   const isBurial = caseData.assistanceType === 'burial'
+  const currentUser = useAuthStore((state) => state.user)
   const [family, setFamily] = useState(caseData.familyComposition || [])
-  const [medicines, setMedicines] = useState(caseData.medicines || [])
+  const [medicines, setMedicines] = useState(normalizeMedicineRows(caseData.medicines || []))
   const [saving, setSaving] = useState(false)
   const [narrativeOptions, setNarrativeOptions] = useState([])
+  const submitModeRef = useRef('save')
 
-  const { control, register, handleSubmit, watch } = useForm({
+  const { control, register, handleSubmit, watch, setValue, getValues } = useForm({
     defaultValues: {
       dateOfAssessment: caseData.dateOfAssessment || new Date().toISOString().slice(0, 10),
-      socialWorkerName: caseData.socialWorkerName || '',
+      socialWorkerName: caseData.socialWorkerName || currentUser?.name || '',
       presentingProblem: caseData.presentingProblem || '',
       findings: caseData.assessment || caseData.backgroundOfProblem || '',
       amount: caseData.amount ?? '',
@@ -87,6 +100,21 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false }) 
       .catch(() => {})
     return () => { active = false }
   }, [caseData.assistanceType])
+
+  useEffect(() => {
+    if (!isMedicine) return
+    setMedicines(normalizeMedicineRows(caseData.medicines || []))
+  }, [caseData.medicines, isMedicine])
+
+  useEffect(() => {
+    if (caseData.socialWorkerName) return
+    const fallbackWorkerName = String(currentUser?.name ?? '').trim()
+    if (!fallbackWorkerName) return
+    if (!String(getValues('socialWorkerName') ?? '').trim()) {
+      setValue('socialWorkerName', fallbackWorkerName, { shouldDirty: false, shouldTouch: false })
+    }
+  }, [caseData.socialWorkerName, currentUser?.name, getValues, setValue])
+
   const amount = watch('amount')
   const parsedAmount = Number(amount)
   const amountCap = resolveAmountCap(caseData.assistanceType)
@@ -97,6 +125,10 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false }) 
   const updateFamilyMember = (index, field, value) =>
     setFamily(family.map((member, idx) => (idx === index ? { ...member, [field]: value } : member)))
 
+  const handleInvalid = (validationErrors) => {
+    scrollToFirstError(validationErrors)
+    toast.error('Please complete the required fields first.')
+  }
 
   const onSave = async (data) => {
     setSaving(true)
@@ -131,7 +163,7 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false }) 
         const totalAmount = Number(medicinesRes.data?.totalAmount ?? data.amount)
         onUpdate({
           ...casePayload,
-          medicines: medicinesRes.data?.medicines ?? medicines,
+          medicines: normalizeMedicineRows(medicinesRes.data?.medicines ?? medicines),
           amount: totalAmount,
           status: medicinesRes.data?.status ?? caseRes.data?.status ?? caseData.status,
         })
@@ -159,6 +191,9 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false }) 
       }
 
       toast.success('Case study saved')
+      if (submitModeRef.current === 'next') {
+        onNext?.()
+      }
     } catch (err) {
       if (err.response) {
         toast.error(err.response?.data?.message || 'Failed to save case study')
@@ -167,7 +202,7 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false }) 
 
       onUpdate({
         ...casePayload,
-        medicines: isMedicine ? medicines : caseData.medicines,
+        medicines: isMedicine ? normalizeMedicineRows(medicines) : caseData.medicines,
         amount: data.amount,
         ...(isBurial
           ? {
@@ -202,18 +237,19 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false }) 
         </div>
       )}
 
-      <form onSubmit={handleSubmit(onSave)}>
+      <form onSubmit={handleSubmit(onSave, handleInvalid)}>
         <fieldset disabled={readOnly} className="space-y-4">
           <section className="rounded-lg border border-slate-200 bg-slate-50 p-4">
             <EncodingSectionHeader number="1" title="Assessment Info" description="Set the assessment date and assigned case worker." />
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <div>
                 <label className="portal-label">Date of Assessment *</label>
-                <input type="date" {...register('dateOfAssessment')} className="portal-input" />
+                <input type="date" {...register('dateOfAssessment', { required: 'Date of assessment is required' })} className="portal-input" />
               </div>
               <div className="sm:col-span-2">
                 <label className="portal-label">Employee Name *</label>
-                <input type="text" {...register('socialWorkerName')} className="portal-input" placeholder="Full name of assigned social worker" />
+                <input type="text" {...register('socialWorkerName', { required: 'Employee name is required' })} className="portal-input" placeholder="Full name of assigned social worker" />
+                <p className="mt-1 text-xs text-slate-500">Auto-filled from the signed-in account. You can adjust it here if needed.</p>
               </div>
             </div>
           </section>
@@ -235,9 +271,9 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false }) 
                     <tr key={index} className="border-t border-slate-100">
                       <td className="px-2 py-1.5"><input type="text" value={member.name || ''} onChange={(e) => updateFamilyMember(index, 'name', e.target.value)} className="portal-input py-1 text-xs" /></td>
                       <td className="px-2 py-1.5"><input type="number" value={member.age || ''} onChange={(e) => updateFamilyMember(index, 'age', e.target.value)} className="portal-input py-1 text-xs" /></td>
-                      <td className="px-2 py-1.5"><select value={member.relationship || ''} onChange={(e) => updateFamilyMember(index, 'relationship', e.target.value)} className="portal-input py-1 text-xs"><option value="">Select</option>{RELATIONSHIP_OPTIONS.map((relationship) => <option key={relationship} value={relationship}>{relationship}</option>)}</select></td>
+                      <td className="px-2 py-1.5"><select value={member.relationship || ''} onChange={(e) => updateFamilyMember(index, 'relationship', e.target.value)} className="portal-input py-1 text-xs"><option value="">Select</option>{RELATIONSHIP_OPTIONS.map((relationship) => <option key={relationship} value={relationship}>{relationship}</option>)}<option value="Other">Other</option></select></td>
                       <td className="px-2 py-1.5"><select value={member.civilStatus || ''} onChange={(e) => updateFamilyMember(index, 'civilStatus', e.target.value)} className="portal-input py-1 text-xs"><option value="">Select status</option>{CIVIL_STATUS_OPTIONS.map((status) => <option key={status} value={status}>{status}</option>)}</select></td>
-                      <td className="px-2 py-1.5"><input type="text" value={member.occupation || ''} onChange={(e) => updateFamilyMember(index, 'occupation', e.target.value)} className="portal-input py-1 text-xs" /></td>
+                      <td className="px-2 py-1.5"><SearchablePresetInput value={member.occupation || ''} onChange={(value) => updateFamilyMember(index, 'occupation', value)} options={OCCUPATION_OPTIONS} placeholder="Search occupation" className="portal-input py-1 text-xs" listId={`family-occupation-${index}`} /></td>
                       <td className="px-2 py-1.5"><button type="button" onClick={() => removeFamilyMember(index)} className="text-red-400 hover:text-red-600"><TrashIcon className="h-3.5 w-3.5" /></button></td>
                     </tr>
                   ))}
@@ -258,15 +294,15 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false }) 
                     <div className="sm:col-span-2"><label className="portal-label">Address</label><input type="text" {...register('deceasedAddress')} className="portal-input" placeholder="Home address of the deceased" /></div>
                     <div><label className="portal-label">Age</label><input type="number" min="0" {...register('deceasedAge')} className="portal-input" placeholder="0" /></div>
                     <div><label className="portal-label">Civil Status</label><select {...register('deceasedCivilStatus')} className="portal-input"><option value="">Select status</option>{CIVIL_STATUS_OPTIONS.map((status) => <option key={status} value={status}>{status}</option>)}</select></div>
-                    <div className="sm:col-span-2"><label className="portal-label">Occupation</label><input type="text" {...register('deceasedOccupation')} className="portal-input" placeholder="Occupation of the deceased" /></div>
+                    <div className="sm:col-span-2"><label className="portal-label">Occupation</label><SearchablePresetInput value={watch('deceasedOccupation') || ''} onChange={(value) => setValue('deceasedOccupation', value, { shouldDirty: true, shouldTouch: true })} options={OCCUPATION_OPTIONS} placeholder="Search occupation" /></div>
                   </div>
                 </div>
               )}
               <div>
-                <Controller name="presentingProblem" control={control} render={({ field }) => <NarrativePresetField label="Presenting Problem *" value={field.value} onChange={field.onChange} options={narrativeOptions.filter((item) => item.field === 'presenting_problem')} readOnly={readOnly} minHeightClass="min-h-[7rem]" placeholder="State the client's concern or reason for seeking assistance." />} />
+                <Controller name="presentingProblem" control={control} rules={{ validate: (value) => String(value ?? '').replace(/<[^>]*>/g, '').trim().length > 0 || 'Presenting problem is required' }} render={({ field }) => <NarrativePresetField label="Presenting Problem *" value={field.value} onChange={field.onChange} options={narrativeOptions.filter((item) => item.field === 'presenting_problem')} readOnly={readOnly} minHeightClass="min-h-[7rem]" placeholder="State the client's concern or reason for seeking assistance." fieldName={field.name} />} />
               </div>
               <div>
-                <Controller name="findings" control={control} render={({ field }) => <NarrativePresetField label="Findings / Narrative *" value={field.value} onChange={field.onChange} options={narrativeOptions.filter((item) => item.field === 'findings')} readOnly={readOnly} minHeightClass="min-h-[12rem]" placeholder="Write the case study findings used in the generated report." />} />
+                <Controller name="findings" control={control} rules={{ validate: (value) => String(value ?? '').replace(/<[^>]*>/g, '').trim().length > 0 || 'Findings are required' }} render={({ field }) => <NarrativePresetField label="Findings / Narrative *" value={field.value} onChange={field.onChange} options={narrativeOptions.filter((item) => item.field === 'findings')} readOnly={readOnly} minHeightClass="min-h-[12rem]" placeholder="Write the case study findings used in the generated report." fieldName={field.name} />} />
               </div>
             </div>
           </section>
@@ -277,15 +313,15 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false }) 
               <MedicineTable items={medicines} onChange={setMedicines} readOnly={readOnly} />
               <div className="mt-5 border-t border-slate-200 pt-4 sm:max-w-sm">
                 <label className="portal-label">Total Amount Requested (PHP) *</label>
-                <input type="number" min="0" step="0.01" required {...register('amount')} className="portal-input" placeholder="0.00" />
+                <input type="number" min="0" step="0.01" required {...register('amount', { required: 'Amount is required' })} className="portal-input" placeholder="0.00" />
                 <p className="mt-1 text-xs text-slate-500">Manually encode the financial assistance amount requested for this medicine case.</p>
               </div>
             </section>
           ) : (
-            <section className="rounded-lg border border-slate-200 bg-white p-4"><EncodingSectionHeader number="4" title="Assistance Amount" description="Enter the amount for the guarantee letter or cash assistance." /><div className="grid grid-cols-1 gap-4 sm:max-w-sm"><div><label className="portal-label">{amountLabelForType(caseData.assistanceType)} *</label><input type="number" min="0" step="any" {...register('amount')} className="portal-input" placeholder="0.00" />{isOverCap && <p className="mt-1 text-xs text-amber-600">Amount exceeds {formatCurrency(amountCap)}. Ensure proper authorization.</p>}</div></div></section>
+            <section className="rounded-lg border border-slate-200 bg-white p-4"><EncodingSectionHeader number="4" title="Assistance Amount" description="Enter the amount for the guarantee letter or cash assistance." /><div className="grid grid-cols-1 gap-4 sm:max-w-sm"><div><label className="portal-label">{amountLabelForType(caseData.assistanceType)} *</label><input type="number" min="0" step="any" {...register('amount', { required: 'Amount is required' })} className="portal-input" placeholder="0.00" />{isOverCap && <p className="mt-1 text-xs text-amber-600">Amount exceeds {formatCurrency(amountCap)}. Ensure proper authorization.</p>}</div></div></section>
           )}
         </fieldset>
-        {!readOnly && <div className="mt-5 flex justify-end"><button type="submit" disabled={saving} className="portal-button-primary" id="btn-save-case-study">{saving ? 'Saving...' : 'Save Case Encoding'}</button></div>}
+        {!readOnly && <div className="mt-5 flex flex-wrap justify-end gap-3"><button type="submit" onClick={() => { submitModeRef.current = 'save' }} disabled={saving} className="portal-button-secondary" id="btn-save-case-study">{saving ? 'Saving...' : 'Save Case Encoding'}</button><button type="submit" onClick={() => { submitModeRef.current = 'next' }} disabled={saving} className="portal-button-primary" id="btn-save-next-case-study">{saving ? 'Saving...' : 'Save and Next'}</button></div>}
       </form>
     </div>
   )

@@ -1,11 +1,13 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
 import api from '../../../lib/api'
 import { GlassesIcon } from '../../../components/ui/Icons'
+import { scrollToFirstError } from '../../../lib/formNavigation'
 
-export default function StepEyeglassDetails({ caseData, onUpdate }) {
+export default function StepEyeglassDetails({ caseData, onUpdate, onNext }) {
   const [saving, setSaving] = useState(false)
+  const submitModeRef = useRef('save')
   const { register, handleSubmit } = useForm({
     defaultValues: {
       doctorName: caseData.eyeglassDetails?.doctorName || '',
@@ -17,12 +19,20 @@ export default function StepEyeglassDetails({ caseData, onUpdate }) {
     },
   })
 
+  const handleInvalid = (validationErrors) => {
+    scrollToFirstError(validationErrors)
+    toast.error('Please complete the required fields first.')
+  }
+
   const onSave = async (data) => {
     setSaving(true)
     try {
       const res = await api.put(`/cases/${caseData.id}/eyeglass`, data)
       onUpdate({ eyeglassDetails: res.data, amount: res.data?.amount ?? data.amount, proxyName: data.conformeName || null, proxyRelationship: data.conformeRelationship || null, status: res.data?.status ?? caseData.status })
       toast.success(res.data?.approvalsReset ? 'Eyeglass details saved. Case returned to encoding for re-review.' : 'Eyeglass details saved')
+      if (submitModeRef.current === 'next') {
+        onNext?.()
+      }
     } catch (err) {
       if (err.response) {
         toast.error(err.response?.data?.message || 'Failed to save eyeglass details')
@@ -42,7 +52,7 @@ export default function StepEyeglassDetails({ caseData, onUpdate }) {
         Eyeglass Details
       </div>
 
-      <form onSubmit={handleSubmit(onSave)} className="space-y-4">
+      <form onSubmit={handleSubmit(onSave, handleInvalid)} className="space-y-4">
         <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm">
           <p className="font-semibold text-slate-800">
             Client: {`${caseData.client?.firstName || ''} ${caseData.client?.lastName || ''}`.trim() || 'Not recorded'}
@@ -58,7 +68,7 @@ export default function StepEyeglassDetails({ caseData, onUpdate }) {
 
           <div>
             <label className="portal-label">Doctor / Optometrist Name *</label>
-            <input type="text" {...register('doctorName')} className="portal-input" placeholder="Full name of the optometrist or doctor" />
+            <input type="text" {...register('doctorName', { required: 'Doctor / optometrist name is required' })} className="portal-input" placeholder="Full name of the optometrist or doctor" />
           </div>
           <div>
             <label className="portal-label">Clinic / Optical Shop Name</label>
@@ -91,13 +101,16 @@ export default function StepEyeglassDetails({ caseData, onUpdate }) {
 
           <div>
             <label className="portal-label">Amount (PHP) *</label>
-            <input type="number" min="0" step="any" {...register('amount')} className="portal-input" placeholder="0.00" />
+            <input type="number" min="0" step="any" {...register('amount', { required: 'Amount is required' })} className="portal-input" placeholder="0.00" />
           </div>
         </div>
 
         <div className="flex flex-wrap gap-3">
-          <button type="submit" disabled={saving} className="portal-button-primary" id="btn-save-eyeglass">
+          <button type="submit" onClick={() => { submitModeRef.current = 'save' }} disabled={saving} className="portal-button-secondary" id="btn-save-eyeglass">
             {saving ? 'Saving...' : 'Save Eyeglass Details'}
+          </button>
+          <button type="submit" onClick={() => { submitModeRef.current = 'next' }} disabled={saving} className="portal-button-primary" id="btn-save-next-eyeglass">
+            {saving ? 'Saving...' : 'Save and Next'}
           </button>
         </div>
       </form>

@@ -5,8 +5,7 @@ import { asyncHandler } from '../utils/asyncHandler.js'
 import { requireAuth } from '../middleware/auth.js'
 import { listCases, getCase, createCase, updateCase, deleteCase, pendingApprovalsByType } from '../controllers/caseController.js'
 import { updateStatus } from '../controllers/caseApprovalController.js'
-import { caseStudyDocx, caseStudyHtml, caseStudyPdf, guaranteeLetterPdf, guaranteeLetterDocx, endorsementDocx, acknowledgementDocx, choCertificationDocx } from '../controllers/caseDocumentController.js'
-import { sendGuaranteeLetterToOpenSign } from '../controllers/openSignController.js'
+import { caseStudyDocx, caseStudyHtml, caseStudyPdf, caseStudyPreviewPdf, guaranteeLetterPdf, guaranteeLetterDocx, endorsementDocx, acknowledgementDocx, choCertificationDocx } from '../controllers/caseDocumentController.js'
 import { getMedicines, saveMedicines, deleteMedicine } from '../controllers/caseMedicineController.js'
 import { getRequirements, updateRequirements, patchRequirement } from '../controllers/caseRequirementController.js'
 import { getBurial, updateBurial, uploadBurialGl, getHospital, updateHospital, uploadHospitalGl, updateMedical, uploadMedicalGl, updateEyeglass, updatePlain } from '../controllers/caseDetailsController.js'
@@ -65,12 +64,11 @@ router.put('/:id/plain', asyncHandler(updatePlain))
 router.get('/:id/report/docx', asyncHandler(caseStudyDocx))
 router.get('/:id/report/html', asyncHandler(caseStudyHtml))
 router.get('/:id/report/pdf', asyncHandler(caseStudyPdf))
+router.get('/:id/report-preview/pdf', asyncHandler(caseStudyPreviewPdf))
 router.get('/:id/guarantee-letter/pdf', asyncHandler(guaranteeLetterPdf))
-router.post('/:id/guarantee-letter/opensign', asyncHandler(sendGuaranteeLetterToOpenSign))
 router.get('/:id/report/gl-docx', asyncHandler(guaranteeLetterDocx))
 router.get('/:id/report/endorsement-docx', asyncHandler(endorsementDocx))
 router.get('/:id/report/acknowledgement-docx', asyncHandler(acknowledgementDocx))
 router.get('/:id/report/cho-cert-docx', asyncHandler(choCertificationDocx))
 
 export default router
-

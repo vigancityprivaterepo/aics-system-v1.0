@@ -11,6 +11,7 @@ const TABS = [
   { key: 'users',  label: 'User Access Control' },
   { key: 'audit',  label: 'Audit Trail' },
   { key: 'format', label: 'Case Number Format' },
+  { key: 'module-access', label: 'Module Access' },
   { key: 'narratives', label: 'Narrative Options' },
   { key: 'backup', label: 'Backup & Restore' },
   { key: 'applicants', label: 'Applicant Accounts' },
@@ -54,10 +55,98 @@ const POSITION_OPTIONS = [
   'Social Welfare Officer IV',
   'Social Welfare Officer V',
   'City Administrator',
+  'Executive Secretary',
+  'City Health Officer I',
+  'City Health Officer II',
+  'City Health Officer III',
+  'City Health Officer IV',
+  'City Health Officer V',
   'City Social Welfare and Development Officer',
   "City Social Welfare and Dev't. Officer",
   'City Mayor',
 ]
+
+const DEPARTMENT_OPTIONS = [
+  'Administrative',
+  'CSWDO',
+  'City Health Office',
+]
+
+const CITY_HEALTH_OFFICE_DEPARTMENT = 'City Health Office'
+
+const MODULE_ACCESS_DEFS = [
+  { key: 'dashboard', label: 'Dashboard' },
+  { key: 'clients', label: 'Client Profile' },
+  { key: 'cases', label: 'Cases' },
+  { key: 'reports', label: 'Reports' },
+  { key: 'portal_applications', label: 'Portal Applications' },
+  { key: 'documents_verify', label: 'QR Verifier' },
+  { key: 'medicines', label: 'Medicines Database' },
+  { key: 'vehicle_requests', label: 'Vehicle Requests' },
+  { key: 'hospitals', label: 'Hospitals Database' },
+  { key: 'funeral_homes', label: 'Funeral Homes Database' },
+]
+
+const DEFAULT_MODULE_ACCESS_CONFIG = {
+  dashboard: { employeeDepartments: ['Administrative', 'CSWDO'], allowUnassignedEmployees: true, choAllowed: false },
+  clients: { employeeDepartments: ['Administrative', 'CSWDO'], allowUnassignedEmployees: true, choAllowed: false },
+  cases: { employeeDepartments: ['Administrative', 'CSWDO'], allowUnassignedEmployees: true, choAllowed: false },
+  reports: { employeeDepartments: ['Administrative', 'CSWDO'], allowUnassignedEmployees: true, choAllowed: false },
+  portal_applications: { employeeDepartments: ['Administrative', 'CSWDO'], allowUnassignedEmployees: true, choAllowed: false },
+  documents_verify: { employeeDepartments: ['Administrative', 'CSWDO'], allowUnassignedEmployees: true, choAllowed: false },
+  medicines: { employeeDepartments: ['Administrative', 'CSWDO'], allowUnassignedEmployees: true, choAllowed: true },
+  vehicle_requests: { employeeDepartments: ['Administrative', 'CSWDO'], allowUnassignedEmployees: true, choAllowed: true },
+  hospitals: { employeeDepartments: ['Administrative', 'CSWDO'], allowUnassignedEmployees: true, choAllowed: false },
+  funeral_homes: { employeeDepartments: ['Administrative', 'CSWDO'], allowUnassignedEmployees: true, choAllowed: false },
+  settings: { employeeDepartments: [], allowUnassignedEmployees: false, choAllowed: false },
+}
+
+function normalizeModuleAccessConfig(value) {
+  const source = value && typeof value === 'object' ? value : {}
+  return Object.fromEntries(
+    Object.entries(DEFAULT_MODULE_ACCESS_CONFIG).map(([key, defaults]) => {
+      const current = source[key] && typeof source[key] === 'object' ? source[key] : {}
+      const departments = Array.isArray(current.employeeDepartments)
+        ? [...new Set(current.employeeDepartments.map((entry) => String(entry || '').trim()).filter(Boolean))]
+        : defaults.employeeDepartments
+      const legacyChoAllowed =
+        typeof current.choAllowed === 'boolean'
+          ? current.choAllowed
+          : defaults.choAllowed
+      const cityHealthAllowed = legacyChoAllowed || departments.some(
+        (department) => department.toLowerCase() === CITY_HEALTH_OFFICE_DEPARTMENT.toLowerCase(),
+      )
+      const normalizedDepartments = cityHealthAllowed && !departments.some(
+        (department) => department.toLowerCase() === CITY_HEALTH_OFFICE_DEPARTMENT.toLowerCase(),
+      )
+        ? [...departments, CITY_HEALTH_OFFICE_DEPARTMENT]
+        : departments
+
+      return [key, {
+        employeeDepartments: normalizedDepartments,
+        allowUnassignedEmployees:
+          typeof current.allowUnassignedEmployees === 'boolean'
+            ? current.allowUnassignedEmployees
+            : defaults.allowUnassignedEmployees,
+        choAllowed: cityHealthAllowed,
+      }]
+    }),
+  )
+}
+
+function officeAllowsEmployeeModule(user, moduleKey, config) {
+  const rule = config?.[moduleKey] ?? DEFAULT_MODULE_ACCESS_CONFIG[moduleKey]
+  if (!user || !rule) return false
+  const department = String(user.department ?? '').trim().toLowerCase()
+  if (user.role === 'city_health_office') {
+    return (rule.employeeDepartments ?? []).some(
+      (entry) => String(entry).trim().toLowerCase() === CITY_HEALTH_OFFICE_DEPARTMENT.toLowerCase(),
+    )
+  }
+  if (!department) return !!rule.allowUnassignedEmployees
+  if ((rule.employeeDepartments ?? []).length === 0) return true
+  return rule.employeeDepartments.some((entry) => String(entry).trim().toLowerCase() === department)
+}
 
 const EMPTY_FORM = {
   name: '',
@@ -66,6 +155,7 @@ const EMPTY_FORM = {
   approvalLevels: [],
   signatureParam: '',
   position: '',
+  department: '',
   password: '',
 }
 const AUDIT_PAGE_SIZE = 5
@@ -146,9 +236,15 @@ export default function SettingsPage() {
     reviewedByUserId:   null,
     recommendingUserId: null,
     approvedByUserId:   null,
+    moduleAccessConfig: normalizeModuleAccessConfig(DEFAULT_MODULE_ACCESS_CONFIG),
   }
   const [fmt, setFmt] = useState(DEFAULT_FMT)
-  const [fmtSaving, setFmtSaving] = useState(false)
+  const [globalSettingsSaving, setGlobalSettingsSaving] = useState(false)
+  const [caseSeriesSaving, setCaseSeriesSaving] = useState(false)
+  const [moduleAccessSaving, setModuleAccessSaving] = useState(false)
+  const [selectedModuleAccessUserId, setSelectedModuleAccessUserId] = useState('')
+  const [employeeModuleAccessDraft, setEmployeeModuleAccessDraft] = useState({})
+  const [employeeModuleAccessSaving, setEmployeeModuleAccessSaving] = useState(false)
   const [backups, setBackups] = useState([])
   const [backupsLoading, setBackupsLoading] = useState(true)
   const [backupCreating, setBackupCreating] = useState(false)
@@ -194,6 +290,7 @@ export default function SettingsPage() {
       reviewedByUserId:   data.reviewedByUserId   ?? null,
       recommendingUserId: data.recommendingUserId ?? null,
       approvedByUserId:   data.approvedByUserId   ?? null,
+      moduleAccessConfig: normalizeModuleAccessConfig(data.moduleAccessConfig),
     })).catch(() => {})
   }, [isAdmin])
 
@@ -220,6 +317,7 @@ export default function SettingsPage() {
       reviewedByUserId:   data.reviewedByUserId   ?? null,
       recommendingUserId: data.recommendingUserId ?? null,
       approvedByUserId:   data.approvedByUserId   ?? null,
+      moduleAccessConfig: data.moduleAccessConfig ? normalizeModuleAccessConfig(data.moduleAccessConfig) : prev.moduleAccessConfig,
     }))
   }
   const loadBackups = async ({ silent = false } = {}) => {
@@ -241,11 +339,13 @@ export default function SettingsPage() {
 
   const saveFmt = async (e) => {
     e.preventDefault()
-    setFmtSaving(true)
+    setGlobalSettingsSaving(true)
     try {
       const current = await api.get('/settings')
+      const currentSettings = { ...current.data }
+      delete currentSettings.moduleAccessConfig
       const { data } = await api.put('/settings', {
-        ...current.data,
+        ...currentSettings,
         locationCode: fmt.locationCode,
         agencyCode: fmt.agencyCode,
         sequenceDigits: Number(fmt.sequenceDigits),
@@ -258,13 +358,57 @@ export default function SettingsPage() {
     } catch (err) {
       toast.error(err.response?.data?.message ?? 'Failed to save global settings.')
     } finally {
-      setFmtSaving(false)
+      setGlobalSettingsSaving(false)
+    }
+  }
+
+  const saveModuleAccess = async () => {
+    setModuleAccessSaving(true)
+    try {
+      const { data } = await api.patch('/settings/module-access', {
+        moduleAccessConfig: fmt.moduleAccessConfig,
+      })
+      mergeSettings(data)
+      toast.success('Module access settings saved.')
+    } catch (err) {
+      toast.error(err.response?.data?.message ?? 'Failed to save module access settings.')
+    } finally {
+      setModuleAccessSaving(false)
+    }
+  }
+
+  const selectModuleAccessEmployee = (userId) => {
+    const selectedUser = users.find((user) => user.id === userId)
+    setSelectedModuleAccessUserId(userId)
+    setEmployeeModuleAccessDraft(selectedUser?.moduleAccessOverrides ?? {})
+  }
+
+  const saveEmployeeModuleAccess = async () => {
+    if (!selectedModuleAccessUserId) return
+    setEmployeeModuleAccessSaving(true)
+    try {
+      const { data } = await api.patch(`/settings/module-access/employees/${selectedModuleAccessUserId}`, {
+        moduleAccessOverrides: employeeModuleAccessDraft,
+      })
+      setEmployeeModuleAccessDraft(data.moduleAccessOverrides ?? {})
+      setUsers((prev) => prev.map((user) => user.id === data.userId
+        ? {
+            ...user,
+            moduleAccessOverrides: data.moduleAccessOverrides ?? {},
+            accessibleModules: data.accessibleModules ?? user.accessibleModules,
+          }
+        : user))
+      toast.success('Employee module access saved.')
+    } catch (err) {
+      toast.error(err.response?.data?.message ?? 'Failed to save employee module access.')
+    } finally {
+      setEmployeeModuleAccessSaving(false)
     }
   }
 
   const saveSelectedCaseSeries = async (e) => {
     e.preventDefault()
-    setFmtSaving(true)
+    setCaseSeriesSaving(true)
     try {
       const { data } = await api.patch(`/settings/case-number-series/${selectedSeries.key}`, {
         prefix: String(fmt[selectedSeries.prefixField] || '').toUpperCase(),
@@ -275,7 +419,7 @@ export default function SettingsPage() {
     } catch (err) {
       toast.error(err.response?.data?.message ?? 'Failed to save case number series.')
     } finally {
-      setFmtSaving(false)
+      setCaseSeriesSaving(false)
     }
   }
   const formatSeq = (value) => String(Number(value) || 1).padStart(Number(fmt.sequenceDigits) || 3, '0')
@@ -304,6 +448,10 @@ export default function SettingsPage() {
   }
   const selectedSeries = CASE_NUMBER_SERIES.find((series) => series.key === selectedCaseSeries) ?? CASE_NUMBER_SERIES[0]
   const selectedPreview = previews[selectedSeries.key]
+  const departmentOptions = [...new Set([
+    ...DEPARTMENT_OPTIONS,
+    ...users.map((u) => String(u.department ?? '').trim()).filter(Boolean),
+  ])].sort((a, b) => a.localeCompare(b))
 
   useEffect(() => {
     if (!isAdmin) return
@@ -428,6 +576,7 @@ export default function SettingsPage() {
       approvalLevels: levels,
       signatureParam: u.signatureParam ?? '',
       position: u.position ?? '',
+      department: u.department ?? '',
       password: '',
     })
     setModal('edit')
@@ -447,6 +596,7 @@ export default function SettingsPage() {
         approvalLevel: form.role === 'city_health_office' ? [] : (form.approvalLevels ?? []),
         signatureParam: form.signatureParam?.trim() || null,
         position: form.position?.trim() || null,
+        department: form.department?.trim() || null,
         password: form.password,
       })
       setUsers((prev) => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)))
@@ -470,6 +620,7 @@ export default function SettingsPage() {
         approvalLevel: form.role === 'city_health_office' ? [] : (form.approvalLevels ?? []),
         signatureParam: form.signatureParam?.trim() || null,
         position: form.position?.trim() || null,
+        department: form.department?.trim() || null,
       })
       setUsers((prev) => prev.map((u) => (u.id === data.id ? data : u)))
       toast.success('User updated')
@@ -556,6 +707,8 @@ export default function SettingsPage() {
   }
 
   const activeUsers = users.filter((u) => u.isActive)
+  const moduleAccessEmployees = activeUsers.filter((u) => u.role !== 'admin')
+  const selectedModuleAccessEmployee = moduleAccessEmployees.find((u) => u.id === selectedModuleAccessUserId) ?? null
   const activeApprovalUsers = activeUsers.filter((u) => u.role !== 'city_health_office')
   const reviewerUsers    = activeApprovalUsers.filter((u) => (Array.isArray(u.approvalLevel) ? u.approvalLevel : []).includes('reviewer'))
   const recommenderUsers = activeApprovalUsers.filter((u) => (Array.isArray(u.approvalLevel) ? u.approvalLevel : []).includes('recommender'))
@@ -635,6 +788,7 @@ export default function SettingsPage() {
                           <div className="font-semibold text-sm text-slate-800">{u.name}</div>
                           <div className="text-xs text-slate-400 font-mono mt-0.5">@{u.username ?? '-'}</div>
                           {u.position && <div className="text-xs text-slate-500 mt-0.5 italic">{u.position}</div>}
+                          {u.department && <div className="text-xs text-slate-500 mt-0.5">Office: {u.department}</div>}
                           <div className="mt-2 flex items-center gap-2">
                             {u.photoUrl ? (
                               <img src={u.photoUrl} alt={u.name} className="h-8 w-8 rounded-full object-cover border border-slate-200" />
@@ -828,7 +982,7 @@ export default function SettingsPage() {
             <h2 className="text-base font-semibold text-slate-900">Case Number Format</h2>
             <p className="text-sm text-slate-500">Configure the ID and case number codes generated for new records. Changes apply to new records only.</p>
           </div>
-          <form onSubmit={saveSelectedCaseSeries} className="space-y-5">
+          <div className="space-y-5">
             {/* Global format settings */}
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
               <div>
@@ -850,7 +1004,7 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+            <form onSubmit={saveSelectedCaseSeries} className="rounded-lg border border-slate-200 bg-slate-50 p-4">
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
                 <div>
                   <label className="portal-label">Series</label>
@@ -890,7 +1044,12 @@ export default function SettingsPage() {
                 <span className="font-mono text-sm font-bold text-brand-primary">{selectedPreview}</span>
               </div>
               <p className="mt-2 text-xs text-slate-400">Only the selected series is saved. Existing higher numbers are still skipped automatically.</p>
-            </div>
+              <div className="mt-4 flex justify-end">
+                <button type="submit" disabled={caseSeriesSaving} className="portal-button-primary">
+                  {caseSeriesSaving ? 'Saving Series...' : `Save ${selectedSeries.label} Series`}
+                </button>
+              </div>
+            </form>
             <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Approval Hierarchy Assignment</p>
               <p className="mt-1 text-xs text-slate-400">Only employees with the matching approval level are shown. Missing e-signatures will not block approval, but documents will omit that signature image.</p>
@@ -950,15 +1109,197 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-              <button type="button" disabled={fmtSaving} onClick={saveFmt} className="portal-button-secondary">
-                {fmtSaving ? 'Saving...' : 'Save Global Settings'}
-              </button>
-              <button type="submit" disabled={fmtSaving} className="portal-button-primary">
-                {fmtSaving ? 'Saving...' : `Save ${selectedSeries.label} Series`}
+            <div className="flex justify-end">
+              <button type="button" disabled={globalSettingsSaving} onClick={saveFmt} className="portal-button-primary">
+                {globalSettingsSaving ? 'Saving Format & Approvals...' : 'Save Format & Approvals'}
               </button>
             </div>
-          </form>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'module-access' && (
+        <div className="card">
+          <div className="mb-4 border-b border-slate-100 pb-3">
+            <h2 className="text-base font-semibold text-slate-900">Module Access by Office</h2>
+            <p className="text-sm text-slate-500">Control which modules employees can open based on their assigned office or department.</p>
+          </div>
+          <p className="text-xs text-slate-400">Admin accounts always keep full access. City Health Office also covers CHO-role accounts.</p>
+          <div className="mt-4 overflow-x-auto rounded-lg border border-slate-200 bg-white">
+            <table className="min-w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 bg-slate-50">
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Module</th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-slate-500">Unassigned Employee</th>
+                  {departmentOptions.map((department) => (
+                    <th key={department} className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-slate-500">
+                      {department}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {MODULE_ACCESS_DEFS.map((moduleDef) => {
+                  const rule = fmt.moduleAccessConfig?.[moduleDef.key] ?? DEFAULT_MODULE_ACCESS_CONFIG[moduleDef.key]
+                  return (
+                    <tr key={moduleDef.key}>
+                      <td className="px-4 py-3 font-medium text-slate-800">{moduleDef.label}</td>
+                      <td className="px-4 py-3 text-center">
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 rounded border-slate-300 accent-emerald-600"
+                          checked={!!rule.allowUnassignedEmployees}
+                          onChange={(e) => setFmt((prev) => ({
+                            ...prev,
+                            moduleAccessConfig: {
+                              ...prev.moduleAccessConfig,
+                              [moduleDef.key]: {
+                                ...prev.moduleAccessConfig[moduleDef.key],
+                                allowUnassignedEmployees: e.target.checked,
+                              },
+                            },
+                          }))}
+                        />
+                      </td>
+                      {departmentOptions.map((department) => {
+                        const checked = (rule.employeeDepartments ?? []).includes(department)
+                        return (
+                          <td key={department} className="px-4 py-3 text-center">
+                            <input
+                              type="checkbox"
+                              className="h-4 w-4 rounded border-slate-300 accent-emerald-600"
+                              checked={checked}
+                              onChange={(e) => setFmt((prev) => {
+                                const current = prev.moduleAccessConfig[moduleDef.key]?.employeeDepartments ?? []
+                                const nextDepartments = e.target.checked
+                                  ? [...new Set([...current, department])]
+                                  : current.filter((entry) => entry !== department)
+                                const isCityHealthOffice = department.toLowerCase() === CITY_HEALTH_OFFICE_DEPARTMENT.toLowerCase()
+                                return {
+                                  ...prev,
+                                  moduleAccessConfig: {
+                                    ...prev.moduleAccessConfig,
+                                    [moduleDef.key]: {
+                                      ...prev.moduleAccessConfig[moduleDef.key],
+                                      employeeDepartments: nextDepartments,
+                                      ...(isCityHealthOffice ? { choAllowed: e.target.checked } : {}),
+                                    },
+                                  },
+                                }
+                              })}
+                            />
+                          </td>
+                        )
+                      })}
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+          <div className="mt-5 flex justify-end">
+            <button type="button" disabled={moduleAccessSaving} onClick={saveModuleAccess} className="portal-button-primary">
+              {moduleAccessSaving ? 'Saving Module Access...' : 'Save Module Access'}
+            </button>
+          </div>
+
+          <div className="mt-8 border-t border-slate-200 pt-6">
+            <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+              <div>
+                <h3 className="text-sm font-semibold text-slate-900">Module Access by Employee</h3>
+                <p className="mt-1 text-xs text-slate-400">Individual Allow or Block choices override the employee&apos;s office settings. Follow Office keeps the automatic office rule.</p>
+              </div>
+              <div className="w-full md:max-w-sm">
+                <label className="portal-label">Employee</label>
+                <select
+                  className="portal-input"
+                  value={selectedModuleAccessUserId}
+                  onChange={(e) => selectModuleAccessEmployee(e.target.value)}
+                >
+                  <option value="">- Select employee -</option>
+                  {moduleAccessEmployees.map((employee) => (
+                    <option key={employee.id} value={employee.id}>
+                      {employee.name} - {employee.department || roleLabel(employee.role)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {selectedModuleAccessEmployee ? (
+              <>
+                <div className="mt-4 overflow-x-auto rounded-lg border border-slate-200 bg-white">
+                  <table className="min-w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-slate-200 bg-slate-50">
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Module</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-slate-500">Office Rule</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-slate-500">Employee Override</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-slate-500">Effective Access</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {MODULE_ACCESS_DEFS.map((moduleDef) => {
+                        const officeAllowed = officeAllowsEmployeeModule(
+                          selectedModuleAccessEmployee,
+                          moduleDef.key,
+                          fmt.moduleAccessConfig,
+                        )
+                        const override = employeeModuleAccessDraft[moduleDef.key]
+                        const effectiveAllowed = typeof override === 'boolean' ? override : officeAllowed
+                        const overrideValue = typeof override === 'boolean' ? (override ? 'allow' : 'block') : 'inherit'
+                        return (
+                          <tr key={moduleDef.key}>
+                            <td className="px-4 py-3 font-medium text-slate-800">{moduleDef.label}</td>
+                            <td className="px-4 py-3 text-center">
+                              <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${officeAllowed ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
+                                {officeAllowed ? 'Allowed' : 'Blocked'}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              <select
+                                className="portal-input mx-auto max-w-40 py-1.5 text-sm"
+                                value={overrideValue}
+                                onChange={(e) => setEmployeeModuleAccessDraft((prev) => {
+                                  const next = { ...prev }
+                                  if (e.target.value === 'inherit') delete next[moduleDef.key]
+                                  else next[moduleDef.key] = e.target.value === 'allow'
+                                  return next
+                                })}
+                              >
+                                <option value="inherit">Follow Office</option>
+                                <option value="allow">Allow</option>
+                                <option value="block">Block</option>
+                              </select>
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${effectiveAllowed ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-50 text-rose-700'}`}>
+                                {effectiveAllowed ? 'Allowed' : 'Blocked'}
+                              </span>
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="mt-5 flex justify-end">
+                  <button
+                    type="button"
+                    disabled={employeeModuleAccessSaving}
+                    onClick={saveEmployeeModuleAccess}
+                    className="portal-button-primary"
+                  >
+                    {employeeModuleAccessSaving ? 'Saving Employee Access...' : 'Save Employee Access'}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="mt-4 rounded-lg border border-dashed border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-400">
+                Select an employee to configure individual module access.
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -1169,6 +1510,21 @@ export default function SettingsPage() {
                         <option key={position} value={position}>{position}</option>
                       ))}
                     </select>
+                  </div>
+                  <div>
+                    <label className="portal-label">Office / Department</label>
+                    <input
+                      className="portal-input"
+                      list="department-options"
+                      value={form.department}
+                      onChange={(e) => setForm({ ...form, department: e.target.value })}
+                      placeholder="e.g. Administrative or CSWDO"
+                    />
+                    <datalist id="department-options">
+                      {departmentOptions.map((department) => (
+                        <option key={department} value={department} />
+                      ))}
+                    </datalist>
                   </div>
                   <div>
                     <label className="portal-label">

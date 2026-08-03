@@ -1,7 +1,7 @@
 import type { Request, Response } from 'express'
 import { prisma } from '../utils/prisma.js'
 import { HttpError } from '../utils/httpError.js'
-import { REQUIREMENT_DEFINITIONS } from '../utils/requirements.js'
+import { normalizePlainAssistanceKinds, requirementDefinitionsForType } from '../utils/requirements.js'
 import { assertCaseReadable, assertEditableCase, ensureRequirementRows, mapRequirements, paramId } from '../services/caseService.js'
 import { updateRequirementsSchema, patchRequirementSchema } from '../schemas/caseSchemas.js'
 import { auditLog, auditLogMany } from '../utils/auditLog.js'
@@ -12,12 +12,13 @@ export async function getRequirements(req: Request, res: Response) {
   const caseData = await prisma.case.findUnique({ where: { id: caseId }, include: { requirements: true } })
   if (!caseData) throw new HttpError(404, 'Case not found')
   assertCaseReadable(caseData, req.user, 'Requirements')
-  await ensureRequirementRows(caseData.id, caseData.assistanceType)
+  const plainAssistanceKinds = normalizePlainAssistanceKinds((caseData.auditFlags as any)?.plain_assistance_kinds)
+  await ensureRequirementRows(caseData.id, caseData.assistanceType, plainAssistanceKinds)
 
   const rows = await prisma.caseRequirement.findMany({ where: { caseId: caseData.id }, orderBy: { createdAt: 'asc' } })
   res.json({
     requirements: rows.map((r) => ({ id: r.id, key: r.requirementName, isSubmitted: r.isSubmitted, notes: r.notes, submittedAt: r.submittedAt })),
-    map: mapRequirements(rows, caseData.assistanceType),
+    map: mapRequirements(rows, caseData.assistanceType, plainAssistanceKinds),
   })
 }
 
@@ -28,9 +29,10 @@ export async function updateRequirements(req: Request, res: Response) {
   const caseData = await prisma.case.findUnique({ where: { id: caseId } })
   if (!caseData) throw new HttpError(404, 'Case not found')
   assertEditableCase(caseData, req.user, 'Requirements')
-  await ensureRequirementRows(caseData.id, caseData.assistanceType)
+  const plainAssistanceKinds = normalizePlainAssistanceKinds((caseData.auditFlags as any)?.plain_assistance_kinds)
+  await ensureRequirementRows(caseData.id, caseData.assistanceType, plainAssistanceKinds)
 
-  const defs = REQUIREMENT_DEFINITIONS[caseData.assistanceType]
+  const defs = requirementDefinitionsForType(caseData.assistanceType, plainAssistanceKinds)
   const allowedKeys = new Set(defs.map((d) => d.key))
   const existingRows = await prisma.caseRequirement.findMany({ where: { caseId: caseData.id } })
   const existingMap = new Map(existingRows.map((r) => [r.requirementName, r.isSubmitted]))
@@ -64,7 +66,7 @@ export async function updateRequirements(req: Request, res: Response) {
 
   const rows = await prisma.caseRequirement.findMany({ where: { caseId: caseData.id } })
   res.json({
-    requirements: mapRequirements(rows, caseData.assistanceType),
+    requirements: mapRequirements(rows, caseData.assistanceType, plainAssistanceKinds),
     status: resetResult.status ?? caseData.status,
     approvalsReset: resetResult.approvalsReset,
   })

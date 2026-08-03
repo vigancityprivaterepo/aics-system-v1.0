@@ -2,6 +2,10 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { PlusIcon, TrashIcon } from './ui/Icons'
 import api from '../lib/api'
 
+function rowAvailability(row) {
+  return row?.isAvailable ?? row?.medicine?.isAvailable ?? true
+}
+
 function SearchCell({ row, rowIndex, onSearch, onSelect, onManualEdit, suggestions, activeSuggestions, searching }) {
   const inputRef = useRef(null)
   const showDrop = activeSuggestions && (suggestions.length > 0 || searching || (row.medicineName && row.medicineName.trim().length > 0))
@@ -121,7 +125,7 @@ export default function MedicineTable({ items = [], onChange, readOnly = false }
   const handleManualEdit = (i, value) => {
     const updated = items.map((row, idx) => {
       if (idx !== i) return row
-      return { ...row, medicineName: value, _fromDb: false, medicineId: '' }
+      return { ...row, medicineName: value, _fromDb: false, medicineId: '', medicine: null }
     })
     onChange(updated)
   }
@@ -150,6 +154,13 @@ export default function MedicineTable({ items = [], onChange, readOnly = false }
         medicineName: medicine.genericName,
         unit: medicine.unit || row.unit || '',
         isAvailable: isAvail,
+        medicine: {
+          isAvailable: isAvail,
+          updatedAt: medicine.updatedAt ?? null,
+          availabilityUpdatedAt: medicine.availabilityUpdatedAt ?? null,
+          availableUpdatedAt: medicine.availableUpdatedAt ?? null,
+          unavailableUpdatedAt: medicine.unavailableUpdatedAt ?? null,
+        },
         _fromDb: true,
       }
     })
@@ -213,12 +224,12 @@ export default function MedicineTable({ items = [], onChange, readOnly = false }
                   {/* Status / Availability */}
                   <td className="px-4 py-2 text-center">
                     <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${
-                      row.isAvailable !== false
+                      rowAvailability(row) !== false
                         ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
                         : 'bg-rose-100 text-rose-800 border border-rose-200'
                     }`}>
-                      <span className={`h-1.5 w-1.5 rounded-full ${row.isAvailable !== false ? 'bg-emerald-500' : 'bg-rose-500'}`} />
-                      {row.isAvailable !== false ? 'Available' : 'Not Available'}
+                      <span className={`h-1.5 w-1.5 rounded-full ${rowAvailability(row) !== false ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                      {rowAvailability(row) !== false ? 'Available' : 'Not Available'}
                     </span>
                   </td>
 

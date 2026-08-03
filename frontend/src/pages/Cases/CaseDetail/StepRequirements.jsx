@@ -45,6 +45,7 @@ export default function StepRequirements({ caseData, onUpdate, locked }) {
       <RequirementsChecklist
         assistanceType={caseData.assistanceType}
         requirements={caseData.requirements || {}}
+        plainAssistanceKinds={caseData.plainDetails?.assistanceKinds || []}
         onChange={handleChange}
         readOnly={locked}
         variant="cgvTable"

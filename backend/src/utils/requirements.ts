@@ -41,6 +41,37 @@ export const REQUIREMENT_DEFINITIONS: Record<AssistanceType, Array<{ key: string
   ],
 }
 
+const PLAIN_ASSISTANCE_REQUIREMENT_TYPES: AssistanceType[] = ['medical', 'hospital', 'burial']
+
+export function normalizePlainAssistanceKinds(value: unknown): AssistanceType[] {
+  if (!Array.isArray(value)) return []
+  const allowed = new Set<string>(PLAIN_ASSISTANCE_REQUIREMENT_TYPES)
+  return [...new Set(
+    value
+      .filter((item): item is string => typeof item === 'string')
+      .map((item) => item.trim().toLowerCase())
+      .filter((item) => allowed.has(item))
+  )] as AssistanceType[]
+}
+
+export function requirementDefinitionsForType(
+  type: AssistanceType,
+  plainAssistanceKinds: AssistanceType[] = [],
+) {
+  if (type !== 'plain') return REQUIREMENT_DEFINITIONS[type]
+
+  const merged = [
+    ...REQUIREMENT_DEFINITIONS.plain,
+    ...plainAssistanceKinds.flatMap((kind) => REQUIREMENT_DEFINITIONS[kind] ?? []),
+  ]
+  const seen = new Set<string>()
+  return merged.filter((requirement) => {
+    if (seen.has(requirement.key)) return false
+    seen.add(requirement.key)
+    return true
+  })
+}
+
 const PORTAL_DOCUMENT_REQUIREMENT_MAP: Record<AssistanceType, Record<string, string>> = {
   medicine: {
     'valid government id': 'id_copy',
@@ -106,8 +137,8 @@ export function requirementLabelsByKey(type: AssistanceType): Record<string, str
   return Object.fromEntries(REQUIREMENT_DEFINITIONS[type].map((r) => [r.key, r.label]))
 }
 
-export function emptyRequirementMap(type: AssistanceType): Record<string, boolean> {
-  return Object.fromEntries(REQUIREMENT_DEFINITIONS[type].map((r) => [r.key, false]))
+export function emptyRequirementMap(type: AssistanceType, plainAssistanceKinds: AssistanceType[] = []): Record<string, boolean> {
+  return Object.fromEntries(requirementDefinitionsForType(type, plainAssistanceKinds).map((r) => [r.key, false]))
 }
 
 

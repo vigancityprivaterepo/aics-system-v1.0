@@ -109,6 +109,9 @@ export const updateEyeglassSchema = z.object({
 
 export const updatePlainSchema = z.object({
   natureOfAssistance: z.string().max(500).optional(),
+  conformeName: z.string().max(200).optional().nullable(),
+  conformeRelationship: z.string().max(100).optional().nullable(),
+  assistanceKinds: z.array(z.enum(['medical', 'hospital', 'burial'])).max(3).optional(),
   amount: z.coerce.number().min(0).optional(),
 })
 

@@ -6,16 +6,20 @@ import PizZip from 'pizzip'
 import Docxtemplater from 'docxtemplater'
 import { DOMParser, XMLSerializer } from '@xmldom/xmldom'
 import { richTextToPlainText } from '../utils/richText.js'
+import {
+  resolveAssistancePurpose,
+  resolveMedicalRequestedAssistance,
+  resolveServiceProviderAddress,
+  resolveServiceProviderName,
+} from './documentCaseContextService.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const require = createRequire(import.meta.url)
 const ImageModule = require('../../vendor/docxtemplater-image-module-safe/index.cjs')
 const TEMPLATES_DIR = path.resolve(__dirname, '..', '..', '..', 'templates')
-const GLOBAL_CASE_STUDY_TEMPLATE = 'CGV AICS Template.fixed.docx'
-
+const BASE_CASE_STUDY_TEMPLATE = 'CGV AICS Template.fixed.docx'
 const CASE_STUDY_CANDIDATES = [
-  GLOBAL_CASE_STUDY_TEMPLATE,
-  path.join('Burial Case Study and GL', 'Burial Case Study.fixed.docx'),
+  BASE_CASE_STUDY_TEMPLATE,
 ]
 
 const GL_CANDIDATES = [
@@ -25,13 +29,11 @@ const GL_CANDIDATES = [
 ]
 
 const HOSPITAL_PERSONAL_CANDIDATES = [
-  GLOBAL_CASE_STUDY_TEMPLATE,
-  path.join('Hospital Case Study and GL', 'Hospital Case Study-PersonalCame.fixed.docx'),
+  BASE_CASE_STUDY_TEMPLATE,
 ]
 
 const HOSPITAL_PROXY_CANDIDATES = [
-  GLOBAL_CASE_STUDY_TEMPLATE,
-  path.join('Hospital Case Study and GL', 'Hospital Case Study-Proxy.fixed.docx'),
+  BASE_CASE_STUDY_TEMPLATE,
 ]
 
 const HOSPITAL_GL_CANDIDATES = [
@@ -40,11 +42,11 @@ const HOSPITAL_GL_CANDIDATES = [
 ]
 
 const MEDICINE_PERSONAL_CANDIDATES = [
-  GLOBAL_CASE_STUDY_TEMPLATE,
+  BASE_CASE_STUDY_TEMPLATE,
 ]
 
 const MEDICINE_PROXY_CANDIDATES = [
-  GLOBAL_CASE_STUDY_TEMPLATE,
+  BASE_CASE_STUDY_TEMPLATE,
 ]
 
 const MEDICINE_GL_CANDIDATES: string[] = [
@@ -55,13 +57,11 @@ const MEDICINE_GL_CANDIDATES: string[] = [
 ]
 
 const MEDICAL_PERSONAL_CANDIDATES = [
-  GLOBAL_CASE_STUDY_TEMPLATE,
-  path.join('Medical Case Study and GL', 'Medical Case Study-personal.fixed.docx'),
+  BASE_CASE_STUDY_TEMPLATE,
 ]
 
 const MEDICAL_PROXY_CANDIDATES = [
-  GLOBAL_CASE_STUDY_TEMPLATE,
-  path.join('Medical Case Study and GL', 'Medical Case Study-proxy.fixed.docx'),
+  BASE_CASE_STUDY_TEMPLATE,
 ]
 
 const MEDICAL_GL_CANDIDATES = [
@@ -70,13 +70,11 @@ const MEDICAL_GL_CANDIDATES = [
 ]
 
 const EYEGLASS_PERSONAL_CANDIDATES = [
-  GLOBAL_CASE_STUDY_TEMPLATE,
-  path.join('Eyeglass Case Study and GL', 'Eyeglass case.fixed.docx'),
+  BASE_CASE_STUDY_TEMPLATE,
 ]
 
 const EYEGLASS_PROXY_CANDIDATES = [
-  GLOBAL_CASE_STUDY_TEMPLATE,
-  path.join('Eyeglass Case Study and GL', 'Eyeglass case-proxy.fixed.docx'),
+  BASE_CASE_STUDY_TEMPLATE,
 ]
 
 const EYEGLASS_ENDORSEMENT_CANDIDATES = [
@@ -88,9 +86,7 @@ const EYEGLASS_ACKNOWLEDGEMENT_CANDIDATES = [
 ]
 
 const PLAIN_CASE_STUDY_CANDIDATES = [
-  GLOBAL_CASE_STUDY_TEMPLATE,
-  path.join('Plain AICS', 'PLAIN AICS.fixed.docx'),
-  path.join('Plain AICS', 'PLAIN AICS.fixed.docx.patching.tmp'),
+  BASE_CASE_STUDY_TEMPLATE,
 ]
 
 // Legacy combined template fallbacks
@@ -149,6 +145,13 @@ function fmt(value: unknown): string {
   return normalized.length > 0 ? normalized : '-'
 }
 
+function normalizeForCompare(value: unknown): string {
+  return richTextToPlainText(value)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+}
+
 function pronounsFromSex(value: unknown): { heShe: string; hisHer: string; himHer: string } {
   const normalized = String(value ?? '').trim().toLowerCase()
   if (normalized.startsWith('f')) return { heShe: 'she', hisHer: 'her', himHer: 'her' }
@@ -175,6 +178,19 @@ function formatLongDate(value: unknown): string {
   const parsed = new Date(raw)
   if (Number.isNaN(parsed.getTime())) return raw
   return parsed.toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' })
+}
+
+function formatOrdinalDay(value: number): string {
+  const normalized = Math.abs(Math.trunc(value))
+  const mod100 = normalized % 100
+  if (mod100 >= 11 && mod100 <= 13) return `${normalized}th`
+
+  switch (normalized % 10) {
+    case 1: return `${normalized}st`
+    case 2: return `${normalized}nd`
+    case 3: return `${normalized}rd`
+    default: return `${normalized}th`
+  }
 }
 
 function calcAge(dob: string | null | undefined): string {
@@ -262,7 +278,10 @@ function buildRenderData(caseData: any): Record<string, any> {
     textOrNull(hospital.diagnosis) ?? textOrNull(medical.diagnosis)
   )
   const resolvedHospitalizationType = String((hospital as any).hospitalizationType ?? '').trim() || 'hospitalized'
-  const resolvedHospitalBill = fmt(textOrNull(hospital.typeOfBill))
+  const resolvedHospitalBill = fmt(
+    textOrNull(hospital.typeOfBill)
+    ?? 'hospitalization expenses'
+  )
   const medicineTemplateType = String((medicine as any).templateType ?? '').trim().toLowerCase() === 'proxy' ? 'proxy' : 'personal'
   const medicalTemplateType = String((medical as any).templateType ?? '').trim().toLowerCase() === 'proxy' ? 'proxy' : 'personal'
   const eyeglassTemplateType = String((eyeglass as any).templateType ?? '').trim().toLowerCase() === 'proxy' ? 'proxy' : 'personal'
@@ -277,13 +296,17 @@ function buildRenderData(caseData: any): Record<string, any> {
     ?? textOrNull(caseData.backgroundOfProblem)
   )
   const resolvedNatureOfAssistance = fmt(textOrNull((caseData.plainDetails as any)?.natureOfAssistance))
-  const resolvedMedicalRequestedAssistance = fmt(
-    textOrNull(medical.medicalType)
-    ?? textOrNull(medical.operationType)
-    ?? textOrNull((caseData as any).portalApplicationContext?.medicalRequestedAssistance)
-    ?? textOrNull((caseData as any).portalApplicationContext?.medicalType)
-    ?? textOrNull((caseData as any).portalApplicationContext?.operationType)
-  )
+  const plainAssistanceKinds = Array.isArray((caseData.plainDetails as any)?.assistanceKinds)
+    ? [...new Set((caseData.plainDetails as any).assistanceKinds
+        .filter((item: unknown): item is string => typeof item === 'string')
+        .map((item: string) => item.trim().toLowerCase())
+        .filter(Boolean))]
+    : []
+  const resolvedMedicalRequestedAssistance = fmt(resolveMedicalRequestedAssistance(caseData))
+  const resolvedMedicalProcedureLabel =
+    resolvedMedicalRequestedAssistance !== '-'
+      ? resolvedMedicalRequestedAssistance
+      : 'medical procedure/examination'
 
   const clientName = `${c.lastName}, ${[c.firstName, c.middleName].filter(Boolean).join(' ')}`
   const fullName   = [c.firstName, c.middleName, c.lastName].filter(Boolean).join(' ')
@@ -311,6 +334,8 @@ function buildRenderData(caseData: any): Record<string, any> {
   const medicalConformeRelationship = textOrNull(medical.conformeRelationship)
   const eyeglassConformeName = textOrNull((eyeglass as any).conformeName)
   const eyeglassConformeRelationship = textOrNull((eyeglass as any).conformeRelationship)
+  const plainConformeName = textOrNull((caseData.plainDetails as any)?.conformeName)
+  const plainConformeRelationship = textOrNull((caseData.plainDetails as any)?.conformeRelationship)
   const resolvedBurialRequestorName = caseData.assistanceType === 'burial' ? fmt(burialConformeName ?? textOrNull(fullName)) : resolvedProxyName
   const resolvedBurialRequestorNameList = caseData.assistanceType === 'burial' ? resolvedBurialRequestorName : resolvedProxyNameList
   const medicineConformeName = textOrNull((medicine as any).conformeName)
@@ -322,6 +347,7 @@ function buildRenderData(caseData: any): Record<string, any> {
     || (caseData.assistanceType === 'medical' && !medicalConformeName && !medicalConformeRelationship)
     || (caseData.assistanceType === 'burial' && !burialConformeName && !burialConformeRelationship)
     || (caseData.assistanceType === 'eyeglass' && !eyeglassConformeName && !eyeglassConformeRelationship)
+    || (caseData.assistanceType === 'plain' && !plainConformeName && !plainConformeRelationship)
   const allowSelfRelationship =
     !((caseData.assistanceType === 'hospital' && hospital.templateType === 'proxy')
       || (caseData.assistanceType === 'medicine' && (medicineTemplateType === 'proxy' || hasMedicineRequestingParty))
@@ -333,6 +359,7 @@ function buildRenderData(caseData: any): Record<string, any> {
     ?? hospitalConformeName
     ?? medicalConformeName
     ?? burialConformeName
+    ?? plainConformeName
     ?? textOrNull(hospital.patientName)
     ?? textOrNull(fullName)
   )
@@ -342,6 +369,7 @@ function buildRenderData(caseData: any): Record<string, any> {
     ?? hospitalConformeRelationship
     ?? medicalConformeRelationship
     ?? burialConformeRelationship
+    ?? plainConformeRelationship
     ?? (hasMedicineRequestingParty ? 'N/A' : allowSelfRelationship ? 'Self' : null)
   )
   const resolvedDateOfAssessment = formatLongDate(
@@ -384,6 +412,13 @@ function buildRenderData(caseData: any): Record<string, any> {
   const unchecked = '\u2610'
   const checkbox = (value: boolean) => (value ? checked : unchecked)
   const isAssistanceType = (type: string) => caseData.assistanceType === type
+  const plainHasKind = (kind: string) => caseData.assistanceType === 'plain' && plainAssistanceKinds.includes(kind)
+  const hasHospitalRequest = isAssistanceType('hospital') || plainHasKind('hospital')
+  const hasMedicalRequest = isAssistanceType('medical') || plainHasKind('medical')
+  const hasEyeglassRequest = isAssistanceType('eyeglass')
+  const hasMedicineRequest = isAssistanceType('medicine')
+  const hasBurialRequest = isAssistanceType('burial') || plainHasKind('burial')
+  const hasOtherPlainRequest = false
   const clientCategory = String(c.clientCategory ?? '').trim().toLowerCase()
   const hasCategory = (needle: string) => clientCategory.includes(needle)
   const isIntakeSourceCategory = ['walk-in', 'walk_in', 'referred', 'rescued'].includes(clientCategory)
@@ -401,10 +436,10 @@ function buildRenderData(caseData: any): Record<string, any> {
     }
   }
   const isReqSubmitted = (...keys: string[]) => keys.some((key) => requirementMap.get(key) === true)
-  const isMedicine = isAssistanceType('medicine')
-  const isMedical = isAssistanceType('medical')
-  const isBurial = isAssistanceType('burial')
-  const isHospital = isAssistanceType('hospital')
+  const isMedicine = hasMedicineRequest
+  const isMedical = hasMedicalRequest
+  const isBurial = hasBurialRequest
+  const isHospital = hasHospitalRequest
   const isSubsequentAvailment = Boolean((caseData as any).isSubsequentAvailment)
   const resolvedRequestingParty = shouldBlankRequestor ? '' : resolvedConformeName
   const resolvedRelationshipToBeneficiary = shouldBlankRequestor ? '' : resolvedRelationship
@@ -414,33 +449,38 @@ function buildRenderData(caseData: any): Record<string, any> {
     : isSelfRequest
       ? resolvedBeneficiaryName
       : `${resolvedRequestingParty}, the ${resolvedRelationshipToBeneficiary} of the beneficiary,`
-  const resolvedServiceProviderName = fmt(
-    caseData.assistanceType === 'burial' ? textOrNull(burial.funeralHome)
-    : caseData.assistanceType === 'hospital' ? textOrNull(hospital.hospitalName)
-    : caseData.assistanceType === 'medical' ? textOrNull(medical.clinicName)
-    : caseData.assistanceType === 'eyeglass' ? textOrNull((eyeglass as any).clinicName)
-    : textOrNull((caseData as any).serviceProviderName)
-  )
-  const assistancePurposeByType: Record<string, string> = {
-    hospital: 'payment of hospitalization expenses',
-    medical: resolvedMedicalRequestedAssistance !== '-' ? resolvedMedicalRequestedAssistance : 'medical procedure/examination',
-    eyeglass: 'purchase of eyeglasses',
-    medicine: 'purchase of maintenance medications',
-    burial: 'burial/funeral expenses',
-    plain: resolvedNatureOfAssistance !== '-' ? resolvedNatureOfAssistance : 'emergency assistance',
-  }
-  const resolvedAssistancePurpose = assistancePurposeByType[caseData.assistanceType] ?? 'emergency assistance'
-  const resolvedSpecificNeed = fmt(
+  const resolvedServiceProviderName = fmt(resolveServiceProviderName(caseData))
+  const resolvedAssistancePurpose = fmt(resolveAssistancePurpose(caseData))
+  const usesGenericPlainAssistancePurpose =
+    caseData.assistanceType === 'plain'
+    && normalizeForCompare(resolvedAssistancePurpose) === 'emergency assistance'
+  const rawPresentingProblem = textOrNull(caseData.presentingProblem)
+  const burialFuneralHome = textOrNull(burial.funeralHome)
+  const burialProblemMentionsFuneralHome =
+    caseData.assistanceType === 'burial'
+    && !!rawPresentingProblem
+    && !!burialFuneralHome
+    && normalizeForCompare(rawPresentingProblem).includes(normalizeForCompare(burialFuneralHome))
+  const burialProblemIsOnlyFuneralHome =
+    caseData.assistanceType === 'burial'
+    && !!rawPresentingProblem
+    && !!burialFuneralHome
+    && normalizeForCompare(rawPresentingProblem) === normalizeForCompare(burialFuneralHome)
+  const rawSpecificNeed =
     caseData.assistanceType === 'hospital' && resolvedHospitalName !== '-'
       ? `${resolvedAssistancePurpose} at ${resolvedHospitalName}`
     : caseData.assistanceType === 'medical' && resolvedClinicName !== '-'
       ? `${resolvedAssistancePurpose} at ${resolvedClinicName}`
-    : caseData.assistanceType === 'burial' && fmt(burial.funeralHome) !== '-'
+    : caseData.assistanceType === 'burial' && fmt(burial.funeralHome) !== '-' && !burialProblemMentionsFuneralHome
       ? `${resolvedAssistancePurpose} at ${fmt(burial.funeralHome)}`
+    : usesGenericPlainAssistancePurpose
+      ? ''
     : resolvedAssistancePurpose
-  )
+  const resolvedSpecificNeed = rawSpecificNeed ? fmt(rawSpecificNeed) : ''
   const resolvedImmediateCircumstance = fmt(
-    textOrNull(caseData.presentingProblem)
+    burialProblemIsOnlyFuneralHome && burialFuneralHome
+      ? `with pending funeral charges at ${burialFuneralHome}`
+    : rawPresentingProblem
     ?? (resolvedDiagnosis !== '-' ? resolvedDiagnosis : null)
     ?? (resolvedFindings !== '-' ? resolvedFindings : null)
   )
@@ -448,7 +488,9 @@ function buildRenderData(caseData: any): Record<string, any> {
   const resolvedCaseSpecificFindings = resolvedFindings
   const resolvedEvaluationRecommendation = caseData.assistanceType === 'medicine'
     ? `In view of the above, the undersigned recommends that the beneficiary avail of financial assistance from the City Government through the Assistance to Individuals in Crisis Situation (AICS) Program, for ${resolvedAssistancePurpose}, in the amount of ${amountToWords(Number(amount))} (P${Number(amount).toFixed(2)}).`
-    : `In view of the above, the undersigned recommends that the beneficiary avail of financial assistance from the City Government through the Assistance to Individuals in Crisis Situation (AICS) Program, through a Guarantee Letter addressed to ${resolvedServiceProviderName}, for ${resolvedAssistancePurpose}, in the amount of ${amountToWords(Number(amount))} (P${Number(amount).toFixed(2)}).`
+    : caseData.assistanceType === 'plain'
+      ? `In view of the above, the undersigned recommends that the beneficiary avail of financial assistance from the City Government through the Assistance to Individuals in Crisis Situation (AICS) Program, through a Plain AICS, for ${resolvedAssistancePurpose}, in the amount of ${amountToWords(Number(amount))} (P${Number(amount).toFixed(2)}).`
+      : `In view of the above, the undersigned recommends that the beneficiary avail of financial assistance from the City Government through the Assistance to Individuals in Crisis Situation (AICS) Program, through a Guarantee Letter addressed to ${resolvedServiceProviderName}, for ${resolvedAssistancePurpose}, in the amount of ${amountToWords(Number(amount))} (P${Number(amount).toFixed(2)}).`
   const reviewedByName = fmt(textOrNull((caseData as any).reviewedByName))
   const reviewedByTitle = fmt(textOrNull((caseData as any).reviewedByTitle) ?? 'Social Welfare Officer II')
   const reviewedByDate = formatLongDate((caseData as any).reviewedByDate)
@@ -467,9 +509,17 @@ function buildRenderData(caseData: any): Record<string, any> {
   // Build per-user signature entries (e.g. { maribelleArtienda: '<url>' })
   // Always include the key even when no URL so templates don't render "undefined" for missing keys.
   const userSignatureParams: Record<string, string | null> = {}
+  const signatureUserNames: Record<string, string> = {}
   const allSignatureParamKeys: string[] = []
+  const signatureUsers = (caseData as any).signatureUsers ?? {}
+  for (const [signatureParam, user] of Object.entries(signatureUsers) as Array<[string, any]>) {
+    if (!/^[a-zA-Z0-9_]+$/.test(signatureParam)) continue
+    userSignatureParams[signatureParam] = user?.signatureUrl ?? null
+    signatureUserNames[`${signatureParam}Name`] = fmt(textOrNull(user?.name))
+    allSignatureParamKeys.push(signatureParam)
+  }
   for (const stage of ['for_review', 'recommending_approval', 'for_approval'] as const) {
-    const approval = (caseData as any).approvals?.[stage]
+    const approval = (caseData as any).approvals?.[stage] ?? (caseData as any).approvalSignatureFallbacks?.[stage]
     const signatureParam = approval?.signatureParam ?? null
     const signatureUrl = approval?.signatureUrl ?? null
     if (signatureParam) {
@@ -489,6 +539,7 @@ function buildRenderData(caseData: any): Record<string, any> {
   return {
     // User-specific signature placeholders (e.g. {maribelleArtienda})
     ...userSignatureParams,
+    ...signatureUserNames,
     // Internal marker so renderDoc knows which dynamic keys are signature image tags.
     __sigParamKeys: allSignatureParamKeys,
 
@@ -497,13 +548,13 @@ function buildRenderData(caseData: any): Record<string, any> {
     caseNumber:          fmt(caseData.caseNumber),
 
     // Global CGV AICS template checkboxes and labels
-    hospitalCheckBox:    checkbox(isAssistanceType('hospital')),
-    medicalCheckBox:     checkbox(isAssistanceType('medical')),
-    eyeglassCheckBox:    checkbox(isAssistanceType('eyeglass')),
-    medicineCheckBox:    checkbox(isAssistanceType('medicine')),
-    burialCheckBox:      checkbox(isAssistanceType('burial')),
-    otherAssistanceCheckBox: checkbox(isAssistanceType('plain')),
-    otherAssistanceText: isAssistanceType('plain') ? resolvedNatureOfAssistance : '',
+    hospitalCheckBox:    checkbox(hasHospitalRequest),
+    medicalCheckBox:     checkbox(hasMedicalRequest),
+    eyeglassCheckBox:    checkbox(hasEyeglassRequest),
+    medicineCheckBox:    checkbox(hasMedicineRequest),
+    burialCheckBox:      checkbox(hasBurialRequest),
+    otherAssistanceCheckBox: checkbox(hasOtherPlainRequest),
+    otherAssistanceText: isAssistanceType('plain') && resolvedNatureOfAssistance !== '-' ? resolvedNatureOfAssistance : '',
     fourPsCheckBox:      checkbox(Boolean(c.is4ps) || hasCategory('4ps')),
     soloParentCheckBox:  checkbox(hasCategory('solo')),
     seniorCitizenCheckBox: checkbox(Boolean(c.isSenior) || hasCategory('senior')),
@@ -530,37 +581,37 @@ function buildRenderData(caseData: any): Record<string, any> {
     reqBurialBillingStatement: checkbox(isBurial && isReqSubmitted('billing_stmt', 'hospital_bill')),
     reqHospitalBillingStatement: checkbox(isBurial && isReqSubmitted('billing_stmt', 'hospital_bill')),
     reqMedicinePrescription: checkbox(isMedicine && isReqSubmitted('prescription')),
-    reqMedicineEyeglassCertificate: checkbox(isAssistanceType('eyeglass') && isReqSubmitted('prescription')),
+    reqMedicineEyeglassCertificate: checkbox(hasEyeglassRequest && isReqSubmitted('prescription')),
     reqMedicalPriceQuotation: checkbox(isMedical && isReqSubmitted('price_quotation')),
     reqHospitalPromissoryNote: checkbox(isHospital && isReqSubmitted('promissory_note')),
     reqBurialPromissoryNote: checkbox(isHospital && isReqSubmitted('promissory_note')),
     reqHospitalCertificateIndigency: checkbox(isHospital && isReqSubmitted('indigency')),
     reqMedicineCertificateIndigency: checkbox(isMedicine && isReqSubmitted('indigency')),
     reqMedicalCertificateIndigency: checkbox(isMedical && isReqSubmitted('indigency')),
-    reqEyeglassCertificateIndigency: checkbox(isAssistanceType('eyeglass') && isReqSubmitted('indigency')),
+    reqEyeglassCertificateIndigency: checkbox(hasEyeglassRequest && isReqSubmitted('indigency')),
     reqBurialCertificateIndigency: checkbox(isBurial && isReqSubmitted('indigency')),
     reqHospitalPhotocopyId: checkbox(isHospital && isReqSubmitted('id_copy')),
     reqMedicinePhotocopyId: checkbox(isMedicine && isReqSubmitted('id_copy')),
     reqMedicalPhotocopyId: checkbox(isMedical && isReqSubmitted('id_copy')),
-    reqEyeglassPhotocopyId: checkbox(isAssistanceType('eyeglass') && isReqSubmitted('id_copy')),
+    reqEyeglassPhotocopyId: checkbox(hasEyeglassRequest && isReqSubmitted('id_copy')),
     reqBurialPhotocopyId: checkbox(isBurial && isReqSubmitted('id_copy')),
     reqMedicineCertificateNoAvailableMedicine: checkbox(isMedicine && isReqSubmitted('cho_cert')),
 
     // Backward-compatible aliases for older templates.
-    reqLetterRequest:     checkbox(isAssistanceType('medicine') && isReqSubmitted('personal_letter')),
-    reqRequestForm:       checkbox(isAssistanceType('medical') && isReqSubmitted('med_request')),
-    reqClinicalAbstract:  checkbox(isAssistanceType('hospital') && isReqSubmitted('clinical_abstract')),
-    reqDeathCertificate:  checkbox(isAssistanceType('burial') && isReqSubmitted('death_cert')),
-    reqMedicalCertificate: checkbox(isAssistanceType('medicine') && isReqSubmitted('medical_cert')),
-    reqMedicalCertificateMedical: checkbox(isAssistanceType('medical') && isReqSubmitted('medical_cert')),
-    reqFinalBill:         checkbox(isAssistanceType('hospital') && isReqSubmitted('final_bill')),
-    reqBillingStatement:  checkbox(isAssistanceType('burial') && isReqSubmitted('billing_stmt', 'hospital_bill')),
-    reqPrescription:      checkbox(isAssistanceType('medicine') && isReqSubmitted('prescription')),
-    reqPriceQuotation:    checkbox(isAssistanceType('medical') && isReqSubmitted('price_quotation')),
-    reqPromissoryNote:    checkbox(isAssistanceType('hospital') && isReqSubmitted('promissory_note')),
-    reqCertificateIndigency: checkbox(isAssistanceType('medicine') && isReqSubmitted('indigency')),
-    reqCertificateIndigencyMedical: checkbox(isAssistanceType('medical') && isReqSubmitted('indigency')),
-    reqCertificateIndigencyBurial: checkbox(isAssistanceType('hospital') && isReqSubmitted('indigency')),
+    reqLetterRequest:     checkbox(hasMedicineRequest && isReqSubmitted('personal_letter')),
+    reqRequestForm:       checkbox(hasMedicalRequest && isReqSubmitted('med_request')),
+    reqClinicalAbstract:  checkbox(hasHospitalRequest && isReqSubmitted('clinical_abstract')),
+    reqDeathCertificate:  checkbox(hasBurialRequest && isReqSubmitted('death_cert')),
+    reqMedicalCertificate: checkbox(hasMedicineRequest && isReqSubmitted('medical_cert')),
+    reqMedicalCertificateMedical: checkbox(hasMedicalRequest && isReqSubmitted('medical_cert')),
+    reqFinalBill:         checkbox(hasHospitalRequest && isReqSubmitted('final_bill')),
+    reqBillingStatement:  checkbox(hasBurialRequest && isReqSubmitted('billing_stmt', 'hospital_bill')),
+    reqPrescription:      checkbox(hasMedicineRequest && isReqSubmitted('prescription')),
+    reqPriceQuotation:    checkbox(hasMedicalRequest && isReqSubmitted('price_quotation')),
+    reqPromissoryNote:    checkbox(hasHospitalRequest && isReqSubmitted('promissory_note')),
+    reqCertificateIndigency: checkbox(hasMedicineRequest && isReqSubmitted('indigency')),
+    reqCertificateIndigencyMedical: checkbox(hasMedicalRequest && isReqSubmitted('indigency')),
+    reqCertificateIndigencyBurial: checkbox(hasHospitalRequest && isReqSubmitted('indigency')),
     reqPhotocopyId:       checkbox(isAssistanceType('medicine') && isReqSubmitted('id_copy')),
     reqPhotocopyIdMedical: checkbox(isAssistanceType('medical') && isReqSubmitted('id_copy')),
     reqPhotocopyIdBurial: checkbox(isAssistanceType('hospital') && isReqSubmitted('id_copy')),
@@ -597,11 +648,11 @@ function buildRenderData(caseData: any): Record<string, any> {
     familyComposition,
 
     // Narratives
-    presentingProblem:   fmt(caseData.presentingProblem),
+    presentingProblem:   resolvedImmediateCircumstance,
     backgroundOfProblem: fmt(caseData.backgroundOfProblem),
     assessment:          fmt(caseData.assessment),
     findings:            resolvedFindings,
-    problemPresented:    fmt(textOrNull(caseData.presentingProblem) ?? resolvedImmediateCircumstance),
+    problemPresented:    resolvedImmediateCircumstance,
     specificNeed:        resolvedSpecificNeed,
     immediateCircumstance: resolvedImmediateCircumstance,
     incomeSituation:     resolvedIncomeSituation,
@@ -630,13 +681,7 @@ function buildRenderData(caseData: any): Record<string, any> {
     NameOfServiceProvider: resolvedServiceProviderName,
     providerName:        resolvedServiceProviderName,
     recipientName:       resolvedServiceProviderName,
-    serviceProviderAddress: fmt(
-      caseData.assistanceType === 'burial' ? textOrNull(burial.funeralOwnerAddress)
-      : caseData.assistanceType === 'hospital' ? textOrNull(hospital.hospitalAddress)
-      : caseData.assistanceType === 'medical' ? textOrNull(medical.clinicAddress)
-      : caseData.assistanceType === 'eyeglass' ? textOrNull((eyeglass as any).clinicAddress)
-      : textOrNull((caseData as any).serviceProviderAddress)
-    ),
+    serviceProviderAddress: fmt(resolveServiceProviderAddress(caseData)),
     assistancePurpose:   resolvedAssistancePurpose,
     requestedAssistance: resolvedAssistancePurpose,
     typeOfAssistance:    resolvedAssistancePurpose,
@@ -705,11 +750,11 @@ function buildRenderData(caseData: any): Record<string, any> {
     clinicAddress:       resolvedClinicAddress,
     consultationDate:    resolvedConsultationDate,
     medicalBill:         resolvedMedicalBill,
-    medicalType:         resolvedMedicalRequestedAssistance,
-    medicalProcedure:    resolvedMedicalRequestedAssistance,
-    procedureType:       resolvedMedicalRequestedAssistance,
+    medicalType:         resolvedMedicalProcedureLabel,
+    medicalProcedure:    resolvedMedicalProcedureLabel,
+    procedureType:       resolvedMedicalProcedureLabel,
     diagnosedType:       fmt(textOrNull(medical.diagnosedType)),
-    operationType:       resolvedMedicalRequestedAssistance,
+    operationType:       resolvedMedicalProcedureLabel,
 
     templateType:        fmt(
       caseData.assistanceType === 'medicine' ? medicineTemplateType
@@ -812,7 +857,7 @@ function renderDocWithDelimiters(
     fileType: 'docx',
     getImage: (tagValue: unknown) => readSignatureImage(tagValue),
     getSize: (_img: unknown, _tagValue: unknown, tagName?: string) => {
-      if (tagName === 'documentQrCode') return [120, 120]
+      if (tagName === 'documentQrCode') return [80, 80]
       return [160, 58]
     },
   })
@@ -859,6 +904,582 @@ function addMissingXmlNamespaces(xml: string): string {
     return `<${name}${attrs} ${missingDeclarations.join(' ')}>`
   })
 }
+
+function paragraphTextContent(paragraph: Element): string {
+  return Array.from(paragraph.getElementsByTagName('w:t'))
+    .map((node) => node.textContent ?? '')
+    .join('')
+}
+
+function paragraphHasVisibleContent(paragraph: Element): boolean {
+  if ((paragraphTextContent(paragraph)).trim().length > 0) return true
+  if (paragraph.getElementsByTagName('w:drawing').length > 0) return true
+  if (paragraph.getElementsByTagName('w:pict').length > 0) return true
+  if (paragraph.getElementsByTagName('mc:AlternateContent').length > 0) return true
+  return false
+}
+
+function normalizeBeneficiaryValueText(value: string): string {
+  return value
+    .replace(/^[\s\u00A0:]+/, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function cloneRunWithText(doc: Document, templateRun: Element | null, text: string): Element {
+  const run = templateRun
+    ? templateRun.cloneNode(true) as Element
+    : doc.createElement('w:r')
+
+  for (const child of Array.from(run.childNodes)) {
+    if (child.nodeName !== 'w:rPr') {
+      run.removeChild(child)
+    }
+  }
+
+  const textNode = doc.createElement('w:t')
+  if (/^\s|\s$/.test(text)) {
+    textNode.setAttribute('xml:space', 'preserve')
+  }
+  textNode.textContent = text
+  run.appendChild(textNode)
+  return run
+}
+
+function buildTabRun(doc: Document, templateRun: Element | null): Element {
+  const run = templateRun
+    ? templateRun.cloneNode(true) as Element
+    : doc.createElement('w:r')
+  for (const child of Array.from(run.childNodes)) {
+    if (child.nodeName !== 'w:rPr') {
+      run.removeChild(child)
+    }
+  }
+  run.appendChild(doc.createElement('w:tab'))
+  return run
+}
+
+function ensureParagraphTabStops(doc: Document, paragraph: Element, positions: string[]) {
+  let pPr = Array.from(paragraph.childNodes).find((node) => node.nodeName === 'w:pPr') as Element | undefined
+  if (!pPr) {
+    pPr = doc.createElement('w:pPr')
+    paragraph.insertBefore(pPr, paragraph.firstChild)
+  }
+
+  for (const existingTabs of Array.from(pPr.childNodes).filter((node) => node.nodeName === 'w:tabs')) {
+    pPr.removeChild(existingTabs)
+  }
+
+  const tabs = doc.createElement('w:tabs')
+  for (const position of positions) {
+    const tab = doc.createElement('w:tab')
+    tab.setAttribute('w:val', 'left')
+    tab.setAttribute('w:pos', position)
+    tabs.appendChild(tab)
+  }
+  // w:tabs must precede indentation, alignment, run properties, and section properties.
+  // LibreOffice ignores out-of-order paragraph properties and falls back to default tabs.
+  const propertiesAfterTabs = new Set([
+    'w:suppressAutoHyphens',
+    'w:kinsoku',
+    'w:wordWrap',
+    'w:overflowPunct',
+    'w:topLinePunct',
+    'w:autoSpaceDE',
+    'w:autoSpaceDN',
+    'w:bidi',
+    'w:adjustRightInd',
+    'w:snapToGrid',
+    'w:spacing',
+    'w:ind',
+    'w:contextualSpacing',
+    'w:mirrorIndents',
+    'w:suppressOverlap',
+    'w:jc',
+    'w:textDirection',
+    'w:textAlignment',
+    'w:textboxTightWrap',
+    'w:outlineLvl',
+    'w:divId',
+    'w:cnfStyle',
+    'w:rPr',
+    'w:sectPr',
+    'w:pPrChange',
+  ])
+  const insertionPoint = Array.from(pPr.childNodes).find((node) => propertiesAfterTabs.has(node.nodeName)) ?? null
+  pPr.insertBefore(tabs, insertionPoint)
+}
+
+function normalizeBeneficiaryInfoParagraphs(doc: Document): boolean {
+  const targets = [
+    'Name of Beneficiary',
+    'Address',
+    'Age',
+    'Sex Assigned at Birth',
+    'Civil Status',
+    'Occupation',
+    'Religion',
+    'Requesting Party (if not the beneficiary)',
+    'Relationship to Beneficiary',
+    'Contact No.',
+  ]
+  let changed = false
+
+  for (const paragraph of Array.from(doc.getElementsByTagName('w:p'))) {
+    const text = paragraphTextContent(paragraph).trim()
+    const prefix = targets.find((candidate) => text.startsWith(candidate))
+    if (!prefix) continue
+
+    const value = normalizeBeneficiaryValueText(text.slice(prefix.length))
+    const runs = Array.from(paragraph.getElementsByTagName('w:r'))
+    const labelRun = runs[0] ?? null
+    const colonRun = runs.find((run) => paragraphTextContent(run).includes(':')) ?? labelRun
+    const valueRun = runs.find((run) => {
+      const runText = paragraphTextContent(run).trim()
+      return runText.length > 0 && runText !== ':' && runText !== prefix
+    }) ?? labelRun
+
+    for (const child of Array.from(paragraph.childNodes)) {
+      if (child.nodeName !== 'w:pPr') {
+        paragraph.removeChild(child)
+      }
+    }
+
+    // One CGV reference column prevents long labels from skipping to a second tab stop.
+    ensureParagraphTabStops(doc, paragraph, ['4680'])
+    paragraph.appendChild(cloneRunWithText(doc, labelRun, prefix))
+    paragraph.appendChild(buildTabRun(doc, labelRun))
+    paragraph.appendChild(cloneRunWithText(doc, colonRun, ': '))
+
+    const rebuiltValueRun = cloneRunWithText(doc, valueRun, value)
+    paragraph.appendChild(rebuiltValueRun)
+    changed = true
+  }
+
+  return changed
+}
+
+function trimTrailingEmptyParagraphs(doc: Document): boolean {
+  const bodies = doc.getElementsByTagName('w:body')
+  const body = bodies[0]
+  if (!body) return false
+
+  let changed = false
+  let cursor = body.lastChild
+  while (cursor && cursor.nodeName === 'w:sectPr') {
+    cursor = cursor.previousSibling
+  }
+
+  while (cursor && cursor.nodeName === 'w:p') {
+    const paragraph = cursor as Element
+    if (paragraphHasVisibleContent(paragraph)) break
+    const previous = cursor.previousSibling
+    body.removeChild(cursor)
+    cursor = previous
+    changed = true
+  }
+
+  return changed
+}
+
+function compactCaseStudySignatureSection(doc: Document): boolean {
+  const body = doc.getElementsByTagName('w:body')[0]
+  if (!body) return false
+
+  let inSignatureSection = false
+  let preserveNextSignatureParagraph = false
+  let changed = false
+
+  for (const child of Array.from(body.childNodes)) {
+    if (child.nodeName !== 'w:p') continue
+    const paragraph = child as Element
+    const text = paragraphTextContent(paragraph).trim()
+
+    if (text.includes('Prepared and submitted by:')) {
+      inSignatureSection = true
+      continue
+    }
+    if (text === 'Reviewed by:' || text === 'Recommending Approval:') {
+      preserveNextSignatureParagraph = true
+      continue
+    }
+    if (preserveNextSignatureParagraph) {
+      preserveNextSignatureParagraph = false
+      continue
+    }
+    if (!inSignatureSection || paragraphHasVisibleContent(paragraph)) continue
+
+    body.removeChild(paragraph)
+    changed = true
+  }
+
+  return changed
+}
+
+function ensureParagraphJustification(doc: Document, paragraph: Element, justification: string): boolean {
+  let pPr = Array.from(paragraph.childNodes).find((node) => node.nodeName === 'w:pPr') as Element | undefined
+  if (!pPr) {
+    pPr = doc.createElement('w:pPr')
+    paragraph.insertBefore(pPr, paragraph.firstChild)
+  }
+
+  const existing = Array.from(pPr.childNodes).filter((node) => node.nodeName === 'w:jc') as Element[]
+  if (existing.length === 1 && existing[0].getAttribute('w:val') === justification) return false
+
+  for (const node of existing) {
+    pPr.removeChild(node)
+  }
+
+  const alignment = doc.createElement('w:jc')
+  alignment.setAttribute('w:val', justification)
+  const propertiesAfterJustification = new Set([
+    'w:textDirection',
+    'w:textAlignment',
+    'w:textboxTightWrap',
+    'w:outlineLvl',
+    'w:divId',
+    'w:cnfStyle',
+    'w:rPr',
+    'w:sectPr',
+    'w:pPrChange',
+  ])
+  const insertionPoint = Array.from(pPr.childNodes).find((node) => propertiesAfterJustification.has(node.nodeName)) ?? null
+  pPr.insertBefore(alignment, insertionPoint)
+  return true
+}
+
+function ensureParagraphMinimumLine(doc: Document, paragraph: Element, lineTwips: string): boolean {
+  let pPr = Array.from(paragraph.childNodes).find((node) => node.nodeName === 'w:pPr') as Element | undefined
+  if (!pPr) {
+    pPr = doc.createElement('w:pPr')
+    paragraph.insertBefore(pPr, paragraph.firstChild)
+  }
+
+  let spacing = Array.from(pPr.childNodes).find((node) => node.nodeName === 'w:spacing') as Element | undefined
+  if (spacing?.getAttribute('w:line') === lineTwips && spacing.getAttribute('w:lineRule') === 'atLeast') return false
+
+  if (!spacing) {
+    spacing = doc.createElement('w:spacing')
+    const propertiesAfterSpacing = new Set([
+      'w:ind',
+      'w:contextualSpacing',
+      'w:mirrorIndents',
+      'w:suppressOverlap',
+      'w:jc',
+      'w:textDirection',
+      'w:textAlignment',
+      'w:textboxTightWrap',
+      'w:outlineLvl',
+      'w:divId',
+      'w:cnfStyle',
+      'w:rPr',
+      'w:sectPr',
+      'w:pPrChange',
+    ])
+    const insertionPoint = Array.from(pPr.childNodes)
+      .find((node) => propertiesAfterSpacing.has(node.nodeName)) ?? null
+    pPr.insertBefore(spacing, insertionPoint)
+  }
+  spacing.setAttribute('w:line', lineTwips)
+  spacing.setAttribute('w:lineRule', 'atLeast')
+  return true
+}
+
+function ensureParagraphSpacingBefore(doc: Document, paragraph: Element, beforeTwips: string): boolean {
+  let pPr = Array.from(paragraph.childNodes).find((node) => node.nodeName === 'w:pPr') as Element | undefined
+  if (!pPr) {
+    pPr = doc.createElement('w:pPr')
+    paragraph.insertBefore(pPr, paragraph.firstChild)
+  }
+
+  let spacing = Array.from(pPr.childNodes).find((node) => node.nodeName === 'w:spacing') as Element | undefined
+  if (spacing?.getAttribute('w:before') === beforeTwips) return false
+  if (!spacing) {
+    spacing = doc.createElement('w:spacing')
+    const propertiesAfterSpacing = new Set([
+      'w:ind', 'w:contextualSpacing', 'w:mirrorIndents', 'w:suppressOverlap', 'w:jc',
+      'w:textDirection', 'w:textAlignment', 'w:textboxTightWrap', 'w:outlineLvl',
+      'w:divId', 'w:cnfStyle', 'w:rPr', 'w:sectPr', 'w:pPrChange',
+    ])
+    const insertionPoint = Array.from(pPr.childNodes)
+      .find((node) => propertiesAfterSpacing.has(node.nodeName)) ?? null
+    pPr.insertBefore(spacing, insertionPoint)
+  }
+  spacing.setAttribute('w:before', beforeTwips)
+  return true
+}
+
+function separatePreparedSignatureParagraph(doc: Document): boolean {
+  const body = doc.getElementsByTagName('w:body')[0]
+  if (!body) return false
+
+  const preparedParagraph = Array.from(body.childNodes).find((node) => {
+    if (node.nodeName !== 'w:p' || !paragraphTextContent(node as Element).trim()) return false
+    return Array.from((node as Element).getElementsByTagName('wp:extent')).some(
+      (extent) => extent.getAttribute('cx') === '1525270' && extent.getAttribute('cy') === '1404620',
+    )
+  }) as Element | undefined
+  if (!preparedParagraph) return false
+
+  const signatureRuns = Array.from(preparedParagraph.childNodes).filter((node) => {
+    if (node.nodeName === 'w:pPr') return false
+    return Array.from((node as Element).getElementsByTagName?.('wp:extent') ?? []).some(
+      (extent) => extent.getAttribute('cx') === '1525270' && extent.getAttribute('cy') === '1404620',
+    )
+  })
+  if (signatureRuns.length === 0) return false
+
+  const signatureParagraph = doc.createElement('w:p')
+  ensureParagraphMinimumLine(doc, signatureParagraph, '360')
+  for (const run of signatureRuns) {
+    signatureParagraph.appendChild(run)
+  }
+  body.insertBefore(signatureParagraph, preparedParagraph)
+  return true
+}
+
+function normalizeCaseStudySignaturePlaceholders(doc: Document): boolean {
+  const body = doc.getElementsByTagName('w:body')[0]
+  if (!body) return false
+
+  const children = Array.from(body.childNodes)
+  let changed = false
+  for (const label of ['Reviewed by:', 'Recommending Approval:', 'APPROVED:']) {
+    const labelParagraph = children.find((node) =>
+      node.nodeName === 'w:p' && paragraphTextContent(node as Element).trim() === label,
+    ) as Element | undefined
+    if (!labelParagraph) continue
+    changed = ensureParagraphSpacingBefore(doc, labelParagraph, '240') || changed
+  }
+
+  for (const label of ['Reviewed by:', 'Recommending Approval:']) {
+    const labelIndex = children.findIndex((node) =>
+      node.nodeName === 'w:p' && paragraphTextContent(node as Element).trim() === label,
+    )
+    const signatureParagraph = labelIndex >= 0 ? children[labelIndex + 1] : null
+    if (signatureParagraph?.nodeName !== 'w:p') continue
+    changed = ensureParagraphMinimumLine(doc, signatureParagraph as Element, '360') || changed
+  }
+
+  return changed
+}
+
+function flattenCaseStudyVerificationTextBox(doc: Document): boolean {
+  const body = doc.getElementsByTagName('w:body')[0]
+  if (!body) return false
+
+  let changed = false
+  for (const child of Array.from(body.childNodes)) {
+    if (child.nodeName !== 'w:p') continue
+    const anchorParagraph = child as Element
+    const textBoxes = Array.from(anchorParagraph.getElementsByTagName('wps:txbx'))
+    const verificationTextBox = textBoxes.find((textBox) =>
+      Array.from(textBox.getElementsByTagName('wp:extent')).some(
+        (extent) => extent.getAttribute('cx') === '762000' && extent.getAttribute('cy') === '762000',
+      ),
+    )
+    const textBoxContent = verificationTextBox?.getElementsByTagName('w:txbxContent')[0]
+    if (!textBoxContent) continue
+
+    const verificationParagraphs = Array.from(textBoxContent.childNodes)
+      .filter((node) => node.nodeName === 'w:p') as Element[]
+    if (verificationParagraphs.length === 0) continue
+
+    const approvedSignatureParagraph = doc.createElement('w:p')
+    for (const node of Array.from(anchorParagraph.childNodes)) {
+      if (node.nodeName === 'w:pPr') continue
+      const element = node as Element
+      if (element.getElementsByTagName?.('wps:txbx').length) continue
+      approvedSignatureParagraph.appendChild(node)
+    }
+    ensureParagraphMinimumLine(doc, approvedSignatureParagraph, '360')
+
+    let cursor = anchorParagraph.nextSibling
+    let approverNameParagraph: Element | null = null
+    let approverTitleParagraph: Element | null = null
+    let lastVisibleParagraph: Element | null = null
+    const spacerParagraphs: Element[] = []
+    for (let inspected = 0; cursor && inspected < 10; inspected += 1) {
+      const node = cursor
+      cursor = cursor.nextSibling
+      if (node.nodeName !== 'w:p') break
+
+      const paragraph = node as Element
+      const text = paragraphTextContent(paragraph).trim()
+      if (/^City Mayor\b/i.test(text)) {
+        approverNameParagraph = lastVisibleParagraph
+        approverTitleParagraph = paragraph
+        break
+      }
+      if (text) {
+        lastVisibleParagraph = paragraph
+      } else {
+        spacerParagraphs.push(paragraph)
+      }
+    }
+
+    if (approverNameParagraph && approverTitleParagraph) {
+      const table = doc.createElement('w:tbl')
+      const tableProperties = doc.createElement('w:tblPr')
+      const tableWidth = doc.createElement('w:tblW')
+      tableWidth.setAttribute('w:w', '9360')
+      tableWidth.setAttribute('w:type', 'dxa')
+      tableProperties.appendChild(tableWidth)
+
+      const tableBorders = doc.createElement('w:tblBorders')
+      for (const edge of ['top', 'left', 'bottom', 'right', 'insideH', 'insideV']) {
+        const border = doc.createElement(`w:${edge}`)
+        border.setAttribute('w:val', 'nil')
+        tableBorders.appendChild(border)
+      }
+      tableProperties.appendChild(tableBorders)
+
+      const tableLayout = doc.createElement('w:tblLayout')
+      tableLayout.setAttribute('w:type', 'fixed')
+      tableProperties.appendChild(tableLayout)
+      table.appendChild(tableProperties)
+
+      const tableGrid = doc.createElement('w:tblGrid')
+      for (const width of ['4680', '4680']) {
+        const column = doc.createElement('w:gridCol')
+        column.setAttribute('w:w', width)
+        tableGrid.appendChild(column)
+      }
+      table.appendChild(tableGrid)
+
+      const row = doc.createElement('w:tr')
+      const buildCell = (verticalAlignment: 'center' | 'top', topMarginTwips = '0') => {
+        const cell = doc.createElement('w:tc')
+        const cellProperties = doc.createElement('w:tcPr')
+        const cellWidth = doc.createElement('w:tcW')
+        cellWidth.setAttribute('w:w', '4680')
+        cellWidth.setAttribute('w:type', 'dxa')
+        cellProperties.appendChild(cellWidth)
+        const cellMargins = doc.createElement('w:tcMar')
+        for (const [edge, width] of [
+          ['top', topMarginTwips],
+          ['left', '0'],
+          ['bottom', '0'],
+          ['right', '0'],
+        ]) {
+          const margin = doc.createElement(`w:${edge}`)
+          margin.setAttribute('w:w', width)
+          margin.setAttribute('w:type', 'dxa')
+          cellMargins.appendChild(margin)
+        }
+        cellProperties.appendChild(cellMargins)
+        const vAlign = doc.createElement('w:vAlign')
+        vAlign.setAttribute('w:val', verticalAlignment)
+        cellProperties.appendChild(vAlign)
+        cell.appendChild(cellProperties)
+        return cell
+      }
+
+      const approverCell = buildCell('top')
+      approverCell.appendChild(approvedSignatureParagraph)
+      approverCell.appendChild(approverNameParagraph)
+      approverCell.appendChild(approverTitleParagraph)
+      row.appendChild(approverCell)
+
+      const verificationCell = buildCell('top')
+      for (const paragraph of verificationParagraphs) {
+        ensureParagraphJustification(doc, paragraph, 'right')
+        verificationCell.appendChild(paragraph)
+      }
+      row.appendChild(verificationCell)
+      table.appendChild(row)
+
+      body.insertBefore(table, anchorParagraph)
+      body.removeChild(anchorParagraph)
+      for (const spacer of spacerParagraphs) {
+        if (spacer.parentNode === body) body.removeChild(spacer)
+      }
+      changed = true
+      continue
+    }
+
+    const insertionPoint = anchorParagraph.nextSibling
+    for (const paragraph of verificationParagraphs) {
+      ensureParagraphJustification(doc, paragraph, 'right')
+      body.insertBefore(paragraph, insertionPoint)
+    }
+    body.removeChild(anchorParagraph)
+    changed = true
+  }
+
+  return changed
+}
+
+function alignCaseStudyVerificationQr(doc: Document): boolean {
+  let changed = flattenCaseStudyVerificationTextBox(doc)
+
+  for (const paragraph of Array.from(doc.getElementsByTagName('w:p'))) {
+    const hasVerificationQr = Array.from(paragraph.getElementsByTagName('wp:extent')).some(
+      (extent) => extent.getAttribute('cx') === '762000' && extent.getAttribute('cy') === '762000',
+    )
+    if (!hasVerificationQr) continue
+
+    changed = ensureParagraphJustification(doc, paragraph, 'right') || changed
+  }
+
+  const sectionProperties = Array.from(doc.getElementsByTagName('w:sectPr')).at(-1)
+  const pageSize = sectionProperties?.getElementsByTagName('w:pgSz')[0]
+  const pageMargins = sectionProperties?.getElementsByTagName('w:pgMar')[0]
+  const pageWidthTwips = Number(pageSize?.getAttribute('w:w'))
+  const leftMarginTwips = Number(pageMargins?.getAttribute('w:left'))
+  const rightMarginTwips = Number(pageMargins?.getAttribute('w:right'))
+  const contentWidthPoints = (pageWidthTwips - leftMarginTwips - rightMarginTwips) / 20
+
+  if (!Number.isFinite(contentWidthPoints) || contentWidthPoints <= 0) return changed
+
+  for (const shape of Array.from(doc.getElementsByTagName('v:shape'))) {
+    const hasVerificationQr = Array.from(shape.getElementsByTagName('wp:extent')).some(
+      (extent) => extent.getAttribute('cx') === '762000' && extent.getAttribute('cy') === '762000',
+    )
+    if (!hasVerificationQr) continue
+
+    const style = shape.getAttribute('style') ?? ''
+    const widthMatch = style.match(/(?:^|;)width:([\d.]+)pt(?:;|$)/)
+    const shapeWidthPoints = Number(widthMatch?.[1])
+    if (!Number.isFinite(shapeWidthPoints) || shapeWidthPoints <= 0) continue
+
+    // LibreOffice uses the VML fallback's explicit offset instead of its right anchor.
+    const rightAlignedOffset = Math.max(0, contentWidthPoints - shapeWidthPoints)
+      .toFixed(2)
+      .replace(/\.?0+$/, '')
+    const nextStyle = /(?:^|;)margin-left:[^;]*/.test(style)
+      ? style.replace(/margin-left:[^;]*/, `margin-left:${rightAlignedOffset}pt`)
+      : `${style}${style.endsWith(';') || style.length === 0 ? '' : ';'}margin-left:${rightAlignedOffset}pt;`
+    if (nextStyle === style) continue
+
+    shape.setAttribute('style', nextStyle)
+    changed = true
+  }
+
+  return changed
+}
+
+function normalizeCaseStudyLayoutXml(xml: string): string {
+  const parser = new DOMParser()
+  const doc = parser.parseFromString(xml, 'application/xml')
+  const beneficiaryNormalized = normalizeBeneficiaryInfoParagraphs(doc)
+  const signatureSectionCompacted = beneficiaryNormalized && compactCaseStudySignatureSection(doc)
+  const preparedSignatureSeparated = beneficiaryNormalized && separatePreparedSignatureParagraph(doc)
+  const signaturePlaceholdersNormalized = beneficiaryNormalized && normalizeCaseStudySignaturePlaceholders(doc)
+  const verificationQrAligned = beneficiaryNormalized && alignCaseStudyVerificationQr(doc)
+  const trailingParagraphsTrimmed = trimTrailingEmptyParagraphs(doc)
+  const changed = beneficiaryNormalized || signatureSectionCompacted || preparedSignatureSeparated
+    || signaturePlaceholdersNormalized
+    || verificationQrAligned || trailingParagraphsTrimmed
+  if (!changed) return xml
+
+  const serialized = new XMLSerializer().serializeToString(doc)
+  const xmlDeclMatch = xml.match(/^\s*<\?xml[\s\S]*?\?>/)
+  return xmlDeclMatch
+    ? `${xmlDeclMatch[0]}${serialized.replace(/^\s*<\?xml[\s\S]*?\?>\s*/, '')}`
+    : serialized
+}
+
 function sanitizeGeneratedDocxBuffer(buffer: Buffer): Buffer {
   const zip = new PizZip(buffer)
   let changed = false
@@ -869,7 +1490,10 @@ function sanitizeGeneratedDocxBuffer(buffer: Buffer): Buffer {
     if (!entry) continue
 
     const original = entry.asText()
-    const cleaned = addMissingXmlNamespaces(original)
+    let cleaned = addMissingXmlNamespaces(original)
+    if (filename === 'word/document.xml') {
+      cleaned = normalizeCaseStudyLayoutXml(cleaned)
+    }
     if (cleaned !== original) {
       zip.file(filename, cleaned)
       changed = true
@@ -911,32 +1535,342 @@ function rewriteParagraphText(xml: string, transform: (text: string) => string):
 }
 
 function removeMedicineGuaranteeLetterClause(buffer: Buffer): Buffer {
-  const zip = new PizZip(buffer)
-  let changed = false
-  const clausePattern = /,\s*through a Guarantee Letter addressed to\s+.*?,\s*for\s+/i
+  try {
+    const zip = new PizZip(buffer)
+    let changed = false
+    const clausePattern = /,\s*through a Guarantee Letter addressed to\s+.*?,\s*for\s+/i
 
-  for (const filename of Object.keys(zip.files)) {
-    if (!filename.startsWith('word/') || !filename.endsWith('.xml')) continue
-    const entry = zip.file(filename)
-    if (!entry) continue
+    for (const filename of Object.keys(zip.files)) {
+      if (!filename.startsWith('word/') || !filename.endsWith('.xml')) continue
+      const entry = zip.file(filename)
+      if (!entry) continue
+
+      const original = entry.asText()
+      const updated = rewriteParagraphText(original, (text) => {
+        if (!text.includes('through a Guarantee Letter addressed to')) return text
+        return text
+          .replace(clausePattern, ', for ')
+          .replace(/\s{2,}/g, ' ')
+          .trim()
+      })
+
+      if (updated !== original) {
+        zip.file(filename, updated)
+        changed = true
+      }
+    }
+
+    if (!changed) return buffer
+    return zip.generate({ type: 'nodebuffer', compression: 'DEFLATE' }) as Buffer
+  } catch (err) {
+    console.warn('[removeMedicineGuaranteeLetterClause] failed:', err)
+    return buffer
+  }
+}
+
+function rewritePlainAicsRecommendationClause(buffer: Buffer): Buffer {
+  try {
+    const zip = new PizZip(buffer)
+    let changed = false
+    const clausePattern = /,\s*through a Guarantee Letter addressed to\s+.*?,\s*for\s+/i
+
+    for (const filename of Object.keys(zip.files)) {
+      if (!filename.startsWith('word/') || !filename.endsWith('.xml')) continue
+      const entry = zip.file(filename)
+      if (!entry) continue
+
+      const original = entry.asText()
+      const updated = rewriteParagraphText(original, (text) => {
+        if (!text.includes('through a Guarantee Letter addressed to')) return text
+        return text
+          .replace(clausePattern, ', through a Plain AICS, for ')
+          .replace(/\s{2,}/g, ' ')
+          .trim()
+      })
+
+      if (updated !== original) {
+        zip.file(filename, updated)
+        changed = true
+      }
+    }
+
+    if (!changed) return buffer
+    return zip.generate({ type: 'nodebuffer', compression: 'DEFLATE' }) as Buffer
+  } catch (err) {
+    console.warn('[rewritePlainAicsRecommendationClause] failed:', err)
+    return buffer
+  }
+}
+
+function rewritePlainAicsPresentingProblemClause(buffer: Buffer): Buffer {
+  try {
+    const zip = new PizZip(buffer)
+    let changed = false
+    const plainProblemPattern = /seek emergency assistance for\s*(?:-|)\s*,\s*/i
+
+    for (const filename of Object.keys(zip.files)) {
+      if (!filename.startsWith('word/') || !filename.endsWith('.xml')) continue
+      const entry = zip.file(filename)
+      if (!entry) continue
+
+      const original = entry.asText()
+      const updated = rewriteParagraphText(original, (text) => {
+        if (!text.includes('seek emergency assistance for')) return text
+        return text
+          .replace(plainProblemPattern, 'seek emergency assistance for ')
+          .replace(/\s{2,}/g, ' ')
+          .trim()
+      })
+
+      if (updated !== original) {
+        zip.file(filename, updated)
+        changed = true
+      }
+    }
+
+    if (!changed) return buffer
+    return zip.generate({ type: 'nodebuffer', compression: 'DEFLATE' }) as Buffer
+  } catch (err) {
+    console.warn('[rewritePlainAicsPresentingProblemClause] failed:', err)
+    return buffer
+  }
+}
+
+function rewriteMedicalGuaranteeLetterSeriesClause(buffer: Buffer): Buffer {
+  try {
+    const zip = new PizZip(buffer)
+    let changed = false
+    const seriesPattern = /\bseries of\s+/i
+
+    for (const filename of Object.keys(zip.files)) {
+      if (!filename.startsWith('word/') || !filename.endsWith('.xml')) continue
+      const entry = zip.file(filename)
+      if (!entry) continue
+
+      const original = entry.asText()
+      const updated = rewriteParagraphText(original, (text) => {
+        if (!text.includes('series of')) return text
+        if (!text.includes('chargeable to Assistance to Individual in Crisis Situation Program')) return text
+        return text
+          .replace(seriesPattern, '')
+          .replace(/\s{2,}/g, ' ')
+          .trim()
+      })
+
+      if (updated !== original) {
+        zip.file(filename, updated)
+        changed = true
+      }
+    }
+
+    if (!changed) return buffer
+    return zip.generate({ type: 'nodebuffer', compression: 'DEFLATE' }) as Buffer
+  } catch (err) {
+    console.warn('[rewriteMedicalGuaranteeLetterSeriesClause] failed:', err)
+    return buffer
+  }
+}
+
+function escapeXmlText(value: string): string {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+}
+
+function formatChoDoctorDisplayName(value: string): string {
+  const normalized = String(value ?? '').trim()
+  return normalized || 'City Health Officer'
+}
+
+function buildChoCertificationTextboxXml(caseData: any): string {
+  const certData = buildChoCertData(caseData)
+  const sizedTextProps = '<w:rPr><w:sz w:val="16"/><w:szCs w:val="16"/></w:rPr>'
+  const boldSizedTextProps = '<w:rPr><w:b/><w:bCs/><w:sz w:val="16"/><w:szCs w:val="16"/></w:rPr>'
+  const paragraph = (text: string, options: { bold?: boolean } = {}) => `
+    <w:p>
+      <w:pPr>${options.bold ? '<w:rPr><w:b/><w:bCs/><w:sz w:val="16"/><w:szCs w:val="16"/></w:rPr>' : '<w:rPr><w:sz w:val="16"/><w:szCs w:val="16"/></w:rPr>'}</w:pPr>
+      <w:r>${options.bold ? boldSizedTextProps : sizedTextProps}<w:t xml:space="preserve">${escapeXmlText(text)}</w:t></w:r>
+    </w:p>`
+
+  if (!certData) {
+    return `<w:txbxContent><w:p/></w:txbxContent>`
+  }
+
+  const { unavailableMedicines, givenDayOrdinal, givenMonth, givenYear, choDoctorName, choPosition } = certData
+  const pad = [...unavailableMedicines]
+  while (pad.length < 5) pad.push({ name: '', date: '', time: '' })
+  const line = (index: number) => pad[index].name ? `${index + 1}. ${pad[index].name}    :    ${pad[index].date} ${pad[index].time}` : ''
+
+  return `<w:txbxContent>
+    ${paragraph('CERTIFICATION', { bold: true })}
+    <w:p/>
+    ${paragraph('This is to certify that the following medicine/s are not part of the regular procurement of the City Health Office:')}
+    <w:p/>
+    ${paragraph(line(0))}
+    ${paragraph(line(1))}
+    ${paragraph(line(2))}
+    ${paragraph(line(3))}
+    ${paragraph(line(4))}
+    <w:p/>
+    ${paragraph(`Given this ${givenDayOrdinal} day of ${givenMonth}, ${givenYear}`)}
+    <w:p/>
+    ${paragraph('Noted by:', { bold: true })}
+    <w:p/>
+    ${paragraph(formatChoDoctorDisplayName(choDoctorName))}
+    ${paragraph(choPosition)}
+    <w:p/>
+    <w:p/>
+  </w:txbxContent>`
+}
+
+function rewriteChoCertificationTextboxTemplate(templateContent: string, caseData: any): { templateContent: string; hasTextbox: boolean } {
+  try {
+    const zip = new PizZip(templateContent)
+    const entry = zip.file('word/document.xml')
+    if (!entry) return { templateContent, hasTextbox: false }
 
     const original = entry.asText()
-    const updated = rewriteParagraphText(original, (text) => {
-      if (!text.includes('through a Guarantee Letter addressed to')) return text
-      return text
-        .replace(clausePattern, ', for ')
-        .replace(/\s{2,}/g, ' ')
+    const pattern = /<w:txbxContent>[\s\S]*?Certifification[\s\S]*?<\/w:txbxContent>/g
+    const matches = original.match(pattern)
+    if (!matches || matches.length === 0) {
+      return { templateContent, hasTextbox: false }
+    }
+
+    const updated = original.replace(pattern, buildChoCertificationTextboxXml(caseData))
+    zip.file('word/document.xml', updated)
+    return {
+      templateContent: zip.generate({ type: 'string', compression: 'DEFLATE' }) as string,
+      hasTextbox: true,
+    }
+  } catch (error) {
+    console.warn('[rewriteChoCertificationTextboxTemplate] failed:', error)
+    return { templateContent, hasTextbox: false }
+  }
+}
+
+function buildChoCertificationParagraphsXml(caseData: any): string {
+  const certData = buildChoCertData(caseData)
+  if (!certData) return ''
+
+  const { unavailableMedicines, givenDayOrdinal, givenMonth, givenYear, choDoctorName, choPosition } = certData
+  const sizedRpr = '<w:rPr><w:sz w:val="16"/><w:szCs w:val="16"/></w:rPr>'
+  const boldSizedRpr = '<w:rPr><w:b/><w:bCs/><w:sz w:val="16"/><w:szCs w:val="16"/></w:rPr>'
+  const lines = [
+    { text: 'CERTIFICATION', bold: true, center: true },
+    { text: '' },
+    { text: 'This is to certify that the following medicine/s are not part of the regular procurement of the City Health Office:' },
+    { text: '' },
+    ...unavailableMedicines
+      .filter((medicine) => medicine.name)
+      .map((medicine, index) => ({ text: `${index + 1}. ${medicine.name}    :    ${medicine.date} ${medicine.time}` })),
+    { text: '' },
+    { text: `Given this ${givenDayOrdinal} day of ${givenMonth}, ${givenYear}` },
+    { text: '' },
+    { text: 'Noted by:', bold: true },
+    { text: '' },
+    { text: formatChoDoctorDisplayName(choDoctorName) },
+    { text: choPosition },
+  ]
+
+  return lines.map((line) => {
+    const pPr = line.center ? '<w:pPr><w:jc w:val="center"/></w:pPr>' : ''
+    const rPr = line.bold ? boldSizedRpr : sizedRpr
+    return `<w:p>${pPr}<w:r>${rPr}<w:t xml:space="preserve">${escapeXmlText(line.text)}</w:t></w:r></w:p>`
+  }).join('')
+}
+
+function appendChoCertificationToDocx(buffer: Buffer, caseData: any): Buffer {
+  const paragraphsXml = buildChoCertificationParagraphsXml(caseData)
+  if (!paragraphsXml) return buffer
+
+  try {
+    const zip = new PizZip(buffer)
+    const entry = zip.file('word/document.xml')
+    if (!entry) return buffer
+
+    const original = entry.asText()
+    const parser = new DOMParser()
+    const doc = parser.parseFromString(original, 'application/xml')
+    const body = doc.getElementsByTagName('w:body')[0]
+    if (!body) return buffer
+
+    const certificationDoc = parser.parseFromString(
+      `<root xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">${paragraphsXml}</root>`,
+      'application/xml'
+    )
+    const certificationParagraphs = Array.from(certificationDoc.documentElement.childNodes)
+      .filter((node) => node.nodeType === 1)
+      .map((node) => node.cloneNode(true))
+
+    if (certificationParagraphs.length === 0) return buffer
+
+    const approvedParagraph = Array.from(doc.getElementsByTagName('w:p')).find((paragraph) => {
+      const text = Array.from(paragraph.getElementsByTagName('w:t'))
+        .map((node) => node.textContent ?? '')
+        .join('')
         .trim()
+      return text.includes('APPROVED:')
     })
 
-    if (updated !== original) {
-      zip.file(filename, updated)
-      changed = true
+    const sectPr = Array.from(body.childNodes).find((node) => node.nodeName === 'w:sectPr')
+    const insertBeforeNode = approvedParagraph ?? sectPr ?? null
+
+    for (const paragraph of certificationParagraphs) {
+      body.insertBefore(paragraph, insertBeforeNode)
+    }
+
+    const serialized = new XMLSerializer().serializeToString(doc)
+    const xmlDeclMatch = original.match(/^\s*<\?xml[\s\S]*?\?>/)
+    const updated = xmlDeclMatch
+      ? `${xmlDeclMatch[0]}${serialized.replace(/^\s*<\?xml[\s\S]*?\?>\s*/, '')}`
+      : serialized
+    if (updated === original) return buffer
+
+    zip.file('word/document.xml', updated)
+    return sanitizeGeneratedDocxBuffer(zip.generate({ type: 'nodebuffer', compression: 'DEFLATE' }) as Buffer)
+  } catch (error) {
+    console.warn('[appendChoCertificationToDocx] failed:', error)
+    return buffer
+  }
+}
+
+function buildChoCertificationRenderData(caseData: any): Record<string, string> {
+  const certData = buildChoCertData(caseData)
+  if (!certData) {
+    return {
+      certificationTitle: '',
+      certIntroLine: '',
+      certLineOne: '',
+      certLineTwo: '',
+      certLineThree: '',
+      certLineFour: '',
+      certLineFive: '',
+      certGivenLine: '',
+      certNotedByLine: '',
+      choDoctorNameWithMd: '',
+      certPositionLine: '',
     }
   }
 
-  if (!changed) return buffer
-  return zip.generate({ type: 'nodebuffer', compression: 'DEFLATE' }) as Buffer
+  const { unavailableMedicines, givenDayOrdinal, givenMonth, givenYear, choDoctorName, choPosition } = certData
+  const pad = [...unavailableMedicines]
+  while (pad.length < 5) pad.push({ name: '', date: '', time: '' })
+  const line = (index: number) => pad[index].name ? `${index + 1}. ${pad[index].name}    :    ${pad[index].date} ${pad[index].time}` : ''
+
+  return {
+    certificationTitle: 'CERTIFICATION',
+    certIntroLine: 'This is to certify that the following medicine/s are not part of the regular procurement of the City Health Office:',
+    certLineOne: line(0),
+    certLineTwo: line(1),
+    certLineThree: line(2),
+    certLineFour: line(3),
+    certLineFive: line(4),
+    certGivenLine: `Given this ${givenDayOrdinal} day of ${givenMonth}, ${givenYear}`,
+    certNotedByLine: 'Noted by:',
+    choDoctorNameWithMd: formatChoDoctorDisplayName(choDoctorName),
+    certPositionLine: choPosition,
+  }
 }
 
 function sanitizeTemplateContent(templateContent: string, extraImageTags: string[] = []): string {
@@ -953,7 +1887,45 @@ function sanitizeTemplateContent(templateContent: string, extraImageTags: string
     // 1. Strip Word spell-check markers that split template tags across runs.
     let cleaned = addMissingXmlNamespaces(original.replace(/<w:proofErr[^>]*\/>/g, ''))
 
-    // Keep family-composition table rows compact in generated DOCX output.
+    // 1a. Strip CHO certification paragraphs that embed broken nested-brace syntax
+    //     (e.g. "{1. {ifOneMedIsNotAvail}}", "{Given this {date}day of {month},{year}}")
+    //     These appear in CGV AICS Template.fixed.docx when the cert section was typed
+    //     directly into the template. They cannot be parsed by docxtemplater.
+    if (
+      cleaned.includes('ifOneMedIsNotAvail') ||
+      cleaned.includes('dateofMedicineUnavail') ||
+      cleaned.includes('Certifification') ||
+      cleaned.includes('choDoctorName,')
+    ) {
+      const CHO_TEXT_MARKERS = [
+        'ifOneMedIsNotAvail', 'ifTwoMedIsNotAvail', 'ifThreeMedIsNotAvail',
+        'ifFourMedIsNotAvail', 'ifFiveMedIsNotAvail',
+        'dateofMedicineUnavail', 'Certifification', 'choDoctorName,',
+      ]
+      cleaned = cleaned
+        .replace(
+          /<mc:AlternateContent\b[\s\S]*?(?:ifOneMedIsNotAvail|dateofMedicineUnavail|Certifification|choDoctorName,?)[\s\S]*?<\/mc:AlternateContent>/g,
+          ''
+        )
+        .replace(
+          /<w:drawing\b[\s\S]*?(?:ifOneMedIsNotAvail|dateofMedicineUnavail|Certifification|choDoctorName,?)[\s\S]*?<\/w:drawing>/g,
+          ''
+        )
+      cleaned = cleaned.replace(/<w:p\b[\s\S]*?<\/w:p>/g, (paragraph) => {
+        // Extract combined text of all <w:t> runs in this paragraph
+        const text = (paragraph.match(/<w:t[^>]*>([^<]*)<\/w:t>/g) || [])
+          .map((t) => t.replace(/<[^>]+>/g, ''))
+          .join('')
+        if (CHO_TEXT_MARKERS.some((marker) => text.includes(marker))) return ''
+        // Also strip paragraphs containing unbalanced nested braces that docxtemplater can't handle
+        // Pattern: {digit. {...}} or {Given this {date}...} or {Noted by:}{...}
+        if (/\{\d+\.\s*\{/.test(text) || /\{Given this \{/.test(text) || /\}\}\{Noted/.test(text) || /\{choDoctorName,\{/.test(text)) return ''
+        return paragraph
+      })
+      if (cleaned !== original) changed = true
+    }
+
+
     cleaned = cleaned.replace(
       /<w:tr\b(?=[\s\S]*?familyComposition)[\s\S]*?\/familyComposition[\s\S]*?<\/w:tr>/g,
       (row) => row
@@ -1084,7 +2056,9 @@ export async function generateMedicineCaseStudyDocx(
     ? [...MEDICINE_PROXY_CANDIDATES, ...MEDICINE_PERSONAL_CANDIDATES]
     : MEDICINE_PERSONAL_CANDIDATES
   const template = loadFirstAvailableTemplate(candidates)
-  return removeMedicineGuaranteeLetterClause(renderDoc(template, buildRenderData(caseData)))
+  const { templateContent, hasTextbox } = rewriteChoCertificationTextboxTemplate(template, caseData)
+  const rendered = removeMedicineGuaranteeLetterClause(renderDoc(templateContent, buildRenderData(caseData)))
+  return hasTextbox ? rendered : appendChoCertificationToDocx(rendered, caseData)
 }
 
 export async function generateMedicineGuaranteeLetterDocx(caseData: any): Promise<Buffer> {
@@ -1105,7 +2079,7 @@ export async function generateMedicalCaseStudyDocx(
 
 export async function generateMedicalGuaranteeLetterDocx(caseData: any): Promise<Buffer> {
   const template = loadFirstAvailableTemplate(MEDICAL_GL_CANDIDATES)
-  return renderDoc(template, buildRenderData(caseData))
+  return rewriteMedicalGuaranteeLetterSeriesClause(renderDoc(template, buildRenderData(caseData)))
 }
 
 export async function generateEyeglassCaseStudyDocx(
@@ -1132,7 +2106,9 @@ export async function generateEyeglassAcknowledgementDocx(caseData: any): Promis
 
 export async function generatePlainCaseStudyDocx(caseData: any): Promise<Buffer> {
   const template = loadFirstAvailableTemplate(PLAIN_CASE_STUDY_CANDIDATES)
-  return renderDoc(template, buildRenderData(caseData))
+  return rewritePlainAicsPresentingProblemClause(
+    rewritePlainAicsRecommendationClause(renderDoc(template, buildRenderData(caseData)))
+  )
 }
 
 // ── CHO Certification for Unavailable Medicines ───────────────────────────────
@@ -1140,6 +2116,7 @@ export async function generatePlainCaseStudyDocx(caseData: any): Promise<Buffer>
 function buildChoCertData(caseData: any): {
   unavailableMedicines: Array<{ name: string; date: string; time: string }>
   givenDay: string
+  givenDayOrdinal: string
   givenMonth: string
   givenYear: string
   choDoctorName: string
@@ -1157,7 +2134,11 @@ function buildChoCertData(caseData: any): {
   if (unavailable.length === 0) return null
 
   const unavailableMedicines = unavailable.map((m: any) => {
-    const raw: Date | null = m.medicine?.updatedAt ? new Date(m.medicine.updatedAt) : null
+    const rawValue = m.medicine?.unavailableUpdatedAt
+      ?? m.medicine?.availabilityUpdatedAt
+      ?? m.medicine?.updatedAt
+      ?? null
+    const raw: Date | null = rawValue ? new Date(rawValue) : null
     const date = raw
       ? raw.toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'Asia/Manila' })
       : '-'
@@ -1169,20 +2150,22 @@ function buildChoCertData(caseData: any): {
 
   const now = new Date()
   const givenDay = String(now.getDate())
+  const givenDayOrdinal = formatOrdinalDay(now.getDate())
   const givenMonth = now.toLocaleString('en-PH', { month: 'long', timeZone: 'Asia/Manila' })
   const givenYear = String(now.getFullYear())
 
-  // CHO officer info – pulled from the approving official assigned in system settings (approvedBy)
-  // or from the case data's CHO doctor fields if present
+  // CHO officer info – prefer explicit CHO signer fields or the active CHO user profile
+  // resolved during report serialization, then fall back to case approval data.
   const choDoctorName = fmt((caseData as any).choDoctorName
-    ?? (caseData as any).officialCityMayorName
+    ?? (caseData as any).officialChoDoctorName
     ?? (caseData as any).approvedByName
     ?? 'City Health Officer')
   const choPosition = fmt((caseData as any).choPosition
+    ?? (caseData as any).officialChoDoctorPosition
     ?? (caseData as any).approvedByTitle
     ?? 'City Health Officer')
 
-  return { unavailableMedicines, givenDay, givenMonth, givenYear, choDoctorName, choPosition }
+  return { unavailableMedicines, givenDay, givenDayOrdinal, givenMonth, givenYear, choDoctorName, choPosition }
 }
 
 /**
@@ -1193,7 +2176,7 @@ export async function generateChoCertificationDocx(caseData: any): Promise<Buffe
   const certData = buildChoCertData(caseData)
   if (!certData) return null
 
-  const { unavailableMedicines, givenDay, givenMonth, givenYear, choDoctorName, choPosition } = certData
+  const { unavailableMedicines, givenDay, givenDayOrdinal, givenMonth, givenYear, choDoctorName, choPosition } = certData
 
   // Pad up to 5 medicine slots (blank if fewer)
   const pad = (arr: typeof unavailableMedicines, len: number) => {
@@ -1204,6 +2187,7 @@ export async function generateChoCertificationDocx(caseData: any): Promise<Buffe
   const meds = pad(unavailableMedicines, 5)
 
   const renderData: Record<string, any> = {
+    Certifification: 'CERTIFICATION',
     ifOneMedIsNotAvail:   meds[0].name,
     ifTwoMedIsNotAvail:   meds[1].name,
     ifThreeMedIsNotAvail: meds[2].name,
@@ -1219,10 +2203,11 @@ export async function generateChoCertificationDocx(caseData: any): Promise<Buffe
     // Generic alias used in template tags
     dateofMedicineUnavail: meds[0].name ? `${meds[0].date} ${meds[0].time}` : '',
 
-    date:          givenDay,
+    date:          givenDayOrdinal,
     month:         givenMonth,
     year:          givenYear,
     choDoctorName,
+    choDoctorNameWithMd: formatChoDoctorDisplayName(choDoctorName),
     MD:            'M.D.',
     position:      choPosition,
   }
@@ -1239,14 +2224,14 @@ export async function generateChoCertificationDocx(caseData: any): Promise<Buffe
     return renderDoc(template, renderData)
   } catch {
     // No template file found — build a simple certification DOCX programmatically using docx library
-    return buildChoCertDocxProgrammatic(renderData, unavailableMedicines, givenDay, givenMonth, givenYear, choDoctorName, choPosition)
+    return buildChoCertDocxProgrammatic(renderData, unavailableMedicines, givenDayOrdinal, givenMonth, givenYear, choDoctorName, choPosition)
   }
 }
 
 function buildChoCertDocxProgrammatic(
   _renderData: Record<string, any>,
   unavailableMedicines: Array<{ name: string; date: string; time: string }>,
-  givenDay: string,
+  givenDayOrdinal: string,
   givenMonth: string,
   givenYear: string,
   choDoctorName: string,
@@ -1262,11 +2247,11 @@ function buildChoCertDocxProgrammatic(
       .filter((m) => m.name)
       .map((m, i) => `${i + 1}. ${m.name}  :  ${m.date} ${m.time}`),
     '',
-    `Given this ${givenDay} day of ${givenMonth}, ${givenYear}`,
+    `Given this ${givenDayOrdinal} day of ${givenMonth}, ${givenYear}`,
     '',
     'Noted by:',
     '',
-    `${choDoctorName}, M.D.`,
+    formatChoDoctorDisplayName(choDoctorName),
     choPosition,
   ]
 

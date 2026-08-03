@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 import toast from 'react-hot-toast'
 import logo from '../../assets/logo.png'
+import { firstAccessiblePath } from '../../utils/moduleAccess'
 
 export default function LoginPage() {
   const { login, isLoading } = useAuthStore()
@@ -15,7 +16,7 @@ export default function LoginPage() {
     const result = await login(form.identifier, form.password)
     if (result.success) {
       toast.success('Welcome back!')
-      navigate(result.user?.role === 'city_health_office' ? '/vehicle-requests' : '/dashboard')
+      navigate(firstAccessiblePath(result.user))
     } else {
       toast.error(result.message || 'Invalid credentials')
     }

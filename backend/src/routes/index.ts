@@ -15,7 +15,7 @@ import applicantApplicationsRoutes from './applicantApplications.js'
 import applicantsRoutes from './applicants.js'
 import documentRoutes from './documents.js'
 import vehicleRequestRoutes from './vehicleRequests.js'
-import { requireAuth, requireRole } from '../middleware/auth.js'
+import { requireAuth, requireModuleAccess, requireRole } from '../middleware/auth.js'
 import { getReadinessStatus } from '../services/healthService.js'
 
 const router = Router()
@@ -56,18 +56,17 @@ router.use('/portal/applications', portalApplicationsRoutes)
 router.use('/documents', documentRoutes)
 
 router.use(requireAuth)
-router.use('/medicines', requireRole(['admin', 'employee', 'city_health_office']), medicineRoutes)
-router.use('/vehicle-requests', requireRole(['admin', 'employee', 'city_health_office']), vehicleRequestRoutes)
-router.use('/hospitals', requireRole(['admin', 'employee']), hospitalRoutes)
 router.use('/users', userRoutes)
 router.use('/applicants', applicantsRoutes)
-router.use(requireRole(['admin', 'employee']))
-router.use('/clients', clientRoutes)
-router.use('/cases', caseRoutes)
-router.use('/dashboard', dashboardRoutes)
-router.use('/reports', reportRoutes)
-router.use('/settings', settingsRoutes)
-router.use('/funeral-homes', funeralHomesRoutes)
-router.use('/applicant-applications', applicantApplicationsRoutes)
+router.use('/medicines', requireModuleAccess('medicines'), medicineRoutes)
+router.use('/vehicle-requests', requireModuleAccess('vehicle_requests'), vehicleRequestRoutes)
+router.use('/hospitals', requireModuleAccess('hospitals'), hospitalRoutes)
+router.use('/clients', requireModuleAccess('clients'), clientRoutes)
+router.use('/cases', requireModuleAccess('cases'), caseRoutes)
+router.use('/dashboard', requireModuleAccess('dashboard'), dashboardRoutes)
+router.use('/reports', requireModuleAccess('reports'), reportRoutes)
+router.use('/settings', requireRole(['admin']), requireModuleAccess('settings'), settingsRoutes)
+router.use('/funeral-homes', requireModuleAccess('funeral_homes'), funeralHomesRoutes)
+router.use('/applicant-applications', requireModuleAccess('portal_applications'), applicantApplicationsRoutes)
 
 export default router

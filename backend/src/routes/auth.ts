@@ -8,6 +8,7 @@ import { prisma } from '../utils/prisma.js'
 import { asyncHandler } from '../utils/asyncHandler.js'
 import { HttpError } from '../utils/httpError.js'
 import { buildBodyFieldKey, softRateLimit } from '../middleware/softRateLimit.js'
+import { getAccessibleModulesForUser, getModuleAccessConfig } from '../services/moduleAccessService.js'
 
 const router = Router()
 
@@ -67,6 +68,13 @@ router.post('/login', staffLoginIpLimiter, staffLoginIdentifierLimiter, asyncHan
   const valid = await bcrypt.compare(password, user.passwordHash)
   if (!valid) throw new HttpError(401, 'Invalid credentials')
 
+  const moduleAccessConfig = await getModuleAccessConfig()
+    const accessibleModules = getAccessibleModulesForUser({
+      role: String(user.role),
+      department: user.department,
+      moduleAccessOverrides: user.moduleAccessOverrides,
+    }, moduleAccessConfig)
+
   const token = jwt.sign(
     {
       sub: user.id,
@@ -75,6 +83,7 @@ router.post('/login', staffLoginIpLimiter, staffLoginIdentifierLimiter, asyncHan
       employeeId: user.employeeId,
       role: normalizeRole(String(user.role)),
       approvalLevel: parseApprovalLevels(user.approvalLevel),
+      department: user.department,
     },
     env.jwtSecret,
     { expiresIn: env.jwtExpiresIn as jwt.SignOptions['expiresIn'] }
@@ -90,7 +99,9 @@ router.post('/login', staffLoginIpLimiter, staffLoginIdentifierLimiter, asyncHan
       employeeId: user.employeeId,
       approvalLevel: parseApprovalLevels(user.approvalLevel),
       position: user.position,
+      department: user.department,
       photoUrl: user.photoUrl,
+      accessibleModules,
     },
   })
 }))

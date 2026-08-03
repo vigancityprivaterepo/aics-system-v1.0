@@ -3,6 +3,8 @@ import toast from 'react-hot-toast'
 import api from '../../lib/api'
 import { PlusIcon, SearchIcon, EditIcon, TrashIcon, HospitalIcon } from '../../components/ui/Icons'
 import { ChevronLeftIcon, ChevronRightIcon } from '../../components/ui/Icons'
+import PresetSelectField from '../../components/PresetSelectField'
+import { DOCTOR_POSITION_OPTIONS } from '../../constants/caseFormOptions'
 
 const PAGE_SIZE = 20
 
@@ -38,7 +40,7 @@ export default function HospitalDatabase() {
   const [types, setTypes] = useState([])
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState(null)
-  const [form, setForm] = useState({ province: '', municipality: '', facilityName: '', facilityType: '', fullAddress: '' })
+  const [form, setForm] = useState({ province: '', municipality: '', facilityName: '', facilityType: '', fullAddress: '', doctorName: '', doctorTitle: '' })
   const [importing, setImporting] = useState(false)
   const [importModal, setImportModal] = useState(null)
   const [deleteAllModal, setDeleteAllModal] = useState(false)
@@ -113,7 +115,7 @@ export default function HospitalDatabase() {
     return () => { active = false }
   }, [page, search, filterType])
 
-  const resetForm = () => setForm({ province: '', municipality: '', facilityName: '', facilityType: '', fullAddress: '' })
+  const resetForm = () => setForm({ province: '', municipality: '', facilityName: '', facilityType: '', fullAddress: '', doctorName: '', doctorTitle: '' })
 
   const handleSave = async () => {
     if (!form.province.trim() || !form.municipality.trim() || !form.facilityName.trim() || !form.facilityType.trim()) {
@@ -146,6 +148,8 @@ export default function HospitalDatabase() {
       facilityName: h.facilityName,
       facilityType: h.facilityType,
       fullAddress:  h.fullAddress ?? '',
+      doctorName:   h.doctorName ?? '',
+      doctorTitle:  h.doctorTitle ?? '',
     })
     setShowForm(true)
   }
@@ -290,6 +294,20 @@ export default function HospitalDatabase() {
               <label className="portal-label">Full Address</label>
               <input value={form.fullAddress} onChange={e => setForm({ ...form, fullAddress: e.target.value })} className="portal-input" placeholder="Street, Barangay, City, Province, ZIP" />
             </div>
+            <div>
+              <label className="portal-label">Doctor Name</label>
+              <input value={form.doctorName} onChange={e => setForm({ ...form, doctorName: e.target.value })} className="portal-input" placeholder="Attending physician's full name" />
+            </div>
+            <div>
+              <label className="portal-label">Doctor Position / Title</label>
+              <PresetSelectField
+                value={form.doctorTitle}
+                onChange={(value) => setForm({ ...form, doctorTitle: value })}
+                options={DOCTOR_POSITION_OPTIONS}
+                placeholder="Select doctor position / title"
+                otherPlaceholder="Specify doctor position / title"
+              />
+            </div>
               </div>
               <div className="flex justify-end gap-3 pt-2 border-t border-slate-100">
                 <button onClick={() => { setShowForm(false); setEditing(null); resetForm() }} className="rounded-lg border border-slate-200 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 transition-colors" type="button">Cancel</button>
@@ -370,6 +388,8 @@ export default function HospitalDatabase() {
                 <p>Facility Name</p>
                 <p>Facility Type</p>
                 <p>Full Address</p>
+                <p>Doctor Name (optional)</p>
+                <p>Doctor Title (optional)</p>
               </div>
               <div className="flex justify-end gap-3 pt-1">
                 <button type="button" onClick={() => setImportModal(null)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50">
@@ -398,7 +418,7 @@ export default function HospitalDatabase() {
         ) : (
           <>
             <div className="overflow-x-auto">
-            <table className="w-full min-w-[600px]">
+            <table className="w-full min-w-[900px]">
               <thead>
                 <tr>
                   <th className="table-header text-center w-12">No.</th>
@@ -407,6 +427,7 @@ export default function HospitalDatabase() {
                   <th className="table-header text-left">Facility Name</th>
                   <th className="table-header text-left">Facility Type</th>
                   <th className="table-header text-left">Full Address</th>
+                  <th className="table-header text-left">Doctor / Title</th>
                   <th className="table-header text-center">Actions</th>
                 </tr>
               </thead>
@@ -423,6 +444,10 @@ export default function HospitalDatabase() {
                       <span className="badge badge-blue">{h.facilityType}</span>
                     </td>
                     <td className="table-cell text-xs text-slate-400 max-w-xs truncate">{displayOptional(h.fullAddress)}</td>
+                    <td className="table-cell text-xs text-slate-500">
+                      <div className="font-medium text-slate-700">{displayOptional(h.doctorName)}</div>
+                      {h.doctorTitle && <div className="mt-0.5 text-slate-400">{h.doctorTitle}</div>}
+                    </td>
                     <td className="table-cell text-center">
                       <div className="flex justify-center gap-2">
                         <button onClick={() => handleEdit(h)} className="text-brand-primary hover:text-brand-dark">
@@ -437,7 +462,7 @@ export default function HospitalDatabase() {
                 ))}
                 {facilities.length === 0 && !loading && (
                   <tr>
-                    <td colSpan={7} className="table-cell py-10 text-center text-sm text-slate-400">
+                    <td colSpan={8} className="table-cell py-10 text-center text-sm text-slate-400">
                       No hospital facilities found.
                     </td>
                   </tr>

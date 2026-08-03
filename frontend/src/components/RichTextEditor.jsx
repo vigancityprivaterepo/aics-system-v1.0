@@ -97,6 +97,7 @@ export default function RichTextEditor({
   readOnly = false,
   minHeightClass = 'min-h-[9rem]',
   placeholder = '',
+  fieldName,
 }) {
   const editorRef = useRef(null)
   const normalizedValue = useMemo(() => normalizeEditorHtml(value), [value])
@@ -134,7 +135,7 @@ export default function RichTextEditor({
   }
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white">
+    <div className="rounded-xl border border-slate-200 bg-white" data-field-name={fieldName}>
       <div className="relative">
         {!readOnly && !normalizedValue && placeholder && (
           <div className="pointer-events-none absolute left-4 top-3 text-sm text-slate-400">
@@ -143,6 +144,7 @@ export default function RichTextEditor({
         )}
         <div
           ref={editorRef}
+          data-field-name={fieldName}
           contentEditable={!readOnly}
           suppressContentEditableWarning
           onInput={() => syncValue()}

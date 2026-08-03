@@ -134,6 +134,7 @@ router.get('/', asyncHandler(async (req, res) => {
     ? {
         OR: [
           { name:    { contains: search, mode: 'insensitive' as const } },
+          { ownerName: { contains: search, mode: 'insensitive' as const } },
           { address: { contains: search, mode: 'insensitive' as const } },
         ],
       }

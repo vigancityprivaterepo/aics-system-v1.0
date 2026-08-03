@@ -191,5 +191,3 @@ export async function updateStatus(req: Request, res: Response) {
 
   res.json({ id: updated.id, status: updated.status })
 }
-
-

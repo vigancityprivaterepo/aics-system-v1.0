@@ -1,23 +1,35 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
 import api from '../../../lib/api'
 import { FileTextIcon, PlusIcon, TrashIcon } from '../../../components/ui/Icons'
 import NarrativePresetField from '../../../components/NarrativePresetField'
+import PresetSelectField from '../../../components/PresetSelectField'
+import SearchablePresetInput from '../../../components/SearchablePresetInput'
+import { OCCUPATION_OPTIONS, RELATIONSHIP_OPTIONS } from '../../../constants/caseFormOptions'
+import { scrollToField, scrollToFirstError } from '../../../lib/formNavigation'
 import { formatCurrency } from '../../../lib/utils'
 
 const defaultMember = { name: '', age: '', relationship: '', civilStatus: '', occupation: '', monthlyIncome: '' }
 const CIVIL_STATUS_OPTIONS = ['Single', 'Married', 'Widowed', 'Separated', 'Annulled']
-const RELATIONSHIP_OPTIONS = ['Spouse', 'Son', 'Daughter', 'Father', 'Mother', 'Brother', 'Sister', 'Grandson', 'Granddaughter', 'Grandfather', 'Grandmother', 'Uncle', 'Aunt', 'Nephew', 'Niece', 'Son-in-Law', 'Daughter-in-Law', 'Father-in-Law', 'Mother-in-Law', 'Other']
+const PLAIN_ASSISTANCE_KIND_OPTIONS = [
+  { value: 'medical', label: 'Medical' },
+  { value: 'hospital', label: 'Hospital' },
+  { value: 'burial', label: 'Burial' },
+]
 
-export default function StepPlainDetails({ caseData, onUpdate, readOnly = false }) {
+export default function StepPlainDetails({ caseData, onUpdate, readOnly = false, onNext }) {
   const [saving, setSaving] = useState(false)
   const [family, setFamily] = useState(caseData.familyComposition || [])
+  const [assistanceKinds, setAssistanceKinds] = useState(caseData.plainDetails?.assistanceKinds || [])
   const [narrativeOptions, setNarrativeOptions] = useState([])
+  const submitModeRef = useRef('save')
 
-  const { control, register, handleSubmit, watch } = useForm({
+  const { control, register, handleSubmit, watch, setValue } = useForm({
     defaultValues: {
       dateOfAssessment: caseData.dateOfAssessment || new Date().toISOString().slice(0, 10),
+      conformeName: caseData.plainDetails?.conformeName || '',
+      conformeRelationship: caseData.plainDetails?.conformeRelationship || '',
       presentingProblem: caseData.presentingProblem || '',
       findings: caseData.assessment || caseData.backgroundOfProblem || '',
       amount: caseData.amount ?? '',
@@ -33,6 +45,7 @@ export default function StepPlainDetails({ caseData, onUpdate, readOnly = false 
     return () => { active = false }
   }, [caseData.assistanceType])
   const amount = watch('amount')
+  const conformeRelationship = watch('conformeRelationship')
   const parsedAmount = Number(amount)
   const isOverCap = Number.isFinite(parsedAmount) && parsedAmount > 35000
 
@@ -40,10 +53,23 @@ export default function StepPlainDetails({ caseData, onUpdate, readOnly = false 
   const removeFamilyMember = (i) => setFamily(family.filter((_, idx) => idx !== i))
   const updateFamilyMember = (i, field, val) =>
     setFamily(family.map((m, idx) => idx === i ? { ...m, [field]: val } : m))
+  const toggleAssistanceKind = (kind) => setAssistanceKinds((prev) => (
+    prev.includes(kind) ? prev.filter((item) => item !== kind) : [...prev, kind]
+  ))
+
+  const handleInvalid = (validationErrors) => {
+    scrollToFirstError(validationErrors)
+    toast.error('Please complete the required fields first.')
+  }
 
   const onSave = async (data) => {
     setSaving(true)
     try {
+      if (!assistanceKinds.length) {
+        toast.error('Select at least one requested assistance type.')
+        scrollToField('plain-assistance-kinds')
+        return
+      }
       const casePayload = {
         dateOfAssessment: data.dateOfAssessment || null,
         presentingProblem: data.presentingProblem,
@@ -53,14 +79,30 @@ export default function StepPlainDetails({ caseData, onUpdate, readOnly = false 
       }
       const [, plainRes] = await Promise.all([
         api.put(`/cases/${caseData.id}`, casePayload),
-        api.put(`/cases/${caseData.id}/plain`, { amount: data.amount }),
+        api.put(`/cases/${caseData.id}/plain`, {
+          natureOfAssistance: '',
+          conformeName: data.conformeName,
+          conformeRelationship: data.conformeRelationship,
+          assistanceKinds,
+          amount: data.amount,
+        }),
       ])
       onUpdate({
         ...casePayload,
+        plainDetails: {
+          ...(caseData.plainDetails || {}),
+          natureOfAssistance: '',
+          conformeName: data.conformeName,
+          conformeRelationship: data.conformeRelationship,
+          assistanceKinds,
+        },
         amount: plainRes.data?.amount ?? data.amount,
         status: plainRes.data?.status ?? caseData.status,
       })
       toast.success(plainRes.data?.approvalsReset ? 'Plain AICS details saved. Case returned to encoding for re-review.' : 'Plain AICS details saved')
+      if (submitModeRef.current === 'next') {
+        onNext?.()
+      }
     } catch (err) {
       if (err.response) {
         toast.error(err.response?.data?.message || 'Failed to save details')
@@ -72,6 +114,13 @@ export default function StepPlainDetails({ caseData, onUpdate, readOnly = false 
         backgroundOfProblem: data.findings,
         assessment: data.findings,
         familyComposition: family,
+        plainDetails: {
+          ...(caseData.plainDetails || {}),
+          natureOfAssistance: '',
+          conformeName: data.conformeName,
+          conformeRelationship: data.conformeRelationship,
+          assistanceKinds,
+        },
         amount: data.amount,
       })
       toast.error(err.response?.data?.message || 'Failed to save changes')
@@ -93,7 +142,7 @@ export default function StepPlainDetails({ caseData, onUpdate, readOnly = false 
         </div>
       )}
 
-      <form onSubmit={handleSubmit(onSave)}>
+      <form onSubmit={handleSubmit(onSave, handleInvalid)}>
       <fieldset disabled={readOnly} className="space-y-4">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {/* Sub-section: Assessment Details */}
@@ -106,7 +155,7 @@ export default function StepPlainDetails({ caseData, onUpdate, readOnly = false 
             <label className="portal-label">Date of Assessment *</label>
             <input
               type="date"
-              {...register('dateOfAssessment')}
+              {...register('dateOfAssessment', { required: 'Date of assessment is required' })}
               className="portal-input"
             />
           </div>
@@ -143,6 +192,7 @@ export default function StepPlainDetails({ caseData, onUpdate, readOnly = false 
                       <select value={m.relationship || ''} onChange={(e) => updateFamilyMember(i, 'relationship', e.target.value)} className="portal-input py-1 text-xs">
                         <option value="">Select</option>
                         {RELATIONSHIP_OPTIONS.map(r => <option key={r} value={r}>{r}</option>)}
+                        <option value="Other">Other</option>
                       </select>
                     </td>
                     <td className="px-2 py-1.5">
@@ -154,7 +204,7 @@ export default function StepPlainDetails({ caseData, onUpdate, readOnly = false 
                       </select>
                     </td>
                     <td className="px-2 py-1.5">
-                      <input type="text" value={m.occupation || ''} onChange={(e) => updateFamilyMember(i, 'occupation', e.target.value)} className="portal-input py-1 text-xs" />
+                      <SearchablePresetInput value={m.occupation || ''} onChange={(value) => updateFamilyMember(i, 'occupation', value)} options={OCCUPATION_OPTIONS} placeholder="Search occupation" className="portal-input py-1 text-xs" listId={`plain-family-occupation-${i}`} />
                     </td>
                     <td className="px-2 py-1.5">
                       <button type="button" onClick={() => removeFamilyMember(i)} className="text-red-400 hover:text-red-600">
@@ -178,14 +228,54 @@ export default function StepPlainDetails({ caseData, onUpdate, readOnly = false 
             <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Findings &amp; Narrative</p>
           </div>
 
+          <div className="sm:col-span-2" data-field-name="plain-assistance-kinds">
+            <label className="portal-label">Requested Assistance Type(s)</label>
+            <div className="grid grid-cols-1 gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3 sm:grid-cols-2 lg:grid-cols-3">
+              {PLAIN_ASSISTANCE_KIND_OPTIONS.map((option) => (
+                <label key={option.value} className="flex items-center gap-2 text-sm text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={assistanceKinds.includes(option.value)}
+                    onChange={() => toggleAssistanceKind(option.value)}
+                    className="h-4 w-4 accent-emerald-700"
+                  />
+                  <span>{option.label}</span>
+                </label>
+              ))}
+            </div>
+            <p className="mt-1 text-xs text-slate-500">
+              Select the request categories that should be checked in the general Plain AICS report.
+            </p>
+          </div>
+          <div>
+            <label className="portal-label">Conforme Name</label>
+              <input
+                type="text"
+                {...register('conformeName')}
+              className="portal-input"
+              placeholder="Enter requesting party if not the beneficiary"
+            />
+          </div>
+          <div>
+            <label className="portal-label">Relationship to Beneficiary</label>
+            <input type="hidden" {...register('conformeRelationship')} />
+            <PresetSelectField
+              value={conformeRelationship}
+              onChange={(value) => setValue('conformeRelationship', value, { shouldDirty: true, shouldTouch: true })}
+              options={RELATIONSHIP_OPTIONS}
+              placeholder="Select relationship"
+              otherPlaceholder="Specify relationship"
+              disabled={readOnly}
+            />
+          </div>
           <div className="sm:col-span-2">
-            <Controller name="presentingProblem" control={control} render={({ field }) => (
-              <NarrativePresetField label="Presenting Problem *" value={field.value} onChange={field.onChange} options={narrativeOptions.filter((item) => item.field === 'presenting_problem')} readOnly={readOnly} minHeightClass="min-h-[7rem]" placeholder="State the client's concern or reason for seeking Plain AICS assistance." />
+            <Controller name="presentingProblem" control={control} rules={{ validate: (value) => String(value ?? '').replace(/<[^>]*>/g, '').trim().length > 0 || 'Presenting problem is required' }} render={({ field }) => (
+              <NarrativePresetField label="Presenting Problem *" value={field.value} onChange={field.onChange} options={narrativeOptions.filter((item) => item.field === 'presenting_problem')} readOnly={readOnly} minHeightClass="min-h-[7rem]" placeholder="State the client's concern or reason for seeking Plain AICS assistance." fieldName={field.name} />
             )} />
           </div>
           <div className="sm:col-span-2">
-            <Controller name="findings" control={control} render={({ field }) => (
-              <NarrativePresetField label="Findings *" value={field.value} onChange={field.onChange} options={narrativeOptions.filter((item) => item.field === 'findings')} readOnly={readOnly} minHeightClass="min-h-[10rem]" placeholder="Enter the findings that should be bridged directly to the template." />
+            <Controller name="findings" control={control} rules={{ validate: (value) => String(value ?? '').replace(/<[^>]*>/g, '').trim().length > 0 || 'Findings are required' }} render={({ field }) => (
+              <NarrativePresetField label="Findings *" value={field.value} onChange={field.onChange} options={narrativeOptions.filter((item) => item.field === 'findings')} readOnly={readOnly} minHeightClass="min-h-[10rem]" placeholder="Enter the findings that should be bridged directly to the template." fieldName={field.name} />
             )} />
           </div>
 
@@ -201,7 +291,7 @@ export default function StepPlainDetails({ caseData, onUpdate, readOnly = false 
               type="number"
               min="0"
               step="any"
-              {...register('amount')}
+              {...register('amount', { required: 'Amount is required' })}
               className="portal-input"
               placeholder="0.00"
             />
@@ -215,9 +305,12 @@ export default function StepPlainDetails({ caseData, onUpdate, readOnly = false 
 
       </fieldset>
       {!readOnly && (
-        <div className="flex flex-wrap gap-3 mt-4">
-          <button type="submit" disabled={saving} className="portal-button-primary" id="btn-save-plain">
+        <div className="mt-4 flex flex-wrap gap-3">
+          <button type="submit" onClick={() => { submitModeRef.current = 'save' }} disabled={saving} className="portal-button-secondary" id="btn-save-plain">
             {saving ? 'Saving...' : 'Save Details'}
+          </button>
+          <button type="submit" onClick={() => { submitModeRef.current = 'next' }} disabled={saving} className="portal-button-primary" id="btn-save-next-plain">
+            {saving ? 'Saving...' : 'Save and Next'}
           </button>
         </div>
       )}

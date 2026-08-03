@@ -72,7 +72,7 @@ const CGV_TYPES = [
   { key: 'eyeglass', label: 'Eyeglass' },
 ]
 
-export default function RequirementsChecklist({ assistanceType, requirements = {}, onChange, readOnly = false, variant = 'list' }) {
+export default function RequirementsChecklist({ assistanceType, requirements = {}, onChange, readOnly = false, variant = 'list', plainAssistanceKinds = [] }) {
   const items = REQUIREMENTS_BY_TYPE[assistanceType] ?? MEDICINE_REQUIREMENTS
 
   const handleToggle = (key) => {
@@ -84,8 +84,11 @@ export default function RequirementsChecklist({ assistanceType, requirements = {
   const completedCount = items.filter((r) => requirements[r.key]).length
 
   if (variant === 'cgvTable') {
+    const plainTypeSelections = new Set(
+      (Array.isArray(plainAssistanceKinds) ? plainAssistanceKinds : []).filter((kind) => CGV_TYPES.some((type) => type.key === kind))
+    )
     const activeTypes = assistanceType === 'plain'
-      ? new Set(CGV_TYPES.map((type) => type.key))
+      ? (plainTypeSelections.size > 0 ? plainTypeSelections : new Set(CGV_TYPES.map((type) => type.key)))
       : new Set([assistanceType])
     const activeKeys = [...new Set(CGV_REQUIREMENT_ROWS.map((row) => (
       CGV_TYPES.filter((type) => activeTypes.has(type.key)).map((type) => row[type.key]).filter(Boolean)

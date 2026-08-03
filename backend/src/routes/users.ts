@@ -13,6 +13,7 @@ import { requireRole } from '../middleware/auth.js'
 import { eSignatureDirectory, eSignaturePublicUrl, profilePhotoPublicUrl, profilePhotosDirectory } from '../services/storageService.js'
 import { removeStoredUpload, validateStoredUpload } from '../services/uploadValidation.js'
 import { logAdminAudit } from '../services/adminAuditService.js'
+import { buildModuleAccessOverrides, getAccessibleModulesForUser, getModuleAccessConfig } from '../services/moduleAccessService.js'
 
 const router = Router()
 
@@ -80,6 +81,7 @@ const createSchema = z.object({
   role: z.enum(['employee', 'admin', 'city_health_office']),
   approvalLevel: z.array(z.enum(APPROVAL_LEVEL_VALUES)).optional().default([]),
   position: z.string().max(200).nullable().optional(),
+  department: z.string().max(200).nullable().optional(),
   password: z.string().min(8),
 })
 
@@ -90,12 +92,14 @@ const updateSchema = z.object({
   approvalLevel: z.array(z.enum(APPROVAL_LEVEL_VALUES)).optional(),
   signatureParam: z.string().max(50).regex(/^[a-zA-Z0-9_]+$/, 'Letters, numbers, underscores only').nullable().optional(),
   position: z.string().max(200).nullable().optional(),
+  department: z.string().max(200).nullable().optional(),
   isActive: z.boolean().optional(),
 })
 
 const selfUpdateSchema = z.object({
   name: z.string().min(1).optional(),
   position: z.string().max(200).nullable().optional(),
+  department: z.string().max(200).nullable().optional(),
 })
 
 const resetSchema = z.object({
@@ -118,6 +122,8 @@ function safeUser(u: {
   approvalLevel: string
   signatureParam: string | null
   position: string | null
+  department: string | null
+  moduleAccessOverrides: string
   photoUrl: string | null
   eSignatureUrl: string | null
   eSignatureUploadedAt: Date | null
@@ -134,6 +140,8 @@ function safeUser(u: {
     approvalLevel: parseApprovalLevels(u.approvalLevel),
     signatureParam: u.signatureParam,
     position: u.position,
+    department: u.department,
+    moduleAccessOverrides: buildModuleAccessOverrides(u.moduleAccessOverrides),
     photoUrl: normalizeUploadUrl(u.photoUrl),
     eSignatureUrl: normalizeUploadUrl(u.eSignatureUrl),
     eSignatureUploadedAt: u.eSignatureUploadedAt,
@@ -144,7 +152,8 @@ function safeUser(u: {
 
 const userSelect = {
   id: true, name: true, username: true, email: true, employeeId: true,
-  role: true, approvalLevel: true, signatureParam: true, position: true,
+  role: true, approvalLevel: true, signatureParam: true, position: true, department: true,
+  moduleAccessOverrides: true,
   photoUrl: true,
   eSignatureUrl: true, eSignatureUploadedAt: true,
   isActive: true, createdAt: true,
@@ -163,12 +172,20 @@ function auditActionLabel(log: { fromStatus: CaseStatus; toStatus: CaseStatus; n
 }
 
 router.get('/me', asyncHandler(async (req, res) => {
+  const moduleAccessConfig = await getModuleAccessConfig()
   const user = await prisma.user.findUnique({
     where: { id: req.user!.id },
     select: userSelect,
   })
   if (!user) throw new HttpError(404, 'User not found')
-  res.json(safeUser(user))
+  res.json({
+    ...safeUser(user),
+    accessibleModules: getAccessibleModulesForUser({
+      role: String(user.role),
+      department: user.department,
+      moduleAccessOverrides: user.moduleAccessOverrides,
+    }, moduleAccessConfig),
+  })
 }))
 
 router.patch('/me', asyncHandler(async (req, res) => {
@@ -307,6 +324,7 @@ router.post('/', adminOnly, asyncHandler(async (req, res) => {
       role: body.role,
       approvalLevel: serializeApprovalLevels(body.role === 'city_health_office' ? [] : body.approvalLevel),
       position: body.position ?? null,
+      department: body.department ?? null,
       passwordHash,
     },
     select: userSelect,
@@ -368,6 +386,7 @@ router.patch('/:id', adminOnly, asyncHandler(async (req, res) => {
         approvalLevel: existing.approvalLevel,
         signatureParam: existing.signatureParam,
         position: existing.position,
+        department: existing.department,
         isActive: existing.isActive,
       },
       next: {
@@ -376,6 +395,7 @@ router.patch('/:id', adminOnly, asyncHandler(async (req, res) => {
         approvalLevel: user.approvalLevel,
         signatureParam: user.signatureParam,
         position: user.position,
+        department: user.department,
         isActive: user.isActive,
       },
     },

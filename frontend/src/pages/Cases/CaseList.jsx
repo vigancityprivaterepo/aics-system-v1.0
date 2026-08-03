@@ -265,6 +265,8 @@ export default function CaseList() {
               <tbody>
               {cases.map((c) => {
                 const approvalMessages = workflowApprovalMessages(c)
+                const canEdit = !!c.permissions?.canEdit
+                const canDelete = !!c.permissions?.canDelete
                 return (
                 <tr
                   key={c.id}
@@ -341,22 +343,24 @@ export default function CaseList() {
                           event.stopPropagation()
                           navigate(`/cases/${c.id}`)
                         }}
-                        title="Open case"
+                        title={canEdit ? 'Open case' : 'View reports'}
                         className="rounded p-2 text-slate-400 hover:bg-blue-50 hover:text-blue-600 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
                       >
-                        <EditIcon className="h-4 w-4" />
+                        {canEdit ? <EditIcon className="h-4 w-4" /> : <FolderIcon className="h-4 w-4" />}
                       </button>
-                      <button
-                        onClick={(event) => {
-                          event.stopPropagation()
-                          handleDelete(c)
-                        }}
-                        disabled={deletingId === c.id}
-                        title="Delete case"
-                        className="rounded p-2 text-slate-400 hover:bg-red-50 hover:text-red-600 transition-colors disabled:opacity-40 min-h-[44px] min-w-[44px] flex items-center justify-center"
-                      >
-                        <TrashIcon className="h-4 w-4" />
-                      </button>
+                      {canDelete ? (
+                        <button
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            handleDelete(c)
+                          }}
+                          disabled={deletingId === c.id}
+                          title="Delete case"
+                          className="rounded p-2 text-slate-400 hover:bg-red-50 hover:text-red-600 transition-colors disabled:opacity-40 min-h-[44px] min-w-[44px] flex items-center justify-center"
+                        >
+                          <TrashIcon className="h-4 w-4" />
+                        </button>
+                      ) : null}
                     </div>
                   </td>
                 </tr>

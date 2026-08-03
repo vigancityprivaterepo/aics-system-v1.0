@@ -13,6 +13,7 @@ import {
 } from '../ui/Icons'
 import MyProfileModal from '../shared/MyProfileModal'
 import { allowedCaseTypesForUser, canAccessAllCases } from '../../utils/accessRules'
+import { canAccessModule } from '../../utils/moduleAccess'
 
 // ── Case sub-types ────────────────────────────────────────────────────────────
 const CASE_CHILDREN = [
@@ -245,6 +246,17 @@ function DatabaseGroup({ onNavigate, isCHO = false }) {
 function SidebarNav({ closeSidebar, user, isAdmin, isCityHealthOffice, pendingByType, portalSubmittedCount }) {
   const visibleCaseTypes = allowedCaseTypesForUser(user, CASE_CHILDREN.map((child) => child.type))
   const allowedCaseTypes = canAccessAllCases(user) ? null : visibleCaseTypes
+  const canAccessDashboard = canAccessModule(user, 'dashboard')
+  const canAccessPortalApplications = canAccessModule(user, 'portal_applications')
+  const canAccessDocumentVerifier = canAccessModule(user, 'documents_verify')
+  const canAccessVehicleRequests = canAccessModule(user, 'vehicle_requests')
+  const canAccessCasesModule = canAccessModule(user, 'cases')
+  const canAccessClients = canAccessModule(user, 'clients')
+  const canAccessMedicines = canAccessModule(user, 'medicines')
+  const canAccessHospitals = canAccessModule(user, 'hospitals')
+  const canAccessFuneralHomes = canAccessModule(user, 'funeral_homes')
+  const canAccessReports = canAccessModule(user, 'reports')
+  const canAccessSettings = canAccessModule(user, 'settings')
   if (isCityHealthOffice) {
     return (
       <nav
@@ -254,8 +266,10 @@ function SidebarNav({ closeSidebar, user, isAdmin, isCityHealthOffice, pendingBy
       >
         <SectionLabel>Health Office</SectionLabel>
         <div className="space-y-0.5">
-          <NavItem to="/vehicle-requests" Icon={Ambulance} label="Ambulance Requests" onClick={closeSidebar} />
-          <DatabaseGroup onNavigate={closeSidebar} isCHO={true} />
+          {canAccessVehicleRequests ? (
+            <NavItem to="/vehicle-requests" Icon={Ambulance} label="Ambulance Requests" onClick={closeSidebar} />
+          ) : null}
+          {canAccessMedicines ? <DatabaseGroup onNavigate={closeSidebar} isCHO={true} /> : null}
         </div>
       </nav>
     )
@@ -270,26 +284,28 @@ function SidebarNav({ closeSidebar, user, isAdmin, isCityHealthOffice, pendingBy
       {/* ── MAIN ── */}
       <SectionLabel>Main</SectionLabel>
       <div className="space-y-0.5">
-        <NavItem to="/dashboard" Icon={ChartIcon} label="Dashboard" onClick={closeSidebar} end />
-        <NavItemWithBadge
-          to="/portal-applications"
-          Icon={ClipboardIcon}
-          label="Portal Applications"
-          onClick={closeSidebar}
-          badge={portalSubmittedCount}
-        />
-        <NavItem to="/documents/verify" Icon={QrCodeIcon} label="QR Verifier" onClick={closeSidebar} />
-        <NavItem to="/vehicle-requests" Icon={Ambulance} label="Vehicle Requests" onClick={closeSidebar} />
-        <CasesGroup onNavigate={closeSidebar} pendingByType={pendingByType} allowedTypes={allowedCaseTypes} />
+        {canAccessDashboard ? <NavItem to="/dashboard" Icon={ChartIcon} label="Dashboard" onClick={closeSidebar} end /> : null}
+        {canAccessPortalApplications ? (
+          <NavItemWithBadge
+            to="/portal-applications"
+            Icon={ClipboardIcon}
+            label="Portal Applications"
+            onClick={closeSidebar}
+            badge={portalSubmittedCount}
+          />
+        ) : null}
+        {canAccessDocumentVerifier ? <NavItem to="/documents/verify" Icon={QrCodeIcon} label="QR Verifier" onClick={closeSidebar} /> : null}
+        {canAccessVehicleRequests ? <NavItem to="/vehicle-requests" Icon={Ambulance} label="Vehicle Requests" onClick={closeSidebar} /> : null}
+        {canAccessCasesModule ? <CasesGroup onNavigate={closeSidebar} pendingByType={pendingByType} allowedTypes={allowedCaseTypes} /> : null}
       </div>
 
       {/* ── DATA ── */}
       <SectionLabel>Data</SectionLabel>
       <div className="space-y-0.5">
-        <NavItem to="/clients"  Icon={UsersIcon}    label="Client Profile" onClick={closeSidebar} />
-        <DatabaseGroup onNavigate={closeSidebar} />
-        <NavItem to="/reports"       Icon={DocumentIcon}  label="Reports"        onClick={closeSidebar} />
-        {isAdmin && (
+        {canAccessClients ? <NavItem to="/clients" Icon={UsersIcon} label="Client Profile" onClick={closeSidebar} /> : null}
+        {(canAccessMedicines || canAccessHospitals || canAccessFuneralHomes) ? <DatabaseGroup onNavigate={closeSidebar} /> : null}
+        {canAccessReports ? <NavItem to="/reports" Icon={DocumentIcon} label="Reports" onClick={closeSidebar} /> : null}
+        {isAdmin && canAccessSettings && (
           <NavItem to="/settings" Icon={CogIcon} label="Settings" onClick={closeSidebar} />
         )}
       </div>
@@ -307,16 +323,28 @@ export default function AppLayout() {
   const [pendingByType, setPendingByType] = useState({})
   const [portalSubmittedCount, setPortalSubmittedCount] = useState(0)
   const isCityHealthOffice = user?.role === 'city_health_office'
+  const canAccessCasesModule = canAccessModule(user, 'cases')
+  const canAccessPortalApplications = canAccessModule(user, 'portal_applications')
 
   useEffect(() => {
-    if (isCityHealthOffice || !user?.approvalLevel?.length) return
+    if (!canAccessCasesModule || isCityHealthOffice || !user?.approvalLevel?.length) {
+      setPendingByType({})
+      return
+    }
     api.get('/cases/pending-approvals-by-type')
       .then((res) => setPendingByType(res.data.byType ?? {}))
       .catch(() => {})
+  }, [canAccessCasesModule, isCityHealthOffice, location.pathname, user?.approvalLevel?.length])
+
+  useEffect(() => {
+    if (!canAccessPortalApplications || isCityHealthOffice) {
+      setPortalSubmittedCount(0)
+      return
+    }
     api.get('/applicant-applications?status=submitted&page=1&limit=1')
       .then((res) => setPortalSubmittedCount(res.data.total || 0))
       .catch(() => {})
-  }, [isCityHealthOffice, location.pathname, user?.approvalLevel?.length])
+  }, [canAccessPortalApplications, isCityHealthOffice, location.pathname])
 
   const handleLogout = () => {
     logout()

@@ -1,4 +1,5 @@
 import type { Request, Response } from 'express'
+import fs from 'node:fs/promises'
 import { prisma } from '../utils/prisma.js'
 import { HttpError } from '../utils/httpError.js'
 import { currencyFromDb } from '../utils/currency.js'
@@ -25,6 +26,13 @@ import {
   generateGuaranteeLetterPdfForCase,
   loadGuaranteeLetterCase,
 } from '../services/guaranteeLetterService.js'
+import { activeReportSignatureStage, arePriorReportSignatureStagesSigned, previousReportSignatureStage } from '../services/reportSignatureService.js'
+import { signedReportAbsolutePath } from '../services/storageService.js'
+
+const CASE_STUDY_PDF_CACHE_TTL_MS = 60 * 60 * 1000
+const MAX_CASE_STUDY_PDF_CACHE_ENTRIES = 64
+const caseStudyPdfBufferCache = new Map<string, { version: string; buffer: Buffer; expiresAt: number }>()
+const caseStudyPdfBufferInFlight = new Map<string, Promise<Buffer>>()
 
 function sendDocx(res: Response, buffer: Buffer, filename: string) {
   res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')
@@ -34,10 +42,94 @@ function sendDocx(res: Response, buffer: Buffer, filename: string) {
 }
 
 function sendPdf(res: Response, buffer: Buffer, filename: string) {
+  if (!buffer?.length) {
+    throw new HttpError(500, 'Generated PDF is empty.')
+  }
   res.setHeader('Content-Type', 'application/pdf')
   res.setHeader('Content-Disposition', `attachment; filename="${filename}"`)
   res.setHeader('Cache-Control', 'no-store')
   res.send(buffer)
+}
+
+function sendInlinePdf(res: Response, buffer: Buffer, filename: string) {
+  if (!buffer?.length) {
+    throw new HttpError(500, 'Generated PDF preview is empty.')
+  }
+  res.setHeader('Content-Type', 'application/pdf')
+  res.setHeader('Content-Disposition', `inline; filename="${filename}"`)
+  res.setHeader('Cache-Control', 'no-store')
+  res.send(buffer)
+}
+
+function extractSignedReportFilename(fileUrl: string | null | undefined) {
+  const match = String(fileUrl ?? '').match(/\/uploads\/signed-reports\/([^/?#]+)$/i)
+  return match?.[1] ? decodeURIComponent(match[1]) : null
+}
+
+function pruneCaseStudyPdfBufferCache() {
+  const now = Date.now()
+  for (const [caseId, entry] of caseStudyPdfBufferCache.entries()) {
+    if (entry.expiresAt <= now) {
+      caseStudyPdfBufferCache.delete(caseId)
+    }
+  }
+
+  while (caseStudyPdfBufferCache.size > MAX_CASE_STUDY_PDF_CACHE_ENTRIES) {
+    const oldestKey = caseStudyPdfBufferCache.keys().next().value
+    if (!oldestKey) break
+    caseStudyPdfBufferCache.delete(oldestKey)
+  }
+}
+
+function buildCaseStudyPdfCacheVersion(caseData: NonNullable<Awaited<ReturnType<typeof findCaseWithDetails>>>) {
+  const extendedCaseData = caseData as any
+  const reportSignatureState = (caseData.auditFlags as any)?.report_signature ?? null
+  return JSON.stringify({
+    layoutVersion: 16,
+    id: caseData.id,
+    status: caseData.status,
+    assistanceType: caseData.assistanceType,
+    updatedAt: caseData.updatedAt?.toISOString?.() ?? String(caseData.updatedAt ?? ''),
+    caseNumber: caseData.caseNumber ?? caseData.client.caseNumber ?? '',
+    dateOfAssessment: caseData.dateOfAssessment?.toISOString?.() ?? String(caseData.dateOfAssessment ?? ''),
+    socialWorkerName: caseData.socialWorkerName ?? '',
+    amount: currencyFromDb(caseData.amount),
+    client: caseData.client ?? null,
+    householdMembers: extendedCaseData.householdMembers ?? [],
+    burialDetails: caseData.burialDetails ?? null,
+    hospitalDetails: caseData.hospitalDetails ?? null,
+    medicalDetails: caseData.medicalDetails ?? null,
+    eyeglassDetails: caseData.eyeglassDetails ?? null,
+    plainDetails: extendedCaseData.plainDetails ?? null,
+    medicineDetails: extendedCaseData.medicineDetails ?? null,
+    medicines: caseData.medicines ?? [],
+    reportSignatureState,
+  })
+}
+
+function getCachedCaseStudyPdfBuffer(caseId: string, version: string): Buffer | null {
+  pruneCaseStudyPdfBufferCache()
+  const entry = caseStudyPdfBufferCache.get(caseId)
+  if (!entry) return null
+  if (entry.version !== version || entry.expiresAt <= Date.now()) {
+    caseStudyPdfBufferCache.delete(caseId)
+    return null
+  }
+
+  caseStudyPdfBufferCache.delete(caseId)
+  caseStudyPdfBufferCache.set(caseId, entry)
+  return entry.buffer
+}
+
+function setCachedCaseStudyPdfBuffer(caseId: string, version: string, buffer: Buffer) {
+  pruneCaseStudyPdfBufferCache()
+  caseStudyPdfBufferCache.delete(caseId)
+  caseStudyPdfBufferCache.set(caseId, {
+    version,
+    buffer,
+    expiresAt: Date.now() + CASE_STUDY_PDF_CACHE_TTL_MS,
+  })
+  pruneCaseStudyPdfBufferCache()
 }
 
 async function loadSerializedCase(caseId: string, user: Express.AuthUser | undefined, scope: string) {
@@ -49,8 +141,13 @@ async function loadSerializedCase(caseId: string, user: Express.AuthUser | undef
   return { caseData, serialized }
 }
 
-async function generateCaseStudyDocxBuffer(caseData: NonNullable<Awaited<ReturnType<typeof findCaseWithDetails>>>) {
-  const { serialized } = await buildRenderableCaseStudy(caseData)
+type RenderableCaseStudy = Awaited<ReturnType<typeof buildRenderableCaseStudy>>
+
+async function generateCaseStudyDocxBuffer(
+  caseData: NonNullable<Awaited<ReturnType<typeof findCaseWithDetails>>>,
+  renderableCaseStudy?: RenderableCaseStudy,
+) {
+  const { serialized } = renderableCaseStudy ?? await buildRenderableCaseStudy(caseData)
 
   if (caseData.assistanceType === 'burial') {
     return generateBurialCaseStudyDocx(serialized)
@@ -72,6 +169,67 @@ async function generateCaseStudyDocxBuffer(caseData: NonNullable<Awaited<ReturnT
   }
 
   throw new HttpError(400, 'Word document report is not available for this assistance type')
+}
+
+export async function generateCaseStudyPdfBuffer(caseData: NonNullable<Awaited<ReturnType<typeof findCaseWithDetails>>>) {
+  const renderableCaseStudy = await buildRenderableCaseStudy(caseData)
+
+  try {
+    const docxBuffer = await generateCaseStudyDocxBuffer(caseData, renderableCaseStudy)
+    const caseNumber = caseData.caseNumber ?? caseData.client.caseNumber
+    const convertedPdf = await convertDocxBufferToPdf(docxBuffer, buildConversionBasename(`${caseNumber}-case-study`))
+    if (convertedPdf?.length) return convertedPdf
+    if (convertedPdf && !convertedPdf.length) {
+      console.warn('[CaseStudy PDF Conversion] LibreOffice returned an empty PDF. Falling back to PDFKit output.')
+    }
+  } catch (error) {
+    console.warn('[CaseStudy PDF Conversion] DOCX-based conversion unavailable, using PDFKit fallback.', error)
+  }
+
+  const { serialized, assets } = renderableCaseStudy
+
+  return generateCaseReportPdf({
+    caseNumber: caseData.caseNumber ?? caseData.client.caseNumber,
+    assistanceType: caseData.assistanceType,
+    clientName: `${caseData.client.lastName}, ${caseData.client.firstName}`,
+    dateOfAssessment: caseData.dateOfAssessment?.toISOString().slice(0, 10) ?? null,
+    socialWorkerName: caseData.socialWorkerName,
+    presentingProblem: caseData.presentingProblem,
+    backgroundOfProblem: caseData.backgroundOfProblem,
+    assessment: caseData.assessment,
+    recommendation: caseData.recommendation,
+    remarks: caseData.remarks,
+    amount: currencyFromDb(caseData.amount),
+    verificationUrl: assets.verificationUrl,
+    verificationCode: assets.verificationCode,
+    qrCodeImage: assets.qrCodeImage,
+    renderableCase: serialized,
+  })
+}
+
+async function getOrGenerateCaseStudyPdfBuffer(caseData: NonNullable<Awaited<ReturnType<typeof findCaseWithDetails>>>) {
+  const caseId = String(caseData.id)
+  const version = buildCaseStudyPdfCacheVersion(caseData)
+  const cached = getCachedCaseStudyPdfBuffer(caseId, version)
+  if (cached) return cached
+
+  const inFlightKey = `${caseId}:${version}`
+  const existingTask = caseStudyPdfBufferInFlight.get(inFlightKey)
+  if (existingTask) {
+    return existingTask
+  }
+
+  const task = generateCaseStudyPdfBuffer(caseData)
+    .then((buffer) => {
+      setCachedCaseStudyPdfBuffer(caseId, version, buffer)
+      return buffer
+    })
+    .finally(() => {
+      caseStudyPdfBufferInFlight.delete(inFlightKey)
+    })
+
+  caseStudyPdfBufferInFlight.set(inFlightKey, task)
+  return task
 }
 
 export async function caseStudyDocx(req: Request, res: Response) {
@@ -105,38 +263,73 @@ export async function caseStudyPdf(req: Request, res: Response) {
   const detailedCaseData = await findCaseWithDetails(caseId)
   if (!detailedCaseData) throw new HttpError(404, 'Case not found')
   assertReportAccess(detailedCaseData, req.user, 'case study report')
+  const buffer = await getOrGenerateCaseStudyPdfBuffer(detailedCaseData)
+  sendPdf(res, buffer, `${detailedCaseData.caseNumber ?? detailedCaseData.client.caseNumber}-case-study.pdf`)
+}
 
-  try {
-    const docxBuffer = await generateCaseStudyDocxBuffer(detailedCaseData)
-    const caseNumber = detailedCaseData.caseNumber ?? detailedCaseData.client.caseNumber
-    const convertedPdf = await convertDocxBufferToPdf(docxBuffer, buildConversionBasename(`${caseNumber}-case-study`))
-    if (convertedPdf) {
-      return sendPdf(res, convertedPdf, `${caseNumber}-case-study.pdf`)
+export async function caseStudyPreviewPdf(req: Request, res: Response) {
+  const caseId = paramId(req.params.id)
+  const caseData = await findCaseWithDetails(caseId)
+  if (!caseData) throw new HttpError(404, 'Case not found')
+  assertReportAccess(caseData, req.user, 'case study preview pdf')
+
+  const reportSignatureState = (caseData.auditFlags as any)?.report_signature
+  const latestSignedFileUrl =
+    reportSignatureState?.stages?.for_approval?.status === 'signed' ? reportSignatureState?.stages?.for_approval?.signedFileUrl
+    : reportSignatureState?.stages?.recommending_approval?.status === 'signed' ? reportSignatureState?.stages?.recommending_approval?.signedFileUrl
+    : reportSignatureState?.stages?.for_review?.status === 'signed' ? reportSignatureState?.stages?.for_review?.signedFileUrl
+    : reportSignatureState?.stages?.prepared_by?.status === 'signed' ? reportSignatureState?.stages?.prepared_by?.signedFileUrl
+    : null
+
+  const generatedDraftRequested = String(req.query.source ?? '').toLowerCase() === 'generated'
+
+  if (latestSignedFileUrl && !generatedDraftRequested) {
+    const filename = extractSignedReportFilename(latestSignedFileUrl)
+    if (filename) {
+      const buffer = await fs.readFile(signedReportAbsolutePath(filename))
+      if (buffer.length > 0) {
+        return sendInlinePdf(res, buffer, `${caseData.caseNumber ?? caseData.client.caseNumber}-case-study-preview.pdf`)
+      }
+      console.warn('[CaseStudy Preview PDF] Latest signed PDF was empty. Falling back to generated PDF preview.', {
+        caseId,
+        filename,
+      })
     }
-  } catch (error) {
-    console.warn('[CaseStudy PDF Conversion] DOCX-based conversion unavailable, using PDFKit fallback.', error)
   }
 
-  const caseData = detailedCaseData
-  const verificationAssets = await buildCaseStudyVerificationAssets(caseData)
+  const buffer = await getOrGenerateCaseStudyPdfBuffer(caseData)
+  sendInlinePdf(res, buffer, `${caseData.caseNumber ?? caseData.client.caseNumber}-case-study-preview.pdf`)
+}
 
-  const buffer = await generateCaseReportPdf({
-    caseNumber: caseData.caseNumber ?? caseData.client.caseNumber,
-    assistanceType: caseData.assistanceType,
-    clientName: `${caseData.client.lastName}, ${caseData.client.firstName}`,
-    dateOfAssessment: caseData.dateOfAssessment?.toISOString().slice(0, 10) ?? null,
-    socialWorkerName: caseData.socialWorkerName,
-    presentingProblem: caseData.presentingProblem,
-    backgroundOfProblem: caseData.backgroundOfProblem,
-    assessment: caseData.assessment,
-    recommendation: caseData.recommendation,
-    remarks: caseData.remarks,
-    amount: currencyFromDb(caseData.amount),
-    verificationUrl: verificationAssets.verificationUrl,
-    verificationCode: verificationAssets.verificationCode,
-    qrCodeImage: verificationAssets.qrCodeImage,
-  })
+export async function currentCaseStudySigningPdf(req: Request, res: Response) {
+  const caseId = paramId(req.params.id)
+  const caseData = await findCaseWithDetails(caseId)
+  if (!caseData) throw new HttpError(404, 'Case not found')
+  assertReportAccess(caseData, req.user, 'current case study signing pdf')
 
+  const activeStage = activeReportSignatureStage(caseData.status)
+  if (!activeStage) throw new HttpError(400, 'No active signing stage for this case.')
+  if (!arePriorReportSignatureStagesSigned(caseData.auditFlags, activeStage)) {
+    throw new HttpError(400, 'The latest signed case study PDF is not available yet for this signer.')
+  }
+
+  if (activeStage === 'prepared_by') {
+    const buffer = await getOrGenerateCaseStudyPdfBuffer(caseData)
+    return sendPdf(res, buffer, `${caseData.caseNumber ?? caseData.client.caseNumber}-case-study.pdf`)
+  }
+
+  const previousStage = previousReportSignatureStage(activeStage)
+  const reportSignatureState = (caseData.auditFlags as any)?.report_signature
+  const previousStageFileUrl = previousStage ? reportSignatureState?.stages?.[previousStage]?.signedFileUrl : null
+  const filename = extractSignedReportFilename(previousStageFileUrl)
+  if (!filename) {
+    throw new HttpError(404, 'The latest signed case study PDF is not available yet.')
+  }
+
+  const buffer = await fs.readFile(signedReportAbsolutePath(filename))
+  if (!buffer.length) {
+    throw new HttpError(500, 'The latest signed case study PDF is empty.')
+  }
   sendPdf(res, buffer, `${caseData.caseNumber ?? caseData.client.caseNumber}-case-study.pdf`)
 }
 

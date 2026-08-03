@@ -17,26 +17,51 @@ export function getStoredAuthHeader() {
 }
 
 export function resolveProtectedFileUrl(fileUrl) {
-  if (/^https?:\/\//i.test(fileUrl)) return fileUrl
+  const rawValue = String(fileUrl || '')
+  let normalizedPath = rawValue.replace(/^\/?api\/uploads\//i, '/uploads/')
 
-  const normalizedPath = String(fileUrl).replace(/^\/?api\/uploads\//i, '/uploads/')
-  const apiBase = String(api.defaults.baseURL || window.location.origin)
-  const originBase = apiBase.replace(/\/api\/?$/, '/')
+  if (/^https?:\/\//i.test(rawValue)) {
+    try {
+      const parsed = new URL(rawValue)
+      const uploadsMatch = parsed.pathname.match(/\/uploads\/.*$/i)
+      if (uploadsMatch?.[0]) {
+        normalizedPath = uploadsMatch[0]
+      } else {
+        return rawValue
+      }
+    } catch {
+      return rawValue
+    }
+  }
+
+  const apiBase = String(api.defaults.baseURL || '')
+  let absoluteApiBase
+  try {
+    absoluteApiBase = new URL(apiBase || '/api', window.location.origin).toString()
+  } catch {
+    absoluteApiBase = new URL('/api', window.location.origin).toString()
+  }
+
+  const originBase = absoluteApiBase.replace(/\/api\/?$/i, '/')
   return new URL(normalizedPath, originBase).toString()
+}
+
+export async function fetchProtectedFileBlob(fileUrl) {
+  const url = resolveProtectedFileUrl(fileUrl)
+  const authHeader = getStoredAuthHeader()
+  const res = await axios.get(url, {
+    responseType: 'blob',
+    headers: authHeader ? { Authorization: authHeader } : undefined,
+  })
+  return res.data instanceof Blob
+    ? res.data
+    : new Blob([res.data], { type: 'application/octet-stream' })
 }
 
 export async function openProtectedFile(fileUrl, filename = 'document') {
   const previewWindow = window.open('', '_blank')
-  const url = resolveProtectedFileUrl(fileUrl)
-  const authHeader = getStoredAuthHeader()
   try {
-    const res = await axios.get(url, {
-      responseType: 'blob',
-      headers: authHeader ? { Authorization: authHeader } : undefined,
-    })
-    const sourceBlob = res.data instanceof Blob
-      ? res.data
-      : new Blob([res.data], { type: 'application/octet-stream' })
+    const sourceBlob = await fetchProtectedFileBlob(fileUrl)
     const objectUrl = URL.createObjectURL(sourceBlob)
 
     if (previewWindow) {

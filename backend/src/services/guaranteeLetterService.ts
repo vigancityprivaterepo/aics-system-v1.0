@@ -8,6 +8,11 @@ import {
   generateHospitalGuaranteeLetterDocx,
   generateMedicalGuaranteeLetterDocx,
 } from './docxService.js'
+import {
+  resolveAssistancePurpose,
+  resolveServiceProviderAddress,
+  resolveServiceProviderName,
+} from './documentCaseContextService.js'
 import { generateGuaranteeLetterPdf } from './pdfService.js'
 import {
   buildGuaranteeLetterQrCodeBuffer,
@@ -17,6 +22,7 @@ import {
   verifyGuaranteeLetterToken,
 } from './documentVerification.js'
 import { buildConversionBasename, convertDocxBufferToPdf } from './officeConversionService.js'
+import { resolveActiveSignatureUsers } from './caseStudyVerificationService.js'
 
 function fullNameOfClient(client: { firstName: string; middleName?: string | null; lastName: string }) {
   return [client.firstName, client.middleName, client.lastName].filter(Boolean).join(' ')
@@ -41,6 +47,9 @@ function titleCaseLabel(input: string) {
 function buildLetterBody(caseData: Awaited<ReturnType<typeof findCaseWithDetails>> extends infer T ? NonNullable<T> : never) {
   const clientName = fullNameOfClient(caseData.client)
   const amount = currencyFromDb(caseData.amount)
+  const assistancePurpose = resolveAssistancePurpose(caseData)
+  const serviceProviderName = resolveServiceProviderName(caseData)
+  const serviceProviderAddress = resolveServiceProviderAddress(caseData)
   const base = {
     caseNumber: caseData.caseNumber ?? caseData.client.caseNumber,
     assistanceType: titleCaseLabel(caseData.assistanceType),
@@ -56,8 +65,8 @@ function buildLetterBody(caseData: Awaited<ReturnType<typeof findCaseWithDetails
       beneficiaryName: caseData.burialDetails?.deceasedName ?? clientName,
       proxyName: clientName,
       proxyRelationship: caseData.burialDetails?.conformeRelationship ?? null,
-      recipientName: caseData.burialDetails?.funeralHome ?? null,
-      recipientAddress: caseData.burialDetails?.funeralOwnerAddress ?? null,
+      recipientName: serviceProviderName,
+      recipientAddress: serviceProviderAddress,
       lineItems: [
         { label: 'Type of Bill', value: caseData.burialDetails?.typeOfBill ?? null },
         { label: 'Cause of Death', value: caseData.burialDetails?.causeOfDeath ?? null },
@@ -71,8 +80,8 @@ function buildLetterBody(caseData: Awaited<ReturnType<typeof findCaseWithDetails
       beneficiaryName: caseData.hospitalDetails?.patientName ?? clientName,
       proxyName: caseData.hospitalDetails?.conformeName ?? clientName,
       proxyRelationship: caseData.hospitalDetails?.conformeRelationship ?? 'Self',
-      recipientName: caseData.hospitalDetails?.hospitalName ?? caseData.hospitalClinic ?? null,
-      recipientAddress: caseData.hospitalDetails?.hospitalAddress ?? null,
+      recipientName: serviceProviderName,
+      recipientAddress: serviceProviderAddress,
       diagnosis: caseData.hospitalDetails?.diagnosis ?? null,
       lineItems: [
         { label: 'Admission Date', value: formatDateOrNull(caseData.hospitalDetails?.admissionDate) },
@@ -88,13 +97,13 @@ function buildLetterBody(caseData: Awaited<ReturnType<typeof findCaseWithDetails
       beneficiaryName: clientName,
       proxyName: caseData.medicalDetails?.conformeName ?? clientName,
       proxyRelationship: caseData.medicalDetails?.conformeRelationship ?? 'Self',
-      recipientName: caseData.medicalDetails?.clinicName ?? caseData.hospitalClinic ?? null,
-      recipientAddress: caseData.medicalDetails?.clinicAddress ?? null,
+      recipientName: serviceProviderName,
+      recipientAddress: serviceProviderAddress,
       diagnosis: caseData.medicalDetails?.diagnosis ?? null,
-      medicalType: caseData.medicalDetails?.medicalType ?? null,
+      medicalType: assistancePurpose,
       lineItems: [
         { label: 'Consultation Date', value: formatDateOrNull(caseData.medicalDetails?.consultationDate) },
-        { label: 'Operation Type', value: caseData.medicalDetails?.operationType ?? null },
+        { label: 'Medical Procedure / Examination', value: assistancePurpose },
         { label: 'Attending Physician', value: caseData.medicalDetails?.doctorName ?? null },
       ],
     }
@@ -166,9 +175,11 @@ export async function generateGuaranteeLetterDocxForCaseWithAssets(
   assets: Awaited<ReturnType<typeof buildGuaranteeLetterAssets>>,
 ) {
   const settings = await getApprovalSettings()
-  const serialized = serializeCase(caseData, await resolveApprovalAssignees(settings))
+  const [assignees, signatureUsers] = await Promise.all([resolveApprovalAssignees(settings), resolveActiveSignatureUsers()])
+  const serialized = serializeCase(caseData, assignees)
   const renderable = {
     ...serialized,
+    signatureUsers,
     documentQrCode: assets.qrCodeDataUrl,
     documentVerificationUrl: assets.verificationUrl,
     documentVerificationCode: assets.verificationCode,

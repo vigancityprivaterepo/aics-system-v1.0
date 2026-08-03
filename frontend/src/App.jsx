@@ -24,10 +24,11 @@ import PortalApplicationsPage from './pages/PortalApplications/PortalApplication
 import DocumentVerifierPage from './pages/Documents/DocumentVerifierPage'
 import VehicleRequestsPage from './pages/VehicleRequests/VehicleRequestsPage'
 import { useAuthStore } from './store/authStore'
+import { firstAccessiblePath } from './utils/moduleAccess'
 
 function HomeRedirect() {
   const user = useAuthStore((state) => state.user)
-  return <Navigate to={user?.role === 'city_health_office' ? '/vehicle-requests' : '/dashboard'} replace />
+  return <Navigate to={firstAccessiblePath(user)} replace />
 }
 
 function PlaceholderPage({ title }) {
@@ -49,21 +50,33 @@ function AppRoutes() {
         <Route element={<AppLayout />}>
           <Route index element={<HomeRedirect />} />
 
-          <Route element={<ProtectedRoute roles={['admin', 'employee']} redirectTo="/cases?type=medical" />}>
+          <Route element={<ProtectedRoute moduleKey="dashboard" redirectTo="/" />}>
             <Route path="/dashboard" element={<Dashboard />} />
+          </Route>
+
+          <Route element={<ProtectedRoute moduleKey="clients" redirectTo="/" />}>
             <Route path="/clients" element={<ClientList />} />
             <Route path="/clients/new" element={<ClientForm />} />
             <Route path="/clients/:id" element={<ClientProfile />} />
-            <Route path="/reports" element={<ReportsPage />} />
-            <Route path="/portal-applications" element={<PortalApplicationsPage />} />
-            <Route path="/documents/verify" element={<DocumentVerifierPage />} />
-
-            <Route element={<ProtectedRoute roles={['admin']} redirectTo="/dashboard" />}>
-              <Route path="/settings" element={<SettingsPage />} />
-            </Route>
           </Route>
 
-          <Route element={<ProtectedRoute roles={['admin', 'employee']} redirectTo="/vehicle-requests" />}>
+          <Route element={<ProtectedRoute moduleKey="reports" redirectTo="/" />}>
+            <Route path="/reports" element={<ReportsPage />} />
+          </Route>
+
+          <Route element={<ProtectedRoute moduleKey="portal_applications" redirectTo="/" />}>
+            <Route path="/portal-applications" element={<PortalApplicationsPage />} />
+          </Route>
+
+          <Route element={<ProtectedRoute moduleKey="documents_verify" redirectTo="/" />}>
+            <Route path="/documents/verify" element={<DocumentVerifierPage />} />
+          </Route>
+
+          <Route element={<ProtectedRoute roles={['admin']} moduleKey="settings" redirectTo="/" />}>
+            <Route path="/settings" element={<SettingsPage />} />
+          </Route>
+
+          <Route element={<ProtectedRoute moduleKey="cases" redirectTo="/" />}>
             <Route path="/cases" element={<CaseList />} />
             <Route path="/cases/new" element={<NewCase />} />
             <Route path="/cases/:id" element={<CaseDetailLayout />}>
@@ -76,16 +89,19 @@ function AppRoutes() {
             </Route>
           </Route>
 
-          <Route element={<ProtectedRoute roles={['admin', 'employee', 'city_health_office']} redirectTo="/vehicle-requests" />}>
+          <Route element={<ProtectedRoute moduleKey="medicines" redirectTo="/" />}>
             <Route path="/medicines" element={<MedicineDatabase />} />
           </Route>
 
-          <Route element={<ProtectedRoute roles={['admin', 'employee', 'city_health_office']} redirectTo="/vehicle-requests" />}>
+          <Route element={<ProtectedRoute moduleKey="vehicle_requests" redirectTo="/" />}>
             <Route path="/vehicle-requests" element={<VehicleRequestsPage />} />
           </Route>
 
-          <Route element={<ProtectedRoute roles={['admin', 'employee']} redirectTo="/medicines" />}>
+          <Route element={<ProtectedRoute moduleKey="hospitals" redirectTo="/" />}>
             <Route path="/hospitals" element={<HospitalDatabase />} />
+          </Route>
+
+          <Route element={<ProtectedRoute moduleKey="funeral_homes" redirectTo="/" />}>
             <Route path="/funeral-homes" element={<FuneralHomeDatabase />} />
           </Route>
         </Route>

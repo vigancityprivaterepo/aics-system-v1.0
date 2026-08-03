@@ -1,6 +1,6 @@
 import RichTextEditor from './RichTextEditor'
 
-export default function NarrativePresetField({ label, value, onChange, options = [], readOnly = false, placeholder = '', minHeightClass }) {
+export default function NarrativePresetField({ label, value, onChange, options = [], readOnly = false, placeholder = '', minHeightClass, fieldName }) {
   const choosePreset = (event) => {
     const option = options.find((item) => item.id === event.target.value)
     if (option) onChange(option.content)
@@ -8,7 +8,7 @@ export default function NarrativePresetField({ label, value, onChange, options =
   }
 
   return (
-    <div>
+    <div data-field-name={fieldName}>
       <div className="mb-1 flex items-center justify-between gap-3">
         <label className="portal-label">{label}</label>
         {!readOnly && options.length > 0 && (
@@ -18,7 +18,7 @@ export default function NarrativePresetField({ label, value, onChange, options =
           </select>
         )}
       </div>
-      <RichTextEditor value={value} onChange={onChange} readOnly={readOnly} minHeightClass={minHeightClass} placeholder={placeholder} />
+      <RichTextEditor value={value} onChange={onChange} readOnly={readOnly} minHeightClass={minHeightClass} placeholder={placeholder} fieldName={fieldName} />
     </div>
   )
 }

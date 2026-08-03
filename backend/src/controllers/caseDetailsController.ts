@@ -8,13 +8,53 @@ import { signedGlPublicUrl } from '../services/storageService.js'
 import { updateBurialSchema, updateHospitalSchema, updateMedicalSchema, updateEyeglassSchema, updatePlainSchema } from '../schemas/caseSchemas.js'
 import { removeStoredUpload, validateStoredUpload } from '../services/uploadValidation.js'
 import { resetApprovalsAfterMaterialEdit, valuesDiffer } from '../services/workflowIntegrityService.js'
+import { getApprovalSettings } from '../queries/caseQueries.js'
+import { resolveApprovalAssignees } from '../services/approvalService.js'
+import { userCanUploadReportSignatureStage } from '../services/reportSignatureService.js'
 
 const HOSPITAL_MEDICAL_GL_MAX_AMOUNT = 30000
+const PLAIN_ASSISTANCE_KIND_VALUES = ['medical', 'hospital', 'burial'] as const
 
 function addChangedField(changedFields: string[], label: string, currentValue: unknown, nextValue: unknown) {
   if (valuesDiffer(currentValue ?? null, nextValue ?? null)) {
     changedFields.push(label)
   }
+}
+
+function normalizePlainAssistanceKinds(value: unknown): string[] {
+  if (!Array.isArray(value)) return []
+  const allowed = new Set<string>(PLAIN_ASSISTANCE_KIND_VALUES)
+  return [...new Set(
+    value
+      .filter((item): item is string => typeof item === 'string')
+      .map((item) => item.trim().toLowerCase())
+      .filter((item) => allowed.has(item))
+  )]
+}
+
+function shouldResetSignedGl(changedFields: string[]) {
+  return changedFields.length > 0
+}
+
+async function assertApproverSignedGlUploadAllowed(
+  caseData: { status: string; socialWorkerId: string | null; auditFlags?: unknown },
+  user: Express.AuthUser | undefined,
+) {
+  if (caseData.status === 'released' || caseData.status === 'rejected') {
+    throw new HttpError(400, `Signed guarantee letter cannot be uploaded when case is ${caseData.status}.`)
+  }
+
+  const settings = await getApprovalSettings()
+  const assigneesByStage = await resolveApprovalAssignees(settings)
+  const approverStage = {
+    key: 'for_approval' as const,
+    assignedUserId: assigneesByStage.for_approval?.id ?? null,
+  }
+
+  if (!userCanUploadReportSignatureStage(user, approverStage, caseData)) {
+    throw new HttpError(403, 'Only the assigned approver can upload the mayor-signed guarantee letter.')
+  }
+
 }
 
 // ── Burial ──────────────────────────────────────────────────────────────────
@@ -121,6 +161,7 @@ export async function updateBurial(req: Request, res: Response) {
         conformeName: body.conformeName,
         conformeRelationship: body.conformeRelationship,
         guaranteeLetterUrl,
+        ...(shouldResetSignedGl(changedFields) ? { signedGlUrl: null, glUploadedAt: null } : {}),
       },
       create: {
         caseId: caseData.id,
@@ -188,9 +229,7 @@ export async function uploadBurialGl(req: Request, res: Response) {
     if (!caseData) throw new HttpError(404, 'Case not found')
     assertCaseReadable(caseData, req.user, 'Signed guarantee letter upload')
     if (caseData.assistanceType !== 'burial') throw new HttpError(400, 'Only burial cases can upload signed GL')
-    if (caseData.status === 'released' || caseData.status === 'rejected') {
-      throw new HttpError(400, `Signed guarantee letter cannot be uploaded when case is ${caseData.status}.`)
-    }
+    await assertApproverSignedGlUploadAllowed(caseData, req.user)
 
     const signedGlUrl = signedGlPublicUrl(file.filename)
     const burial = await prisma.burialDetail.upsert({
@@ -281,6 +320,7 @@ export async function updateHospital(req: Request, res: Response) {
         admissionDate: body.admissionDate ? new Date(body.admissionDate) : body.admissionDate === null ? null : undefined,
         diagnosis: body.diagnosis, typeOfBill: body.typeOfBill, conformeName: body.conformeName,
         conformeRelationship: body.conformeRelationship, guaranteeLetterUrl,
+        ...(shouldResetSignedGl(changedFields) ? { signedGlUrl: null, glUploadedAt: null } : {}),
       },
       create: {
         caseId: caseData.id, templateType: body.templateType ?? 'personal',
@@ -326,9 +366,7 @@ export async function uploadHospitalGl(req: Request, res: Response) {
     if (!caseData) throw new HttpError(404, 'Case not found')
     assertCaseReadable(caseData, req.user, 'Signed guarantee letter upload')
     if (caseData.assistanceType !== 'hospital') throw new HttpError(400, 'Only hospital cases can upload signed GL')
-    if (caseData.status === 'released' || caseData.status === 'rejected') {
-      throw new HttpError(400, `Signed guarantee letter cannot be uploaded when case is ${caseData.status}.`)
-    }
+    await assertApproverSignedGlUploadAllowed(caseData, req.user)
 
     const signedGlUrl = signedGlPublicUrl(file.filename)
     const hospital = await prisma.hospitalDetail.upsert({
@@ -390,6 +428,7 @@ export async function updateMedical(req: Request, res: Response) {
         medicalType: body.medicalType, diagnosedType: body.diagnosedType, operationType: body.operationType,
         diagnosis: body.diagnosis, typeOfBill: body.typeOfBill, conformeName: body.conformeName,
         conformeRelationship: body.conformeRelationship, guaranteeLetterUrl,
+        ...(shouldResetSignedGl(medicalChangedFields) ? { signedGlUrl: null, glUploadedAt: null } : {}),
       },
       create: {
         caseId: caseData.id, templateType: body.templateType ?? 'personal',
@@ -437,9 +476,7 @@ export async function uploadMedicalGl(req: Request, res: Response) {
     if (!caseData) throw new HttpError(404, 'Case not found')
     assertCaseReadable(caseData, req.user, 'Signed guarantee letter upload')
     if (caseData.assistanceType !== 'medical') throw new HttpError(400, 'Only medical cases can upload signed GL')
-    if (caseData.status === 'released' || caseData.status === 'rejected') {
-      throw new HttpError(400, `Signed guarantee letter cannot be uploaded when case is ${caseData.status}.`)
-    }
+    await assertApproverSignedGlUploadAllowed(caseData, req.user)
 
     const signedGlUrl = signedGlPublicUrl(file.filename)
     const medical = await prisma.medicalDetail.upsert({
@@ -511,8 +548,22 @@ export async function updatePlain(req: Request, res: Response) {
   assertEditableCase(caseData, req.user, 'Plain details')
   if (caseData.assistanceType !== 'plain') throw new HttpError(400, 'Only plain cases can store plain details')
 
+  const currentAuditFlags =
+    typeof caseData.auditFlags === 'object' && caseData.auditFlags && !Array.isArray(caseData.auditFlags)
+      ? { ...(caseData.auditFlags as Record<string, unknown>) }
+      : {}
+  const currentAssistanceKinds = normalizePlainAssistanceKinds(currentAuditFlags.plain_assistance_kinds)
+  const nextAssistanceKinds = normalizePlainAssistanceKinds(body.assistanceKinds)
+  const currentConformeName = typeof currentAuditFlags.plain_conforme_name === 'string' ? currentAuditFlags.plain_conforme_name : null
+  const currentConformeRelationship = typeof currentAuditFlags.plain_conforme_relationship === 'string' ? currentAuditFlags.plain_conforme_relationship : null
+  const nextConformeName = typeof body.conformeName === 'string' && body.conformeName.trim() ? body.conformeName.trim() : null
+  const nextConformeRelationship = typeof body.conformeRelationship === 'string' && body.conformeRelationship.trim() ? body.conformeRelationship.trim() : null
+
   const plainChangedFields: string[] = []
   addChangedField(plainChangedFields, 'natureOfAssistance', caseData.plainDetails?.natureOfAssistance ?? null, body.natureOfAssistance ?? null)
+  addChangedField(plainChangedFields, 'conformeName', currentConformeName, nextConformeName)
+  addChangedField(plainChangedFields, 'conformeRelationship', currentConformeRelationship, nextConformeRelationship)
+  addChangedField(plainChangedFields, 'assistanceKinds', currentAssistanceKinds, nextAssistanceKinds)
   if (body.amount !== undefined) {
     addChangedField(plainChangedFields, 'amount', currencyFromDb(caseData.amount), body.amount)
   }
@@ -522,8 +573,27 @@ export async function updatePlain(req: Request, res: Response) {
       create: { caseId: caseData.id, natureOfAssistance: body.natureOfAssistance },
       update: { natureOfAssistance: body.natureOfAssistance },
     })
+    const nextAuditFlags = { ...currentAuditFlags }
+    if (nextAssistanceKinds.length > 0) nextAuditFlags.plain_assistance_kinds = nextAssistanceKinds
+    else delete nextAuditFlags.plain_assistance_kinds
+    if (nextConformeName) nextAuditFlags.plain_conforme_name = nextConformeName
+    else delete nextAuditFlags.plain_conforme_name
+    if (nextConformeRelationship) nextAuditFlags.plain_conforme_relationship = nextConformeRelationship
+    else delete nextAuditFlags.plain_conforme_relationship
+
+    const caseUpdateData: Record<string, unknown> = {}
     if (body.amount !== undefined) {
-      await tx.case.update({ where: { id: caseData.id }, data: { amount: body.amount } })
+      caseUpdateData.amount = body.amount
+    }
+    if (
+      valuesDiffer(currentAssistanceKinds, nextAssistanceKinds)
+      || valuesDiffer(currentConformeName, nextConformeName)
+      || valuesDiffer(currentConformeRelationship, nextConformeRelationship)
+    ) {
+      caseUpdateData.auditFlags = nextAuditFlags as any
+    }
+    if (Object.keys(caseUpdateData).length > 0) {
+      await tx.case.update({ where: { id: caseData.id }, data: caseUpdateData as any })
     }
     const resetResult = await resetApprovalsAfterMaterialEdit(tx, {
       caseId: caseData.id,
@@ -534,4 +604,3 @@ export async function updatePlain(req: Request, res: Response) {
   })
   res.json({ ok: true, amount: body.amount, status: plainResult.resetResult.status ?? caseData.status, approvalsReset: plainResult.resetResult.approvalsReset })
 }
-

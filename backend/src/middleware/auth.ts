@@ -4,6 +4,8 @@ import type { UserRole } from '@prisma/client'
 import { env } from '../config/env.js'
 import { HttpError } from '../utils/httpError.js'
 import { prisma } from '../utils/prisma.js'
+import type { StaffModuleKey } from '../services/moduleAccessService.js'
+import { getAccessibleModulesForUser, getModuleAccessConfig } from '../services/moduleAccessService.js'
 
 interface JwtPayload {
   sub: string
@@ -13,6 +15,7 @@ interface JwtPayload {
   role: UserRole
   approvalLevel?: string[]
   position?: string | null
+  department?: string | null
 }
 
 const VALID_ROLES: UserRole[] = ['admin', 'employee', 'city_health_office']
@@ -56,6 +59,8 @@ export function requireAuth(req: Request, _res: Response, next: NextFunction) {
         role: true,
         approvalLevel: true,
         position: true,
+        department: true,
+        moduleAccessOverrides: true,
         isActive: true,
       },
     })
@@ -63,6 +68,13 @@ export function requireAuth(req: Request, _res: Response, next: NextFunction) {
     if (!dbUser || !dbUser.isActive) {
       throw new HttpError(401, 'Account is inactive or no longer available')
     }
+
+    const moduleAccessConfig = await getModuleAccessConfig()
+    const accessibleModules = getAccessibleModulesForUser({
+      role: String(dbUser.role),
+      department: dbUser.department,
+      moduleAccessOverrides: dbUser.moduleAccessOverrides,
+    }, moduleAccessConfig)
 
     req.user = {
       id: dbUser.id,
@@ -72,6 +84,8 @@ export function requireAuth(req: Request, _res: Response, next: NextFunction) {
       role: validateRole(String(dbUser.role)),
       approvalLevel: parseApprovalLevels(dbUser.approvalLevel),
       position: dbUser.position,
+      department: dbUser.department,
+      accessibleModules,
     }
     next()
   })().catch(next)
@@ -82,5 +96,16 @@ export function requireRole(roles: UserRole[]) {
     if (!req.user) return next(new HttpError(401, 'Unauthorized'))
     if (!roles.includes(req.user.role)) return next(new HttpError(403, 'Forbidden'))
     return next()
+  }
+}
+
+export function requireModuleAccess(moduleKeys: StaffModuleKey | StaffModuleKey[]) {
+  const required = Array.isArray(moduleKeys) ? moduleKeys : [moduleKeys]
+
+  return (req: Request, _res: Response, next: NextFunction) => {
+    if (!req.user) return next(new HttpError(401, 'Unauthorized'))
+    if (req.user.role === 'admin') return next()
+    if (required.some((key) => req.user?.accessibleModules?.includes(key))) return next()
+    return next(new HttpError(403, 'This module is not available for your account.'))
   }
 }

@@ -1,6 +1,7 @@
 import type { ApprovalStage } from '@prisma/client'
 import { APPROVAL_STAGE_ORDER, APPROVAL_STAGE_META, type ApprovalAssigneeByStage } from '../types/caseTypes.js'
 import { approvalActorTitle } from '../services/approvalService.js'
+import { buildCaseStudyReportSignature } from '../services/reportSignatureService.js'
 import { assessCaseWorkflow } from '../services/caseWorkflowService.js'
 import { currencyFromDb } from '../utils/currency.js'
 
@@ -27,6 +28,17 @@ function normalizeWorkflowStatus(status: string): string {
   return status === 'requirements' ? 'encoding' : status
 }
 
+function normalizePlainAssistanceKinds(value: unknown): string[] {
+  const allowed = new Set(['medical', 'hospital', 'burial'])
+  if (!Array.isArray(value)) return []
+  return [...new Set(
+    value
+      .filter((item): item is string => typeof item === 'string')
+      .map((item) => item.trim().toLowerCase())
+      .filter((item) => allowed.has(item))
+  )]
+}
+
 function mapRequirements(rows: Array<{ requirementName: string; isSubmitted: boolean }>, type: string): Record<string, boolean> {
   const map: Record<string, boolean> = {}
   for (const row of rows) {
@@ -45,6 +57,9 @@ export function serializeCase(caseRow: any, assigneesByStage?: ApprovalAssigneeB
 
   const medicineTemplateType = auditFlags.medicine_template_type === 'proxy' ? 'proxy' : 'personal'
   const eyeglassTemplateType = auditFlags.eyeglass_template_type === 'proxy' ? 'proxy' : 'personal'
+  const plainAssistanceKinds = normalizePlainAssistanceKinds(auditFlags.plain_assistance_kinds)
+  const plainConformeName = typeof auditFlags.plain_conforme_name === 'string' ? auditFlags.plain_conforme_name : null
+  const plainConformeRelationship = typeof auditFlags.plain_conforme_relationship === 'string' ? auditFlags.plain_conforme_relationship : null
   const medicineConformeName = typeof auditFlags.medicine_conforme_name === 'string' ? auditFlags.medicine_conforme_name : null
   const medicineConformeRelationship =
     typeof auditFlags.medicine_conforme_relationship === 'string' ? auditFlags.medicine_conforme_relationship : null
@@ -190,6 +205,15 @@ export function serializeCase(caseRow: any, assigneesByStage?: ApprovalAssigneeB
       unit: m.unit,
       unitPrice: Number(m.unitPrice),
       totalPrice: Number(m.totalPrice),
+      medicine: m.medicine
+        ? {
+            isAvailable: m.medicine.isAvailable ?? true,
+            updatedAt: m.medicine.updatedAt ?? null,
+            availabilityUpdatedAt: m.medicine.availabilityUpdatedAt ?? null,
+            availableUpdatedAt: m.medicine.availableUpdatedAt ?? null,
+            unavailableUpdatedAt: m.medicine.unavailableUpdatedAt ?? null,
+          }
+        : null,
     })),
     burialDetails: caseRow.burialDetails
       ? {
@@ -212,11 +236,6 @@ export function serializeCase(caseRow: any, assigneesByStage?: ApprovalAssigneeB
           guaranteeLetterUrl: caseRow.burialDetails.guaranteeLetterUrl,
           signedGlUrl: caseRow.burialDetails.signedGlUrl,
           glUploadedAt: caseRow.burialDetails.glUploadedAt,
-          openSignDocumentId: caseRow.burialDetails.openSignDocumentId ?? null,
-          openSignStatus: caseRow.burialDetails.openSignStatus ?? null,
-          openSignSignUrl: caseRow.burialDetails.openSignSignUrl ?? null,
-          openSignSentAt: caseRow.burialDetails.openSignSentAt ?? null,
-          openSignSignedAt: caseRow.burialDetails.openSignSignedAt ?? null,
         }
       : null,
     hospitalDetails: caseRow.hospitalDetails
@@ -236,11 +255,6 @@ export function serializeCase(caseRow: any, assigneesByStage?: ApprovalAssigneeB
           guaranteeLetterUrl: caseRow.hospitalDetails.guaranteeLetterUrl ?? null,
           signedGlUrl: caseRow.hospitalDetails.signedGlUrl ?? null,
           glUploadedAt: caseRow.hospitalDetails.glUploadedAt ?? null,
-          openSignDocumentId: caseRow.hospitalDetails.openSignDocumentId ?? null,
-          openSignStatus: caseRow.hospitalDetails.openSignStatus ?? null,
-          openSignSignUrl: caseRow.hospitalDetails.openSignSignUrl ?? null,
-          openSignSentAt: caseRow.hospitalDetails.openSignSentAt ?? null,
-          openSignSignedAt: caseRow.hospitalDetails.openSignSignedAt ?? null,
         }
       : null,
     medicalDetails: caseRow.medicalDetails
@@ -262,11 +276,6 @@ export function serializeCase(caseRow: any, assigneesByStage?: ApprovalAssigneeB
           guaranteeLetterUrl: caseRow.medicalDetails.guaranteeLetterUrl ?? null,
           signedGlUrl: caseRow.medicalDetails.signedGlUrl ?? null,
           glUploadedAt: caseRow.medicalDetails.glUploadedAt ?? null,
-          openSignDocumentId: caseRow.medicalDetails.openSignDocumentId ?? null,
-          openSignStatus: caseRow.medicalDetails.openSignStatus ?? null,
-          openSignSignUrl: caseRow.medicalDetails.openSignSignUrl ?? null,
-          openSignSentAt: caseRow.medicalDetails.openSignSentAt ?? null,
-          openSignSignedAt: caseRow.medicalDetails.openSignSignedAt ?? null,
         }
       : null,
     eyeglassDetails: caseRow.eyeglassDetails
@@ -281,15 +290,15 @@ export function serializeCase(caseRow: any, assigneesByStage?: ApprovalAssigneeB
           guaranteeLetterUrl: caseRow.eyeglassDetails.guaranteeLetterUrl ?? null,
           signedGlUrl: caseRow.eyeglassDetails.signedGlUrl ?? null,
           glUploadedAt: caseRow.eyeglassDetails.glUploadedAt ?? null,
-          openSignDocumentId: caseRow.eyeglassDetails.openSignDocumentId ?? null,
-          openSignStatus: caseRow.eyeglassDetails.openSignStatus ?? null,
-          openSignSignUrl: caseRow.eyeglassDetails.openSignSignUrl ?? null,
-          openSignSentAt: caseRow.eyeglassDetails.openSignSentAt ?? null,
-          openSignSignedAt: caseRow.eyeglassDetails.openSignSignedAt ?? null,
         }
       : null,
     plainDetails: caseRow.plainDetails
-      ? { natureOfAssistance: caseRow.plainDetails.natureOfAssistance ?? null }
+      ? {
+          natureOfAssistance: caseRow.plainDetails.natureOfAssistance ?? null,
+          conformeName: plainConformeName,
+          conformeRelationship: plainConformeRelationship,
+          assistanceKinds: plainAssistanceKinds,
+        }
       : null,
     medicineDetails: {
       templateType: medicineTemplateType,
@@ -310,6 +319,7 @@ export function serializeCase(caseRow: any, assigneesByStage?: ApprovalAssigneeB
       for_approval: approvedStage,
     },
     approvalSignatureFallbacks,
+    reportSignature: buildCaseStudyReportSignature(caseRow, stageAssignees),
     reviewedByName: reviewedStage?.actedByName ?? reviewedAssignee?.name ?? null,
     reviewedByTitle: reviewedStage?.actedByTitle ?? reviewedAssignee?.position ?? approvalActorTitle('for_review'),
     reviewedByDate: reviewedStage?.actedAt ?? null,
@@ -331,4 +341,3 @@ export function serializeCase(caseRow: any, assigneesByStage?: ApprovalAssigneeB
 export type SerializedCase = ReturnType<typeof serializeCase>
 
 export { portalContextFromAuditFlags, normalizeWorkflowStatus, mapRequirements, APPROVAL_STAGE_META, APPROVAL_STAGE_ORDER }
-

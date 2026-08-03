@@ -1,8 +1,15 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
 import api from '../../../lib/api'
 import { CrossIcon } from '../../../components/ui/Icons'
+import FuneralHomePicker from '../../../components/FuneralHomePicker'
+import PresetSelectField from '../../../components/PresetSelectField'
+import {
+  BURIAL_BILL_TYPE_OPTIONS,
+  RELATIONSHIP_OPTIONS,
+} from '../../../constants/caseFormOptions'
+import { scrollToFirstError } from '../../../lib/formNavigation'
 import { formatCurrency } from '../../../lib/utils'
 
 const GL_MAX = 10000
@@ -13,35 +20,10 @@ const INTERMENT_PRESETS = [
   'Ayusan Catholic Cemetery',
   'Loyola Cemetery',
 ]
-const FUNERAL_HOME_PRESETS = [
-  {
-    owner: 'MR. LAWRENCE BAQUIRAN',
-    title: 'Owner',
-    funeralHome: 'La Funeraria Lawrence Baquiran',
-    address: 'Vigan City, Ilocos Sur',
-  },
-  {
-    owner: 'MR. ALFREDO QUITORIANO',
-    title: 'Owner/Manager',
-    funeralHome: 'Holy Angel Gabriel Funeral Homes',
-    address: 'Vigan City, Ilocos Sur',
-  },
-  {
-    owner: 'MR. OSCAR L. PINEDA',
-    title: 'Owner/Manager',
-    funeralHome: 'Pineda Funeral Services',
-    address: 'Bulag Centro, Bantay Ilocos Sur',
-  },
-  {
-    owner: 'MR. JONAS GUY DE LEON',
-    title: 'Owner',
-    funeralHome: 'Funeraria Singson',
-    address: 'Vigan City, Ilocos Sur',
-  },
-]
 
-export default function StepBurialDetails({ caseData, onUpdate }) {
+export default function StepBurialDetails({ caseData, onUpdate, onNext }) {
   const [saving, setSaving] = useState(false)
+  const submitModeRef = useRef('save')
   const { register, handleSubmit, watch, setValue } = useForm({
     defaultValues: {
       deceasedName: caseData.burialDetails?.deceasedName || '',
@@ -64,8 +46,22 @@ export default function StepBurialDetails({ caseData, onUpdate }) {
   )
 
   const amount = watch('amount')
+  const funeralHomeValue = watch('funeralHome')
+  const typeOfBill = watch('typeOfBill')
+  const conformeRelationship = watch('conformeRelationship')
   const parsedAmount = Number(amount)
   const isOverCap = Number.isFinite(parsedAmount) && parsedAmount > GL_MAX
+
+  const handleFuneralHomeSelect = (home) => {
+    setValue('funeralHome', home.name || '', { shouldDirty: true, shouldTouch: true })
+    setValue('funeralHomeOwner', home.ownerName || '', { shouldDirty: true, shouldTouch: true })
+    setValue('funeralOwnerAddress', home.address || '', { shouldDirty: true, shouldTouch: true })
+  }
+
+  const handleInvalid = (validationErrors) => {
+    scrollToFirstError(validationErrors)
+    toast.error('Please complete the required fields first.')
+  }
 
   const onSave = async (data) => {
     setSaving(true)
@@ -80,6 +76,9 @@ export default function StepBurialDetails({ caseData, onUpdate }) {
         status: res.data?.status ?? caseData.status,
       })
       toast.success(res.data?.approvalsReset ? 'Burial details saved. Case returned to encoding for re-review.' : 'Burial details saved')
+      if (submitModeRef.current === 'next') {
+        onNext?.()
+      }
     } catch (err) {
       if (err.response) {
         toast.error(err.response?.data?.message || 'Failed to save burial details')
@@ -105,7 +104,7 @@ export default function StepBurialDetails({ caseData, onUpdate }) {
         Burial Details &amp; Guarantee Letter
       </div>
 
-      <form onSubmit={handleSubmit(onSave)} className="space-y-4">
+      <form onSubmit={handleSubmit(onSave, handleInvalid)} className="space-y-4">
         <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm">
           <p className="font-semibold text-slate-800">Beneficiary: {caseData.beneficiaryName || caseData.burialDetails?.deceasedName || 'No deceased name recorded'}</p>
           <p className="mt-1 text-slate-500">
@@ -141,28 +140,12 @@ export default function StepBurialDetails({ caseData, onUpdate }) {
 
           <div>
             <label className="portal-label">Funeral Home / Service Provider</label>
-            <input type="text" {...register('funeralHome')} className="portal-input" placeholder="Funeral home name" />
-          </div>
-          <div>
-            <label className="portal-label">Funeral Home Preset</label>
-            <select
-              className="portal-input"
-              defaultValue=""
-              onChange={(e) => {
-                const selected = FUNERAL_HOME_PRESETS.find((item) => item.funeralHome === e.target.value)
-                if (!selected) return
-                setValue('funeralHome', selected.funeralHome, { shouldDirty: true, shouldTouch: true })
-                setValue('funeralHomeOwner', selected.owner, { shouldDirty: true, shouldTouch: true })
-                setValue('funeralOwnerAddress', selected.address, { shouldDirty: true, shouldTouch: true })
-              }}
-            >
-              <option value="">Select preset (optional)</option>
-              {FUNERAL_HOME_PRESETS.map((item) => (
-                <option key={item.funeralHome} value={item.funeralHome}>
-                  {item.owner} - {item.funeralHome}
-                </option>
-              ))}
-            </select>
+            <FuneralHomePicker
+              value={funeralHomeValue}
+              onChange={(value) => setValue('funeralHome', value, { shouldDirty: true, shouldTouch: true })}
+              onSelect={handleFuneralHomeSelect}
+              placeholder="Search funeral home or service provider..."
+            />
           </div>
           <div>
             <label className="portal-label">Funeral Home Owner</label>
@@ -183,7 +166,14 @@ export default function StepBurialDetails({ caseData, onUpdate }) {
           </div>
           <div className="sm:col-span-2">
             <label className="portal-label">Type of Bill</label>
-            <input type="text" {...register('typeOfBill')} className="portal-input" placeholder="e.g. funeral bill, embalming fee" />
+            <input type="hidden" {...register('typeOfBill')} />
+            <PresetSelectField
+              value={typeOfBill}
+              onChange={(value) => setValue('typeOfBill', value, { shouldDirty: true, shouldTouch: true })}
+              options={BURIAL_BILL_TYPE_OPTIONS}
+              placeholder="Select bill type"
+              otherPlaceholder="Specify bill type"
+            />
           </div>
 
           {/* Sub-section: Interment & Representative */}
@@ -222,7 +212,14 @@ export default function StepBurialDetails({ caseData, onUpdate }) {
           </div>
           <div>
             <label className="portal-label">Relationship to Deceased</label>
-            <input type="text" {...register('conformeRelationship')} className="portal-input" placeholder="e.g. Daughter, Son, Spouse" />
+            <input type="hidden" {...register('conformeRelationship')} />
+            <PresetSelectField
+              value={conformeRelationship}
+              onChange={(value) => setValue('conformeRelationship', value, { shouldDirty: true, shouldTouch: true })}
+              options={RELATIONSHIP_OPTIONS}
+              placeholder="Select relationship"
+              otherPlaceholder="Specify relationship"
+            />
           </div>
 
           {/* Sub-section: Financial Assistance */}
@@ -233,7 +230,7 @@ export default function StepBurialDetails({ caseData, onUpdate }) {
 
           <div>
             <label className="portal-label">Guarantee Letter Amount (PHP)</label>
-            <input type="number" min="0" step="any" {...register('amount')} className="portal-input" placeholder="0.00" />
+            <input type="number" min="0" step="any" {...register('amount', { required: 'Amount is required' })} className="portal-input" placeholder="0.00" />
             {isOverCap && (
               <p className="mt-1 text-xs text-amber-600">
                 Warning: Amount exceeds the maximum cap of {formatCurrency(GL_MAX)} per DSWD MC.
@@ -243,8 +240,11 @@ export default function StepBurialDetails({ caseData, onUpdate }) {
         </div>
 
         <div className="flex flex-wrap gap-3">
-          <button type="submit" disabled={saving} className="portal-button-primary" id="btn-save-burial">
+          <button type="submit" onClick={() => { submitModeRef.current = 'save' }} disabled={saving} className="portal-button-secondary" id="btn-save-burial">
             {saving ? 'Saving...' : 'Save Burial Details'}
+          </button>
+          <button type="submit" onClick={() => { submitModeRef.current = 'next' }} disabled={saving} className="portal-button-primary" id="btn-save-next-burial">
+            {saving ? 'Saving...' : 'Save and Next'}
           </button>
         </div>
       </form>

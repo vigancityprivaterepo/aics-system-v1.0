@@ -61,6 +61,11 @@ export default function CaseDetailLayout() {
   const [caseData, setCaseData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState(false)
+  const permissions = caseData?.permissions ?? {}
+  const canEdit = !!permissions.canEdit
+  const canManageWorkflow = !!permissions.canManageWorkflow
+  const readOnlyAccess = !!caseData && !canEdit
+  const tabs = canEdit ? BASE_TABS : BASE_TABS.filter((tab) => tab.key === 'reports')
 
   useEffect(() => {
     let cancelled = false
@@ -93,8 +98,19 @@ export default function CaseDetailLayout() {
     }
   }, [id, location.pathname, navigate])
 
+  useEffect(() => {
+    if (!caseData) return
+
+    const allowedTabKeys = new Set(tabs.map((tab) => tab.key))
+    const currentTabKey = BASE_TABS.find((tab) => location.pathname.includes(`/cases/${id}/${tab.key}`))?.key
+
+    if (!currentTabKey) return
+    if (allowedTabKeys.has(currentTabKey)) return
+
+    navigate(`/cases/${id}/reports`, { replace: true })
+  }, [caseData, id, location.pathname, navigate, tabs])
+
   const workingSteps = ['intake', 'encoding']
-  const tabs = BASE_TABS
 
   const transitionStatus = async (nextStatus, notes) => {
     if (!caseData) return
@@ -151,8 +167,12 @@ export default function CaseDetailLayout() {
     setCaseData((prev) => ({ ...prev, ...updates }))
   }
 
+  const goToTab = (tabKey) => {
+    navigate(`/cases/${id}/${tabKey}`)
+  }
+
   const canClickStepperStep = (stepKey) => {
-    if (!caseData || actionLoading) return false
+    if (!caseData || actionLoading || !canManageWorkflow) return false
     const currentIndex = workingSteps.indexOf(caseData.status)
     const targetIndex = workingSteps.indexOf(stepKey)
     if (currentIndex < 0 || targetIndex < 0) return false
@@ -190,8 +210,7 @@ export default function CaseDetailLayout() {
   }
 
   if (!caseData) return null
-
-  const activeTabKey = tabs.find((t) => location.pathname.includes(`/cases/${id}/${t.key}`))?.key ?? 'profile'
+  const activeTabKey = tabs.find((t) => location.pathname.includes(`/cases/${id}/${t.key}`))?.key ?? tabs[0]?.key ?? 'reports'
 
   return (
     <div className="animate-fade-in">
@@ -218,6 +237,11 @@ export default function CaseDetailLayout() {
               {TYPE_LABELS[caseData.assistanceType] || caseData.assistanceType}
             </span>
             <span className="text-xs text-slate-400">SW: {caseData.socialWorkerName}</span>
+            {readOnlyAccess ? (
+              <span className="inline-flex items-center rounded border border-amber-300 bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-700">
+                Read-only access
+              </span>
+            ) : null}
           </div>
         </div>
       </div>
@@ -283,14 +307,16 @@ export default function CaseDetailLayout() {
         )}
       </div>
 
-      <CaseActionBar
-        caseData={caseData}
-        actionLoading={actionLoading}
-        onTransition={transitionStatus}
-        onReject={handleReject}
-        onSubmitForReview={handleSubmitForReview}
-        onApprovalStage={handleApprovalStage}
-      />
+      {canManageWorkflow ? (
+        <CaseActionBar
+          caseData={caseData}
+          actionLoading={actionLoading}
+          onTransition={transitionStatus}
+          onReject={handleReject}
+          onSubmitForReview={handleSubmitForReview}
+          onApprovalStage={handleApprovalStage}
+        />
+      ) : null}
 
       <div className="mb-4 overflow-x-auto">
         <div className="flex min-w-max gap-1 rounded-xl border border-slate-200 bg-slate-100 p-1">
@@ -310,7 +336,7 @@ export default function CaseDetailLayout() {
         </div>
       </div>
 
-      <Outlet context={{ caseData, onUpdate: handleUpdateCase, actionLoading }} />
+      <Outlet context={{ caseData, onUpdate: handleUpdateCase, actionLoading, readOnlyAccess, goToTab }} />
     </div>
   )
 }

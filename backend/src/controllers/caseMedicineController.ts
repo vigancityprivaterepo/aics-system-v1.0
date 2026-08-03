@@ -7,23 +7,51 @@ import { saveMedicinesSchema } from '../schemas/caseSchemas.js'
 import { resetApprovalsAfterMaterialEdit, valuesDiffer } from '../services/workflowIntegrityService.js'
 import { currencyFromDb, parseOptionalCurrency, roundCurrency } from '../utils/currency.js'
 
+function serializeCaseMedicineRow(m: any) {
+  return {
+    id: m.id,
+    medicineId: m.medicineId,
+    medicineName: m.medicineName,
+    quantity: Number(m.quantity),
+    unit: m.unit,
+    unitPrice: Number(m.unitPrice),
+    totalPrice: Number(m.totalPrice),
+    isAvailable: m.medicine?.isAvailable ?? true,
+    medicine: m.medicine
+      ? {
+          isAvailable: m.medicine.isAvailable ?? true,
+          updatedAt: m.medicine.updatedAt ?? null,
+          availabilityUpdatedAt: m.medicine.availabilityUpdatedAt ?? null,
+          availableUpdatedAt: m.medicine.availableUpdatedAt ?? null,
+          unavailableUpdatedAt: m.medicine.unavailableUpdatedAt ?? null,
+        }
+      : null,
+  }
+}
+
 export async function getMedicines(req: Request, res: Response) {
   const caseId = paramId(req.params.id)
   const caseData = await prisma.case.findUnique({ where: { id: caseId } })
   if (!caseData) throw new HttpError(404, 'Case not found')
   assertCaseReadable(caseData, req.user, 'Medicine details')
 
-  const rows = await prisma.caseMedicine.findMany({ where: { caseId }, orderBy: { createdAt: 'asc' } })
+  const rows = await prisma.caseMedicine.findMany({
+    where: { caseId },
+    orderBy: { createdAt: 'asc' },
+    include: {
+      medicine: {
+        select: {
+          isAvailable: true,
+          updatedAt: true,
+          availabilityUpdatedAt: true,
+          availableUpdatedAt: true,
+          unavailableUpdatedAt: true,
+        },
+      },
+    },
+  })
   res.json({
-    medicines: rows.map((m) => ({
-      id: m.id,
-      medicineId: m.medicineId,
-      medicineName: m.medicineName,
-      quantity: Number(m.quantity),
-      unit: m.unit,
-      unitPrice: Number(m.unitPrice),
-      totalPrice: Number(m.totalPrice),
-    })),
+    medicines: rows.map(serializeCaseMedicineRow),
   })
 }
 
@@ -91,8 +119,24 @@ export async function saveMedicines(req: Request, res: Response) {
     })
   })
 
+  const savedRows = await prisma.caseMedicine.findMany({
+    where: { caseId: caseData.id },
+    orderBy: { createdAt: 'asc' },
+    include: {
+      medicine: {
+        select: {
+          isAvailable: true,
+          updatedAt: true,
+          availabilityUpdatedAt: true,
+          availableUpdatedAt: true,
+          unavailableUpdatedAt: true,
+        },
+      },
+    },
+  })
+
   res.status(201).json({
-    medicines: normalized,
+    medicines: savedRows.map(serializeCaseMedicineRow),
     totalAmount: finalTotalAmount,
     status: resetResult.status ?? caseData.status,
     approvalsReset: resetResult.approvalsReset,

@@ -53,6 +53,8 @@ const hospitalSchema = z.object({
   facilityName: z.string().min(1),
   facilityType: z.string().min(1),
   fullAddress:  z.string().optional().nullable(),
+  doctorName:   z.string().max(200).optional().nullable(),
+  doctorTitle:  z.string().max(200).optional().nullable(),
 })
 
 // POST /hospitals/bulk-import
@@ -82,14 +84,24 @@ router.post('/bulk-import', canManageHospitals, csvUpload.single('file'), asyncH
     return -1
   }
 
-  // CSV columns: Province | City / Municipality | Facility Name | Facility Type | Full Address
+  // CSV columns: Province | City / Municipality | Facility Name | Facility Type | Full Address | Doctor Name | Doctor Title
   const iProvince     = col(['province'])                       >= 0 ? col(['province'])                       : 0
   const iMunicipality = col(['city', 'municipality', 'citymun']) >= 0 ? col(['city', 'municipality', 'citymun']) : 1
   const iFacilityName = col(['facilityname', 'facility'])       >= 0 ? col(['facilityname', 'facility'])       : 2
   const iFacilityType = col(['facilitytype', 'type'])           >= 0 ? col(['facilitytype', 'type'])           : 3
   const iFullAddress  = col(['fulladdress', 'address'])         >= 0 ? col(['fulladdress', 'address'])         : 4
+  const iDoctorName   = col(['doctorname', 'physicianname', 'attendingphysician'])
+  const iDoctorTitle  = col(['doctortitle', 'doctorposition', 'physiciantitle', 'position', 'title'])
 
-  type FacilityRow = { province: string; municipality: string; facilityName: string; facilityType: string; fullAddress: string | null }
+  type FacilityRow = {
+    province: string
+    municipality: string
+    facilityName: string
+    facilityType: string
+    fullAddress: string | null
+    doctorName: string | null
+    doctorTitle: string | null
+  }
   const toInsert: FacilityRow[] = []
   let skipped = 0
 
@@ -102,19 +114,29 @@ router.post('/bulk-import', canManageHospitals, csvUpload.single('file'), asyncH
     const municipality = (r[iMunicipality]?.trim() || '').slice(0, 100)
     const facilityType = (r[iFacilityType]?.trim() || '').slice(0, 100)
     const fullAddress  = (r[iFullAddress]?.trim()  || null)
+    const doctorName   = iDoctorName >= 0 ? (r[iDoctorName]?.trim() || null) : null
+    const doctorTitle  = iDoctorTitle >= 0 ? (r[iDoctorTitle]?.trim() || null) : null
 
-    toInsert.push({ province, municipality, facilityName: facilityName.slice(0, 300), facilityType, fullAddress })
+    toInsert.push({
+      province,
+      municipality,
+      facilityName: facilityName.slice(0, 300),
+      facilityType,
+      fullAddress,
+      doctorName: doctorName?.slice(0, 200) ?? null,
+      doctorTitle: doctorTitle?.slice(0, 200) ?? null,
+    })
   }
 
   if (toInsert.length === 0) throw new HttpError(400, 'No valid hospital rows found in CSV')
 
-  const makeKey = (r: FacilityRow) =>
+  const makeKey = (r: Pick<FacilityRow, 'facilityName' | 'municipality' | 'province'>) =>
     `${r.facilityName.toLowerCase()}|${r.municipality.toLowerCase()}|${r.province.toLowerCase()}`
 
   const existing = await prisma.hospitalFacility.findMany({
     select: { facilityName: true, municipality: true, province: true },
   })
-  const existingKeys = new Set(existing.map(h => makeKey({ ...h, facilityType: '', fullAddress: null })))
+  const existingKeys = new Set(existing.map(makeKey))
 
   const newRows = toInsert.filter(r => !existingKeys.has(makeKey(r)))
   const duplicates = toInsert.length - newRows.length
@@ -154,6 +176,8 @@ router.get('/', asyncHandler(async (req, res) => {
           { facilityName: { contains: search, mode: 'insensitive' as const } },
           { municipality: { contains: search, mode: 'insensitive' as const } },
           { fullAddress:  { contains: search, mode: 'insensitive' as const } },
+          { doctorName:   { contains: search, mode: 'insensitive' as const } },
+          { doctorTitle:  { contains: search, mode: 'insensitive' as const } },
         ],
       }
       : {}),
@@ -181,6 +205,8 @@ router.get('/', asyncHandler(async (req, res) => {
       facilityName: h.facilityName,
       facilityType: h.facilityType,
       fullAddress:  h.fullAddress,
+      doctorName:   h.doctorName,
+      doctorTitle:  h.doctorTitle,
       createdAt:    h.createdAt,
     })),
   })

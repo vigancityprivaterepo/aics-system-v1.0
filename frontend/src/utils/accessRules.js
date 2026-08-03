@@ -1,37 +1,28 @@
-const APPROVAL_CASE_ACCESS_LEVELS = new Set(['reviewer', 'recommender', 'approver'])
-const FULL_CASE_ACCESS_POSITIONS = new Set([
-  'Administrative Aide I',
-  'Administrative Aide II',
-  'Administrative Aide III',
-  'Administrative Aide IV',
-  'Administrative Aide V',
-  'Administrative Assistant I',
-  'Administrative Assistant II',
-  'Administrative Assistant III',
-  'Administrative Assistant IV',
-  'Administrative Assistant V',
-  'Administrative Officer I',
-  'Administrative Officer II',
-  'Administrative Officer III',
-  'Administrative Officer IV',
-])
+import { canAccessModule } from './moduleAccess'
 
-export const LIMITED_CASE_TYPES = ['medical', 'hospital']
+export const LIMITED_CASE_TYPES = ['medical', 'hospital', 'plain']
+
+function normalizeDepartment(value) {
+  return String(value ?? '').trim().toLowerCase()
+}
 
 export function canAccessAllCases(user) {
-  if (!user) return false
-  if (user.role === 'admin') return true
-  if (user.role !== 'employee') return false
-  if (FULL_CASE_ACCESS_POSITIONS.has(String(user.position ?? '').trim())) return true
-  return Array.isArray(user.approvalLevel) && user.approvalLevel.some((level) => APPROVAL_CASE_ACCESS_LEVELS.has(level))
+  if (!canAccessModule(user, 'cases')) return false
+  if (user?.role === 'admin') return true
+  if (Array.isArray(user?.approvalLevel) && user.approvalLevel.some((level) => ['reviewer', 'recommender', 'approver'].includes(level))) {
+    return true
+  }
+  return normalizeDepartment(user?.department) !== 'cswdo'
 }
 
 export function canAccessCases(user) {
-  return canAccessAllCases(user) || user?.role === 'employee'
+  return canAccessModule(user, 'cases')
 }
 
 export function allowedCaseTypesForUser(user, allCaseTypes) {
   if (canAccessAllCases(user)) return allCaseTypes
-  if (user?.role === 'employee') return LIMITED_CASE_TYPES
+  if (canAccessCases(user) && normalizeDepartment(user?.department) === 'cswdo') {
+    return allCaseTypes.filter((type) => LIMITED_CASE_TYPES.includes(type))
+  }
   return []
 }

@@ -2,18 +2,19 @@ import { useState, useEffect, useRef } from 'react'
 import { DownloadIcon, FileTextIcon, ChevronDownIcon } from '../../../components/ui/Icons'
 import api from '../../../lib/api'
 import toast from 'react-hot-toast'
-import BurialCaseStudyPreview from './BurialCaseStudyPreview'
-import HospitalCaseStudyPreview from './HospitalCaseStudyPreview'
-import MedicineCaseStudyPreview from './MedicineCaseStudyPreview'
-import MedicalCaseStudyPreview from './MedicalCaseStudyPreview'
-import EyeglassCaseStudyPreview from './EyeglassCaseStudyPreview'
-import PlainCaseStudyPreview from './PlainCaseStudyPreview'
+import CaseStudyPdfPreview from './CaseStudyPdfPreview'
 import GuaranteeLetterPanel from '../../../components/GuaranteeLetterPanel'
 
-export default function StepReports({ caseData }) {
+export default function StepReports({ caseData, onUpdate }) {
   const [open, setOpen] = useState(false)
   const [downloading, setDownloading] = useState(false)
   const dropdownRef = useRef(null)
+
+  const refreshCaseData = async () => {
+    if (!onUpdate) return
+    const { data } = await api.get(`/cases/${caseData.id}`)
+    onUpdate(data)
+  }
 
   useEffect(() => {
     if (!open) return
@@ -42,6 +43,7 @@ export default function StepReports({ caseData }) {
       const PDF_MIME = 'application/pdf'
       const configMap = {
         docx:                  { endpoint: `/cases/${caseData.id}/report/docx`,                mime: DOCX_MIME, label: 'case-study',      ext: 'docx' },
+        pdf:                   { endpoint: `/cases/${caseData.id}/report/pdf`,                 mime: PDF_MIME,  label: 'case-study',      ext: 'pdf' },
         'gl-pdf':              { endpoint: `/cases/${caseData.id}/guarantee-letter/pdf`,       mime: PDF_MIME,  label: 'guarantee-letter', ext: 'pdf' },
         'gl-docx':             { endpoint: `/cases/${caseData.id}/report/gl-docx`,             mime: DOCX_MIME, label: 'guarantee-letter', ext: 'docx' },
         'endorsement-docx':    { endpoint: `/cases/${caseData.id}/report/endorsement-docx`,    mime: DOCX_MIME, label: 'endorsement',      ext: 'docx' },
@@ -100,20 +102,46 @@ export default function StepReports({ caseData }) {
           {open && (
             <div className="absolute left-0 mt-1 w-72 rounded-xl border border-slate-200 bg-white shadow-lg z-10 overflow-hidden">
               {isPlain ? (
-                <button
-                  onClick={() => { handleDownload('docx'); setOpen(false) }}
-                  className="w-full flex items-start gap-3 px-4 py-3 text-left text-sm hover:bg-slate-50 transition-colors"
-                >
-                  <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700">
-                    <DownloadIcon className="h-3.5 w-3.5" />
-                  </div>
-                  <div>
-                    <p className="font-semibold text-slate-800">Plain AICS Case Study</p>
-                    <p className="text-xs text-slate-400">Social case study report (.docx)</p>
-                  </div>
-                </button>
+                <>
+                  <button
+                    onClick={() => { handleDownload('pdf'); setOpen(false) }}
+                    className="w-full flex items-start gap-3 px-4 py-3 text-left text-sm hover:bg-slate-50 transition-colors border-b border-slate-100"
+                  >
+                    <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-sky-100 text-sky-700">
+                      <DownloadIcon className="h-3.5 w-3.5" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-slate-800">Plain AICS Case Study PDF</p>
+                      <p className="text-xs text-slate-400">Ready-to-sign case study report (.pdf)</p>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => { handleDownload('docx'); setOpen(false) }}
+                    className="w-full flex items-start gap-3 px-4 py-3 text-left text-sm hover:bg-slate-50 transition-colors"
+                  >
+                    <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700">
+                      <DownloadIcon className="h-3.5 w-3.5" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-slate-800">Plain AICS Case Study</p>
+                      <p className="text-xs text-slate-400">Social case study report (.docx)</p>
+                    </div>
+                  </button>
+                </>
               ) : isEyeglass ? (
                 <>
+                  <button
+                    onClick={() => { handleDownload('pdf'); setOpen(false) }}
+                    className="w-full flex items-start gap-3 px-4 py-3 text-left text-sm hover:bg-slate-50 transition-colors border-b border-slate-100"
+                  >
+                    <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-sky-100 text-sky-700">
+                      <DownloadIcon className="h-3.5 w-3.5" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-slate-800">Eyeglass Case Study PDF</p>
+                      <p className="text-xs text-slate-400">Ready-to-sign case study report (.pdf)</p>
+                    </div>
+                  </button>
                   <button
                     onClick={() => { handleDownload('docx'); setOpen(false) }}
                     className="w-full flex items-start gap-3 px-4 py-3 text-left text-sm hover:bg-slate-50 transition-colors border-b border-slate-100"
@@ -156,6 +184,20 @@ export default function StepReports({ caseData }) {
                 </>
               ) : (
                 <>
+                  <button
+                    onClick={() => { handleDownload('pdf'); setOpen(false) }}
+                    className={`w-full flex items-start gap-3 px-4 py-3 text-left text-sm hover:bg-slate-50 transition-colors ${hasGuaranteeLetter ? 'border-b border-slate-100' : ''}`}
+                  >
+                    <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-sky-100 text-sky-700">
+                      <DownloadIcon className="h-3.5 w-3.5" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-slate-800">
+                        {isBurial ? 'Burial Case Study PDF' : isHospital ? 'Hospital Case Study PDF' : isMedical ? 'Medical Case Study PDF' : isMedicine ? 'Medicine Case Study PDF' : 'Case Study PDF'}
+                      </p>
+                      <p className="text-xs text-slate-400">Ready-to-sign PDF case study report (.pdf)</p>
+                    </div>
+                  </button>
                   <button
                     onClick={() => { handleDownload('docx'); setOpen(false) }}
                     className={`w-full flex items-start gap-3 px-4 py-3 text-left text-sm hover:bg-slate-50 transition-colors ${hasGuaranteeLetter ? 'border-b border-slate-100' : ''}`}
@@ -244,43 +286,42 @@ export default function StepReports({ caseData }) {
 
       {isBurial && (
         <div className="mt-6">
-          <BurialCaseStudyPreview caseData={caseData} />
-          <GuaranteeLetterPanel caseData={caseData} />
+          <CaseStudyPdfPreview caseData={caseData} title="Burial Case Study PDF Preview" />
+          <GuaranteeLetterPanel caseData={caseData} onUploaded={refreshCaseData} />
         </div>
       )}
 
       {isHospital && (
         <div className="mt-6">
-          <HospitalCaseStudyPreview caseData={caseData} />
-          <GuaranteeLetterPanel caseData={caseData} />
+          <CaseStudyPdfPreview caseData={caseData} title="Hospital Case Study PDF Preview" />
+          <GuaranteeLetterPanel caseData={caseData} onUploaded={refreshCaseData} />
         </div>
       )}
 
       {isMedicine && (
         <div className="mt-6">
-          <MedicineCaseStudyPreview caseData={caseData} />
+          <CaseStudyPdfPreview caseData={caseData} title="Medicine Case Study PDF Preview" />
         </div>
       )}
 
       {isMedical && (
         <div className="mt-6">
-          <MedicalCaseStudyPreview caseData={caseData} />
-          <GuaranteeLetterPanel caseData={caseData} />
+          <CaseStudyPdfPreview caseData={caseData} title="Medical Case Study PDF Preview" />
+          <GuaranteeLetterPanel caseData={caseData} onUploaded={refreshCaseData} />
         </div>
       )}
 
       {isEyeglass && (
         <div className="mt-6">
-          <EyeglassCaseStudyPreview caseData={caseData} />
+          <CaseStudyPdfPreview caseData={caseData} title="Eyeglass Case Study PDF Preview" />
         </div>
       )}
 
       {isPlain && (
         <div className="mt-6">
-          <PlainCaseStudyPreview caseData={caseData} />
+          <CaseStudyPdfPreview caseData={caseData} title="Plain AICS Case Study PDF Preview" />
         </div>
       )}
     </div>
   )
 }
-

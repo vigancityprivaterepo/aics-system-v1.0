@@ -52,17 +52,19 @@ export default function NewCase() {
         clientId: selectedClient.id,
         assistanceType,
       })
+      let movedToEncoding = false
 
       try {
         await api.patch(`/cases/${res.data.id}/status`, {
           status: 'encoding',
           notes: 'Client selected, proceed to case study encoding',
         })
-      } catch {
-        // Best-effort transition; still proceed to case detail.
+        movedToEncoding = true
+      } catch (statusErr) {
+        toast.error(statusErr.response?.data?.message || 'Case created, but automatic move to encoding failed.')
       }
 
-      toast.success('Case saved. Proceed to case study encoding.')
+      toast.success(movedToEncoding ? 'Case saved. Proceed to case study encoding.' : 'Case created. Review the status before continuing.')
       navigate(`/cases/${res.data.id}`)
     } catch (err) {
       const issueMessage = err.response?.data?.issues?.[0]?.message

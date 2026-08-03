@@ -75,6 +75,11 @@ export default function HospitalFacilityPicker({ value, onChange, onSelect, plac
               <p className="text-sm font-semibold text-slate-800">{f.facilityName}</p>
               <p className="text-xs text-slate-400">{[f.municipality, f.province].filter(Boolean).join(', ')} · <span className="text-slate-500">{f.facilityType}</span></p>
               {f.fullAddress && <p className="text-xs text-slate-400 truncate">{f.fullAddress}</p>}
+              {(f.doctorName || f.doctorTitle) && (
+                <p className="mt-1 text-xs text-slate-500">
+                  {[f.doctorName, f.doctorTitle].filter(Boolean).join(' - ')}
+                </p>
+              )}
             </li>
           ))}
         </ul>

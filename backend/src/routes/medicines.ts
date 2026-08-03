@@ -65,6 +65,18 @@ const medicineSchema = z.object({
   isAvailable: z.boolean().optional().default(true),
 })
 
+function buildAvailabilityTimestamps(isAvailable: boolean, occurredAt = new Date()) {
+  return isAvailable
+    ? {
+        availabilityUpdatedAt: occurredAt,
+        availableUpdatedAt: occurredAt,
+      }
+    : {
+        availabilityUpdatedAt: occurredAt,
+        unavailableUpdatedAt: occurredAt,
+      }
+}
+
 router.post('/bulk-import', adminOnly, csvUpload.single('file'), asyncHandler(async (req, res) => {
   if (!req.file) throw new HttpError(400, 'No file uploaded')
 
@@ -135,7 +147,13 @@ router.post('/bulk-import', adminOnly, csvUpload.single('file'), asyncHandler(as
     return res.status(200).json({ imported: 0, skipped, duplicates, message: 'All rows already exist — nothing new to import.' })
   }
 
-  const result = await prisma.medicineItem.createMany({ data: newRows })
+  const importTimestamp = new Date()
+  const result = await prisma.medicineItem.createMany({
+    data: newRows.map((row) => ({
+      ...row,
+      ...buildAvailabilityTimestamps(row.isAvailable, importTimestamp),
+    })),
+  })
 
   res.status(201).json({ imported: result.count, skipped, duplicates })
 }))
@@ -212,6 +230,9 @@ router.get('/', asyncHandler(async (req, res) => {
       category: m.category,
       unitPrice: Number(m.unitPrice),
       isAvailable: (m as any).isAvailable ?? true,
+      availabilityUpdatedAt: (m as any).availabilityUpdatedAt ?? m.updatedAt,
+      availableUpdatedAt: (m as any).availableUpdatedAt ?? ((m as any).isAvailable ?? true ? ((m as any).availabilityUpdatedAt ?? m.updatedAt) : null),
+      unavailableUpdatedAt: (m as any).unavailableUpdatedAt ?? ((m as any).isAvailable === false ? ((m as any).availabilityUpdatedAt ?? m.updatedAt) : null),
       createdAt: m.createdAt,
     })),
   })
@@ -229,6 +250,7 @@ router.post('/', canManageMedicine, asyncHandler(async (req, res) => {
       category: cleanOptionalText(body.category, 100),
       unitPrice: Number(body.unitPrice ?? 0),
       isAvailable: body.isAvailable ?? true,
+      ...buildAvailabilityTimestamps(body.isAvailable ?? true),
     },
   })
 
@@ -241,6 +263,9 @@ router.post('/', canManageMedicine, asyncHandler(async (req, res) => {
     category: created.category,
     unitPrice: Number(created.unitPrice),
     isAvailable: (created as any).isAvailable ?? true,
+    availabilityUpdatedAt: (created as any).availabilityUpdatedAt ?? created.updatedAt,
+    availableUpdatedAt: (created as any).availableUpdatedAt ?? ((created as any).isAvailable ?? true ? ((created as any).availabilityUpdatedAt ?? created.updatedAt) : null),
+    unavailableUpdatedAt: (created as any).unavailableUpdatedAt ?? ((created as any).isAvailable === false ? ((created as any).availabilityUpdatedAt ?? created.updatedAt) : null),
   })
 }))
 
@@ -250,6 +275,8 @@ router.put('/:id', canManageMedicine, asyncHandler(async (req, res) => {
 
   const existing = await prisma.medicineItem.findUnique({ where: { id: medicineId } })
   if (!existing) throw new HttpError(404, 'Medicine not found')
+  const nextIsAvailable = body.isAvailable ?? (existing as any).isAvailable ?? true
+  const didAvailabilityChange = nextIsAvailable !== ((existing as any).isAvailable ?? true)
 
   const updated = await prisma.medicineItem.update({
     where: { id: medicineId },
@@ -260,7 +287,10 @@ router.put('/:id', canManageMedicine, asyncHandler(async (req, res) => {
       strength: cleanOptionalText(body.strength, 50),
       category: cleanOptionalText(body.category, 100),
       unitPrice: Number(body.unitPrice ?? existing.unitPrice),
-      isAvailable: body.isAvailable ?? (existing as any).isAvailable ?? true,
+      isAvailable: nextIsAvailable,
+      ...(didAvailabilityChange
+        ? buildAvailabilityTimestamps(nextIsAvailable)
+        : {}),
     },
   })
 
@@ -273,6 +303,9 @@ router.put('/:id', canManageMedicine, asyncHandler(async (req, res) => {
     category: updated.category,
     unitPrice: Number(updated.unitPrice),
     isAvailable: (updated as any).isAvailable ?? true,
+    availabilityUpdatedAt: (updated as any).availabilityUpdatedAt ?? updated.updatedAt,
+    availableUpdatedAt: (updated as any).availableUpdatedAt ?? ((updated as any).isAvailable ?? true ? ((updated as any).availabilityUpdatedAt ?? updated.updatedAt) : null),
+    unavailableUpdatedAt: (updated as any).unavailableUpdatedAt ?? ((updated as any).isAvailable === false ? ((updated as any).availabilityUpdatedAt ?? updated.updatedAt) : null),
   })
 }))
 
@@ -286,13 +319,16 @@ router.patch('/:id/availability', canManageMedicine, asyncHandler(async (req, re
 
   const updated = await prisma.medicineItem.update({
     where: { id: medicineId },
-    data: { isAvailable },
+    data: { isAvailable, ...buildAvailabilityTimestamps(isAvailable) },
   })
 
   res.json({
     id: updated.id,
     genericName: updated.genericName,
     isAvailable: (updated as any).isAvailable ?? true,
+    availabilityUpdatedAt: (updated as any).availabilityUpdatedAt ?? updated.updatedAt,
+    availableUpdatedAt: (updated as any).availableUpdatedAt ?? ((updated as any).isAvailable ?? true ? ((updated as any).availabilityUpdatedAt ?? updated.updatedAt) : null),
+    unavailableUpdatedAt: (updated as any).unavailableUpdatedAt ?? ((updated as any).isAvailable === false ? ((updated as any).availabilityUpdatedAt ?? updated.updatedAt) : null),
   })
 }))
 

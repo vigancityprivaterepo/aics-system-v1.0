@@ -13,6 +13,25 @@ function displayOptional(value) {
   return normalized
 }
 
+function formatAvailabilityTimestamp(value) {
+  if (!value) return '-'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return '-'
+  const dateText = date.toLocaleDateString('en-PH', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    timeZone: 'Asia/Manila',
+  })
+  const timeText = date.toLocaleTimeString('en-PH', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+    timeZone: 'Asia/Manila',
+  })
+  return `${dateText} ${timeText}`
+}
+
 // ─── Reusable centered modal wrapper ────────────────────────────────────────
 function Modal({ onClose, children }) {
   return (
@@ -182,12 +201,32 @@ export default function MedicineDatabase() {
   const handleToggleAvailability = async (m) => {
     if (!canManageMedicines) return
     const nextStatus = m.isAvailable === false ? true : false
-    setMedicines(prev => prev.map(item => item.id === m.id ? { ...item, isAvailable: nextStatus } : item))
+    const localTimestamp = new Date().toISOString()
+    setMedicines(prev => prev.map(item => item.id === m.id ? {
+      ...item,
+      isAvailable: nextStatus,
+      availabilityUpdatedAt: localTimestamp,
+      availableUpdatedAt: nextStatus ? localTimestamp : item.availableUpdatedAt,
+      unavailableUpdatedAt: nextStatus ? item.unavailableUpdatedAt : localTimestamp,
+    } : item))
     try {
-      await api.patch(`/medicines/${m.id}/availability`, { isAvailable: nextStatus })
+      const { data } = await api.patch(`/medicines/${m.id}/availability`, { isAvailable: nextStatus })
+      setMedicines(prev => prev.map(item => item.id === m.id ? {
+        ...item,
+        isAvailable: data.isAvailable,
+        availabilityUpdatedAt: data.availabilityUpdatedAt,
+        availableUpdatedAt: data.availableUpdatedAt,
+        unavailableUpdatedAt: data.unavailableUpdatedAt,
+      } : item))
       toast.success(`${m.genericName} set to ${nextStatus ? 'Available' : 'Not Available'}`)
     } catch {
-      setMedicines(prev => prev.map(item => item.id === m.id ? { ...item, isAvailable: m.isAvailable } : item))
+      setMedicines(prev => prev.map(item => item.id === m.id ? {
+        ...item,
+        isAvailable: m.isAvailable,
+        availabilityUpdatedAt: m.availabilityUpdatedAt,
+        availableUpdatedAt: m.availableUpdatedAt,
+        unavailableUpdatedAt: m.unavailableUpdatedAt,
+      } : item))
       toast.error('Failed to update availability')
     }
   }
@@ -571,7 +610,7 @@ export default function MedicineDatabase() {
         ) : (
           <>
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[700px]">
+              <table className="w-full min-w-[1100px]">
                 <thead>
                   <tr>
                     <th className="table-header text-center w-12">No.</th>
@@ -580,6 +619,8 @@ export default function MedicineDatabase() {
                     <th className="table-header text-left">Dosage Form</th>
                     <th className="table-header text-left">Category</th>
                     <th className="table-header text-center">Availability Status</th>
+                    <th className="table-header text-center">Available Updated</th>
+                    <th className="table-header text-center">Not Available Updated</th>
                     <th className="table-header text-center">Actions</th>
                   </tr>
                 </thead>
@@ -612,6 +653,14 @@ export default function MedicineDatabase() {
                         </button>
                       </td>
 
+                      <td className="table-cell text-center text-xs text-slate-600">
+                        {formatAvailabilityTimestamp(m.availableUpdatedAt)}
+                      </td>
+
+                      <td className="table-cell text-center text-xs text-slate-600">
+                        {formatAvailabilityTimestamp(m.unavailableUpdatedAt)}
+                      </td>
+
                       {/* Actions */}
                       <td className="table-cell text-center">
                         {canManageMedicines ? (
@@ -639,7 +688,7 @@ export default function MedicineDatabase() {
                   ))}
                   {medicines.length === 0 && !loading && (
                     <tr>
-                      <td colSpan={7} className="table-cell py-10 text-center text-sm text-slate-400">
+                      <td colSpan={9} className="table-cell py-10 text-center text-sm text-slate-400">
                         No medicines found.
                       </td>
                     </tr>

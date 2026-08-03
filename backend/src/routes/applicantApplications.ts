@@ -398,9 +398,9 @@ async function createCaseFromAcceptedApplication(
     application.submittedAt
     ?? application.reviewedAt
     ?? application.createdAt
-  const newCaseNumber = await generateCaseCaseNumber(application.assistanceType)
 
   const created = await prisma.$transaction(async (tx) => {
+    const newCaseNumber = await generateCaseCaseNumber(application.assistanceType, tx)
     const createdCase = await tx.case.create({
       data: {
         clientId: client.id,

@@ -111,10 +111,6 @@ export function assessCaseWorkflow(caseRow: any, assigneesByStage?: ApprovalAssi
     addBlocker(blockers, !textPresent(caseRow.eyeglassDetails?.doctorName), 'Optometrist or doctor name is missing')
     addBlocker(blockers, !textPresent(caseRow.eyeglassDetails?.clinicName), 'Clinic or optical shop is missing')
   }
-  if (caseRow.assistanceType === 'plain') {
-    addBlocker(blockers, !textPresent(caseRow.plainDetails?.natureOfAssistance), 'Nature of assistance is missing')
-  }
-
   const readyForReview = blockers.length === 0
   const isRejected = status === 'rejected'
   const isBlocked = (status === 'encoding' && !readyForReview) || isRejected

@@ -2,13 +2,15 @@ import { useState } from 'react'
 import { PillIcon } from '../../../components/ui/Icons'
 import api from '../../../lib/api'
 import toast from 'react-hot-toast'
+import PresetSelectField from '../../../components/PresetSelectField'
+import { RELATIONSHIP_OPTIONS } from '../../../constants/caseFormOptions'
 
-export default function StepMedicineEncode({ caseData, onUpdate }) {
+export default function StepMedicineEncode({ caseData, onUpdate, onNext }) {
   const [conformeName, setConformeName] = useState(caseData.medicineDetails?.conformeName || '')
   const [conformeRelationship, setConformeRelationship] = useState(caseData.medicineDetails?.conformeRelationship || '')
   const [saving, setSaving] = useState(false)
 
-  const handleSave = async () => {
+  const handleSave = async (mode = 'save') => {
     setSaving(true)
     const normalizedRelationshipValue = conformeRelationship.trim()
     const normalizedRelationship = normalizedRelationshipValue.toLowerCase()
@@ -36,6 +38,9 @@ export default function StepMedicineEncode({ caseData, onUpdate }) {
         status: caseRes.data?.status ?? caseData.status,
       })
       toast.success(caseRes.data?.approvalsReset ? 'Medicine requester saved. Case returned to encoding for re-review.' : 'Medicine requester saved')
+      if (mode === 'next') {
+        onNext?.()
+      }
     } catch (err) {
       if (err.response) {
         toast.error(err.response?.data?.message || 'Failed to save medicine requester')
@@ -70,20 +75,23 @@ export default function StepMedicineEncode({ caseData, onUpdate }) {
           </label>
           <label className="block">
             <span className="text-sm font-semibold text-brand-dark">Relation to Beneficiary</span>
-            <input
-              type="text"
+            <PresetSelectField
               value={conformeRelationship}
-              onChange={(e) => setConformeRelationship(e.target.value)}
-              className="portal-input mt-1"
-              placeholder="e.g. Self, Mother, Son, Spouse"
+              onChange={setConformeRelationship}
+              options={RELATIONSHIP_OPTIONS}
+              placeholder="Select relationship"
+              otherPlaceholder="Specify relationship"
             />
           </label>
         </div>
       </div>
 
-      <div className="flex justify-end">
-        <button onClick={handleSave} disabled={saving} className="portal-button-primary" id="btn-save-medicines">
+      <div className="flex justify-end gap-3">
+        <button onClick={() => handleSave('save')} disabled={saving} className="portal-button-secondary" id="btn-save-medicines">
           {saving ? 'Saving...' : 'Save Medicine Requester'}
+        </button>
+        <button onClick={() => handleSave('next')} disabled={saving} className="portal-button-primary" id="btn-save-next-medicines">
+          {saving ? 'Saving...' : 'Save and Next'}
         </button>
       </div>
     </div>

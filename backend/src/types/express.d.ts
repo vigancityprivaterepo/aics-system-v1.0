@@ -1,4 +1,5 @@
 import type { UserRole } from '@prisma/client'
+import type { StaffModuleKey } from '../services/moduleAccessService.js'
 
 declare global {
   namespace Express {
@@ -10,6 +11,8 @@ declare global {
       role: UserRole
       approvalLevel: string[]
       position: string | null
+      department: string | null
+      accessibleModules: StaffModuleKey[]
     }
 
     interface PortalApplicant {
