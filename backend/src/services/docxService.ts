@@ -1459,16 +1459,174 @@ function alignCaseStudyVerificationQr(doc: Document): boolean {
   return changed
 }
 
+function normalizeSignatureBlocksInDocument(doc: Document): boolean {
+  const body = doc.getElementsByTagName('w:body')[0]
+  if (!body) return false
+
+  const sectionLabels = [
+    'Prepared and submitted by:',
+    'Prepared by:',
+    'Reviewed by:',
+    'Recommending Approval:',
+    'APPROVED:',
+  ]
+
+  let changed = false
+
+  for (const labelText of sectionLabels) {
+    const paragraphs = Array.from(doc.getElementsByTagName('w:p'))
+    const labelParagraph = paragraphs.find((p) => paragraphTextContent(p).trim() === labelText)
+    if (!labelParagraph) continue
+
+    let cursor = labelParagraph.nextSibling
+    let signatureDrawing: Element | null = null
+    const targetParagraphsToRemove: Element[] = []
+    let nameParagraph: Element | null = null
+
+    for (let i = 0; cursor && i < 8; i += 1) {
+      const node = cursor
+      cursor = cursor.nextSibling
+      if (node.nodeName !== 'w:p') continue
+
+      const p = node as Element
+      const text = paragraphTextContent(p).trim()
+
+      const drawings = Array.from(p.getElementsByTagName('w:drawing'))
+      const picts = Array.from(p.getElementsByTagName('w:pict'))
+
+      if (drawings.length > 0 || picts.length > 0) {
+        if (drawings.length > 0) {
+          signatureDrawing = drawings[0]
+        } else if (picts.length > 0) {
+          const blips = Array.from(picts[0].getElementsByTagName('a:blip'))
+          if (blips.length > 0) {
+            const rId = blips[0].getAttribute('r:embed')
+            if (rId) {
+              const newDrawing = doc.createElement('w:drawing')
+              const inline = doc.createElement('wp:inline')
+              inline.setAttribute('distT', '0')
+              inline.setAttribute('distB', '0')
+              inline.setAttribute('distL', '0')
+              inline.setAttribute('distR', '0')
+              const extent = doc.createElement('wp:extent')
+              extent.setAttribute('cx', '1524000')
+              extent.setAttribute('cy', '552450')
+              inline.appendChild(extent)
+
+              const docPr = doc.createElement('wp:docPr')
+              docPr.setAttribute('id', '100')
+              docPr.setAttribute('name', 'Signature')
+              inline.appendChild(docPr)
+
+              const graphic = doc.createElement('a:graphic')
+              graphic.setAttribute('xmlns:a', 'http://schemas.openxmlformats.org/drawingml/2006/main')
+              const graphicData = doc.createElement('a:graphicData')
+              graphicData.setAttribute('uri', 'http://schemas.openxmlformats.org/drawingml/2006/picture')
+
+              const pic = doc.createElement('pic:pic')
+              pic.setAttribute('xmlns:pic', 'http://schemas.openxmlformats.org/drawingml/2006/picture')
+              const nvPicPr = doc.createElement('pic:nvPicPr')
+              const cNvPr = doc.createElement('pic:cNvPr')
+              cNvPr.setAttribute('id', '0')
+              cNvPr.setAttribute('name', 'Signature')
+              nvPicPr.appendChild(cNvPr)
+              const cNvPicPr = doc.createElement('pic:cNvPicPr')
+              nvPicPr.appendChild(cNvPicPr)
+              pic.appendChild(nvPicPr)
+
+              const blipFill = doc.createElement('pic:blipFill')
+              const blip = doc.createElement('a:blip')
+              blip.setAttribute('r:embed', rId)
+              blipFill.appendChild(blip)
+              const stretch = doc.createElement('a:stretch')
+              stretch.appendChild(doc.createElement('a:fillRect'))
+              blipFill.appendChild(stretch)
+              pic.appendChild(blipFill)
+
+              const spPr = doc.createElement('pic:spPr')
+              const xfrm = doc.createElement('a:xfrm')
+              const off = doc.createElement('a:off')
+              off.setAttribute('x', '0')
+              off.setAttribute('y', '0')
+              const ext = doc.createElement('a:ext')
+              ext.setAttribute('cx', '1524000')
+              ext.setAttribute('cy', '552450')
+              xfrm.appendChild(off)
+              xfrm.appendChild(ext)
+              spPr.appendChild(xfrm)
+              const prstGeom = doc.createElement('a:prstGeom')
+              prstGeom.setAttribute('prst', 'rect')
+              prstGeom.appendChild(doc.createElement('a:avLst'))
+              spPr.appendChild(prstGeom)
+              pic.appendChild(spPr)
+
+              graphicData.appendChild(pic)
+              graphic.appendChild(graphicData)
+              inline.appendChild(graphic)
+              newDrawing.appendChild(inline)
+              signatureDrawing = newDrawing
+            }
+          }
+        }
+        targetParagraphsToRemove.push(p)
+      } else if (text && !nameParagraph) {
+        nameParagraph = p
+        break
+      } else if (!text) {
+        targetParagraphsToRemove.push(p)
+      }
+    }
+
+    if (signatureDrawing && nameParagraph) {
+      const anchors = Array.from(signatureDrawing.getElementsByTagName('wp:anchor'))
+      for (const anchor of anchors) {
+        anchor.setAttribute('behindDoc', '0')
+        anchor.setAttribute('simplePos', '0')
+        anchor.removeAttribute('relativeHeight')
+      }
+
+      const sigP = doc.createElement('w:p')
+      const pPr = doc.createElement('w:pPr')
+      const spacing = doc.createElement('w:spacing')
+      spacing.setAttribute('w:before', '60')
+      spacing.setAttribute('w:after', '0')
+      spacing.setAttribute('w:line', '440')
+      spacing.setAttribute('w:lineRule', 'atLeast')
+      pPr.appendChild(spacing)
+
+      const jc = doc.createElement('w:jc')
+      jc.setAttribute('w:val', 'left')
+      pPr.appendChild(jc)
+      sigP.appendChild(pPr)
+
+      const run = doc.createElement('w:r')
+      run.appendChild(signatureDrawing.cloneNode(true))
+      sigP.appendChild(run)
+
+      for (const pRem of targetParagraphsToRemove) {
+        if (pRem.parentNode) pRem.parentNode.removeChild(pRem)
+      }
+
+      if (nameParagraph.parentNode) {
+        nameParagraph.parentNode.insertBefore(sigP, nameParagraph)
+        changed = true
+      }
+    }
+  }
+
+  return changed
+}
+
 function normalizeCaseStudyLayoutXml(xml: string): string {
   const parser = new DOMParser()
   const doc = parser.parseFromString(xml, 'application/xml')
   const beneficiaryNormalized = normalizeBeneficiaryInfoParagraphs(doc)
-  const signatureSectionCompacted = beneficiaryNormalized && compactCaseStudySignatureSection(doc)
-  const preparedSignatureSeparated = beneficiaryNormalized && separatePreparedSignatureParagraph(doc)
-  const signaturePlaceholdersNormalized = beneficiaryNormalized && normalizeCaseStudySignaturePlaceholders(doc)
-  const verificationQrAligned = beneficiaryNormalized && alignCaseStudyVerificationQr(doc)
+  const signatureSectionCompacted = compactCaseStudySignatureSection(doc)
+  const signatureBlocksNormalized = normalizeSignatureBlocksInDocument(doc)
+  const signaturePlaceholdersNormalized = normalizeCaseStudySignaturePlaceholders(doc)
+  const verificationQrAligned = alignCaseStudyVerificationQr(doc)
   const trailingParagraphsTrimmed = trimTrailingEmptyParagraphs(doc)
-  const changed = beneficiaryNormalized || signatureSectionCompacted || preparedSignatureSeparated
+  const changed = beneficiaryNormalized || signatureSectionCompacted || signatureBlocksNormalized
     || signaturePlaceholdersNormalized
     || verificationQrAligned || trailingParagraphsTrimmed
   if (!changed) return xml
