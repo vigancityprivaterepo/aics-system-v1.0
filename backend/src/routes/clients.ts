@@ -6,7 +6,7 @@ import { asyncHandler } from '../utils/asyncHandler.js'
 import { generateClientCaseNumber } from '../utils/caseNumber.js'
 import { HttpError } from '../utils/httpError.js'
 import { requireRole } from '../middleware/auth.js'
-import { buildPersonMatchInput, duplicateConflict, findClientDuplicateMatches, mergeClientRecords, recordClientDedupEvent } from '../services/clientDedupService.js'
+import { buildPersonMatchInput, duplicateConflict, findClientDuplicateMatches, findFamilyCompositionMatches, mergeClientRecords, recordClientDedupEvent } from '../services/clientDedupService.js'
 
 const router = Router()
 
@@ -155,6 +155,10 @@ router.get('/', asyncHandler(async (req, res) => {
     }),
   ])
 
+  const familyMatches = search && req.query.includeFamily === '1'
+    ? await findFamilyCompositionMatches(prisma, search)
+    : []
+
   res.json({
     total,
     page,
@@ -163,6 +167,7 @@ router.get('/', asyncHandler(async (req, res) => {
       ...serializeClient(c),
       latestCaseNumber: (c as any).cases?.[0]?.caseNumber ?? null,
     })),
+    familyMatches,
   })
 }))
 

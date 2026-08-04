@@ -84,8 +84,22 @@ function pruneCaseStudyPdfBufferCache() {
 function buildCaseStudyPdfCacheVersion(caseData: NonNullable<Awaited<ReturnType<typeof findCaseWithDetails>>>) {
   const extendedCaseData = caseData as any
   const reportSignatureState = (caseData.auditFlags as any)?.report_signature ?? null
+  // Who signed each stage, and which signature image was captured for it, isn't reflected
+  // in any of the fields above (a re-uploaded e-signature doesn't touch the case row at
+  // all) - without this, a stale PDF with a missing/old signature would keep being served
+  // from cache indefinitely once a stage had been acted on.
+  const approvalsFingerprint = (extendedCaseData.approvals ?? []).map((approval: any) => ({
+    stage: approval.stage,
+    actedByName: approval.actedByName ?? null,
+    actedByTitle: approval.actedByTitle ?? null,
+    signatureUrlSnapshot: approval.signatureUrlSnapshot ?? null,
+    // The report always renders the signer's CURRENT e-signature (see caseSerializer.ts),
+    // not just the frozen snapshot, so a re-upload must bust this cache too.
+    currentSignatureUrl: approval.actedByUser?.eSignatureUrl ?? null,
+    actedAt: approval.actedAt?.toISOString?.() ?? String(approval.actedAt ?? ''),
+  }))
   return JSON.stringify({
-    layoutVersion: 16,
+    layoutVersion: 17,
     id: caseData.id,
     status: caseData.status,
     assistanceType: caseData.assistanceType,
@@ -93,6 +107,7 @@ function buildCaseStudyPdfCacheVersion(caseData: NonNullable<Awaited<ReturnType<
     caseNumber: caseData.caseNumber ?? caseData.client.caseNumber ?? '',
     dateOfAssessment: caseData.dateOfAssessment?.toISOString?.() ?? String(caseData.dateOfAssessment ?? ''),
     socialWorkerName: caseData.socialWorkerName ?? '',
+    preparedBySignatureUrl: extendedCaseData.socialWorker?.eSignatureUrl ?? null,
     amount: currencyFromDb(caseData.amount),
     client: caseData.client ?? null,
     householdMembers: extendedCaseData.householdMembers ?? [],
@@ -104,6 +119,7 @@ function buildCaseStudyPdfCacheVersion(caseData: NonNullable<Awaited<ReturnType<
     medicineDetails: extendedCaseData.medicineDetails ?? null,
     medicines: caseData.medicines ?? [],
     reportSignatureState,
+    approvals: approvalsFingerprint,
   })
 }
 

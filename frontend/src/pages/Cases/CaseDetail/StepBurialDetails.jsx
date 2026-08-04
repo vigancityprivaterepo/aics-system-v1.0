@@ -124,7 +124,7 @@ export default function StepBurialDetails({ caseData, onUpdate, onNext }) {
             <input type="text" {...register('deceasedName', { required: true })} className="portal-input" placeholder="Full name of the deceased" />
           </div>
           <div>
-            <label className="portal-label">Date of Death</label>
+            <label className="portal-label">Interment Date</label>
             <input type="date" {...register('dateOfDeath')} className="portal-input" />
           </div>
           <div className="sm:col-span-2">

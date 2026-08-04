@@ -15,7 +15,7 @@ const DEFAULT_ZOOM = 100
 const THUMBNAIL_WIDTH = 110
 const MAIN_PAGE_BASE_WIDTH = 860
 const MAX_PDF_PREVIEW_CACHE_ENTRIES = 8
-const CASE_STUDY_LAYOUT_VERSION = 16
+const CASE_STUDY_LAYOUT_VERSION = 17
 const pdfPreviewSessionCache = new Map()
 
 function latestSignedStage(reportSignature) {
@@ -41,6 +41,7 @@ function previewCacheKey(caseData, source) {
     caseNumber: caseData.caseNumber ?? '',
     dateOfAssessment: caseData.dateOfAssessment ?? '',
     socialWorkerName: caseData.socialWorkerName ?? '',
+    preparedBySignature: caseData.preparedBySignature ?? '',
     presentingProblem: caseData.presentingProblem ?? '',
     backgroundOfProblem: caseData.backgroundOfProblem ?? '',
     assessment: caseData.assessment ?? '',
@@ -56,6 +57,15 @@ function previewCacheKey(caseData, source) {
     plainDetails: caseData.plainDetails ?? null,
     medicineDetails: caseData.medicineDetails ?? null,
     medicines: caseData.medicines ?? [],
+    approvals: ['for_review', 'recommending_approval', 'for_approval'].map((stage) => {
+      const approval = caseData.approvals?.[stage]
+      return {
+        stage,
+        actedByName: approval?.actedByName ?? '',
+        signatureUrl: approval?.signatureUrl ?? '',
+        actedAt: approval?.actedAt ?? '',
+      }
+    }),
     reportSignature: {
       version: reportSignature?.version ?? 0,
       preparedAt: reportSignature?.preparedAt ?? '',

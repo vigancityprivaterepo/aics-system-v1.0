@@ -30,19 +30,7 @@ const requestSchema = z.object({
   status: z.enum(STATUS).default('pending_admin'),
 }).refine((data) => data.vehicleType !== 'other' || Boolean(data.otherVehicle), { path: ['otherVehicle'], message: 'Specify the requested vehicle.' })
   .refine((data) => data.arrivalDate >= data.departureDate, { path: ['arrivalDate'], message: 'Arrival date cannot be before departure.' })
-
-const choReviewSchema = z.object({
-  availability: z.enum(['available', 'unavailable']),
-  vehicleModel: z.string().trim().max(150).nullable().optional(),
-  unavailableReason: z.string().trim().max(2000).nullable().optional(),
-  plateNumber: z.string().trim().max(50).nullable().optional(),
-  alternativeVehicle: z.string().trim().max(150).nullable().optional(),
-  alternativeModel: z.string().trim().max(150).nullable().optional(),
-  alternativePlate: z.string().trim().max(50).nullable().optional(),
-  remarks: z.string().trim().max(3000).nullable().optional(),
-}).refine((data) => data.availability !== 'unavailable' || Boolean(data.unavailableReason), {
-  path: ['unavailableReason'], message: 'Provide the reason the ambulance is unavailable.',
-})
+  .refine((data) => data.availability !== 'unavailable' || Boolean(data.unavailableReason), { path: ['unavailableReason'], message: 'Provide the reason the ambulance is unavailable.' })
 
 function isCho(req: any) {
   return req.user?.role === 'city_health_office'
@@ -134,30 +122,6 @@ router.patch('/:id/approve', asyncHandler(async (req, res) => {
   res.json(serialize(updated))
 }))
 
-router.patch('/:id/cho-review', asyncHandler(async (req, res) => {
-  if (!req.user || !['admin', 'city_health_office'].includes(req.user.role)) throw new HttpError(403, 'Only City Health Office can review ambulance availability.')
-  const body = choReviewSchema.parse(req.body)
-  const current = await prisma.vehicleRequest.findUnique({ where: { id: String(req.params.id) } })
-  if (!current) throw new HttpError(404, 'Vehicle request not found.')
-  if (current.vehicleType !== 'ambulance') throw new HttpError(400, 'CHO review is only available for ambulance requests.')
-  const updated = await prisma.vehicleRequest.update({
-    where: { id: current.id },
-    data: {
-      ...body,
-      status: 'cho_reviewed',
-      choReviewedById: req.user.id,
-      choReviewedByName: req.user.name,
-      choReviewedAt: new Date(),
-    },
-    include: { createdBy: { select: { id: true, name: true } }, choReviewedBy: { select: { id: true, name: true } } },
-  })
-  await logAdminAudit(prisma, {
-    actorId: req.user.id, action: 'vehicle_request.cho_review', targetType: 'vehicle_request', targetId: updated.id,
-    summary: `CHO marked ${updated.requestNumber} as ${body.availability}`,
-  })
-  res.json(serialize(updated))
-}))
-
 router.get('/:id', asyncHandler(async (req, res) => {
   const row = await prisma.vehicleRequest.findUnique({ where: { id: String(req.params.id) }, include: { createdBy: { select: { id: true, name: true } }, choReviewedBy: { select: { id: true, name: true } } } })
   if (!row) throw new HttpError(404, 'Vehicle request not found.')
@@ -166,19 +130,12 @@ router.get('/:id', asyncHandler(async (req, res) => {
 }))
 
 router.put('/:id', asyncHandler(async (req, res) => {
-  if (!isCho(req)) throw new HttpError(403, 'Only administrative employees can edit approved request records.')
+  if (!isCho(req)) throw new HttpError(403, 'Only City Health Office can edit vehicle requests.')
   const body = requestSchema.parse(req.body)
   const current = await prisma.vehicleRequest.findUnique({ where: { id: String(req.params.id) } })
   if (!current) throw new HttpError(404, 'Vehicle request not found.')
-  const isAdmin = !isCho(req)
-  const workflowData = isAdmin
-    ? {}
-    : {
-        availability: current.availability, status: current.status, vehicleModel: current.vehicleModel,
-        unavailableReason: current.unavailableReason, plateNumber: current.plateNumber,
-        alternativeVehicle: current.alternativeVehicle, alternativeModel: current.alternativeModel, alternativePlate: current.alternativePlate,
-      }
-  const updated = await prisma.vehicleRequest.update({ where: { id: current.id }, data: { ...body, ...workflowData } })
+  const data = current.status === 'approved' ? { remarks: body.remarks } : body
+  const updated = await prisma.vehicleRequest.update({ where: { id: current.id }, data })
   await logAdminAudit(prisma, { actorId: req.user?.id, action: 'vehicle_request.update', targetType: 'vehicle_request', targetId: updated.id, summary: `Updated vehicle request ${updated.requestNumber}` })
   res.json(serialize(updated))
 }))

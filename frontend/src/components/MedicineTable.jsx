@@ -125,13 +125,15 @@ export default function MedicineTable({ items = [], onChange, readOnly = false }
   const handleManualEdit = (i, value) => {
     const updated = items.map((row, idx) => {
       if (idx !== i) return row
-      return { ...row, medicineName: value, _fromDb: false, medicineId: '', medicine: null }
+      // Typed free-text, not picked from CHO's known-available list -> treated as not
+      // available until saved (the backend auto-adds it to the master list as unavailable).
+      return { ...row, medicineName: value, _fromDb: false, medicineId: '', medicine: null, isAvailable: false }
     })
     onChange(updated)
   }
 
   const addRow = () => {
-    onChange([...items, { medicineId: '', medicineName: '', quantity: 1, unit: '', isAvailable: true, _fromDb: false }])
+    onChange([...items, { medicineId: '', medicineName: '', quantity: 1, unit: '', isAvailable: false, _fromDb: false }])
   }
 
   const removeRow = (i) => onChange(items.filter((_, idx) => idx !== i))

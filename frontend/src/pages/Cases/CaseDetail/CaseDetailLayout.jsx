@@ -231,6 +231,16 @@ export default function CaseDetailLayout() {
               </p>
             </div>
           )}
+          {caseData.assistanceType !== 'burial' && caseData.beneficiaryName && (
+            <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm">
+              <p className="font-semibold text-amber-900">Beneficiary: {caseData.beneficiaryName}</p>
+              <p className="mt-1 text-amber-700">
+                Filed under {`${caseData.client?.firstName || ''} ${caseData.client?.lastName || ''}`.trim()}'s profile
+                {caseData.beneficiaryRequestorName ? ` by ${caseData.beneficiaryRequestorName}` : ''}
+                {caseData.beneficiaryRequestorRelationship ? ` (${caseData.beneficiaryRequestorRelationship})` : ''}
+              </p>
+            </div>
+          )}
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <StatusBadge status={caseData.status} />
             <span className={`badge ${TYPE_BADGE_CLASS[caseData.assistanceType] || 'badge-slate'}`}>
@@ -307,9 +317,10 @@ export default function CaseDetailLayout() {
         )}
       </div>
 
-      {canManageWorkflow ? (
+      {(canManageWorkflow || permissions.canRelease || caseData?.status === 'released') ? (
         <CaseActionBar
           caseData={caseData}
+          canManageWorkflow={canManageWorkflow}
           actionLoading={actionLoading}
           onTransition={transitionStatus}
           onReject={handleReject}

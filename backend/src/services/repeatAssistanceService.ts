@@ -40,14 +40,23 @@ export async function findRepeatAssistanceConflicts(
     clientId: string
     cooldownDays: number
     excludeCaseId?: string | null
+    beneficiaryName?: string | null
   },
 ) {
   const cooldownDays = Math.max(0, Math.round(Number(input.cooldownDays || 0)))
   const cutoff = new Date()
   cutoff.setDate(cutoff.getDate() - cooldownDays)
+  const normalizedBeneficiaryName = String(input.beneficiaryName ?? '').trim()
 
+  // A case's beneficiary is the client themself unless a beneficiaryName override is
+  // set (e.g. a case created for a household member found in the client's family
+  // composition). Only compare cooldown conflicts against other cases for the same
+  // beneficiary, so a case for a family member doesn't collide with the client's own.
   const buildWhere = (includeArchiveFilter: boolean) => ({
     clientId: input.clientId,
+    beneficiaryName: normalizedBeneficiaryName
+      ? { equals: normalizedBeneficiaryName, mode: 'insensitive' as const }
+      : null,
     ...(includeArchiveFilter ? { isArchived: false } : {}),
     ...(input.excludeCaseId ? { id: { not: input.excludeCaseId } } : {}),
     OR: [

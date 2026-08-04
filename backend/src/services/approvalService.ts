@@ -11,6 +11,7 @@ import {
   type ApprovalLevelValue,
 } from '../types/caseTypes.js'
 import type { ApprovalSettings } from '../queries/caseQueries.js'
+import { userCanRelease } from './caseService.js'
 
 export function parseApprovalLevels(stored: string | null | undefined): ApprovalLevelValue[] {
   if (!stored || stored === 'none') return []
@@ -83,6 +84,10 @@ export function assertTransitionPermission(
     if (!ACTIVE_APPROVAL_STATUSES.has(currentStatus)) {
       throw new HttpError(400, 'Cases can only be rejected from pending approval stages.')
     }
+  }
+
+  if (nextStatus === 'released' && !userCanRelease(user)) {
+    throw new HttpError(403, 'Only administrative employees can release approved cases.')
   }
 }
 

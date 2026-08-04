@@ -89,6 +89,13 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false, on
       deceasedAge: caseData.burialDetails?.deceasedAge ?? '',
       deceasedOccupation: caseData.burialDetails?.deceasedOccupation || '',
       deceasedCivilStatus: caseData.burialDetails?.deceasedCivilStatus || '',
+      beneficiaryName: caseData.beneficiaryName || '',
+      beneficiaryAge: caseData.beneficiaryAge || '',
+      beneficiarySex: caseData.beneficiarySex || '',
+      beneficiaryCivilStatus: caseData.beneficiaryCivilStatus || '',
+      beneficiaryOccupation: caseData.beneficiaryOccupation || '',
+      beneficiaryRequestorName: caseData.beneficiaryRequestorName || '',
+      beneficiaryRequestorRelationship: caseData.beneficiaryRequestorRelationship || '',
     },
   })
 
@@ -141,6 +148,13 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false, on
       assessment: normalizeNarrativeText(data.findings),
       familyComposition: family,
       amount: isMedicine ? undefined : data.amount,
+      beneficiaryName: data.beneficiaryName || null,
+      beneficiaryAge: data.beneficiaryAge || null,
+      beneficiarySex: data.beneficiarySex || null,
+      beneficiaryCivilStatus: data.beneficiaryCivilStatus || null,
+      beneficiaryOccupation: data.beneficiaryOccupation || null,
+      beneficiaryRequestorName: data.beneficiaryRequestorName || null,
+      beneficiaryRequestorRelationship: data.beneficiaryRequestorRelationship || null,
     }
     const burialPayload = isBurial
       ? {
@@ -295,6 +309,20 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false, on
                     <div><label className="portal-label">Age</label><input type="number" min="0" {...register('deceasedAge')} className="portal-input" placeholder="0" /></div>
                     <div><label className="portal-label">Civil Status</label><select {...register('deceasedCivilStatus')} className="portal-input"><option value="">Select status</option>{CIVIL_STATUS_OPTIONS.map((status) => <option key={status} value={status}>{status}</option>)}</select></div>
                     <div className="sm:col-span-2"><label className="portal-label">Occupation</label><SearchablePresetInput value={watch('deceasedOccupation') || ''} onChange={(value) => setValue('deceasedOccupation', value, { shouldDirty: true, shouldTouch: true })} options={OCCUPATION_OPTIONS} placeholder="Search occupation" /></div>
+                  </div>
+                </div>
+              )}
+              {!isBurial && (
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                  <EncodingSectionHeader number="3A" title="Beneficiary" description="Only fill this in if the assistance is for someone other than the client (e.g. a household member) - otherwise leave blank." />
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div className="sm:col-span-2"><label className="portal-label">Beneficiary Name</label><input type="text" {...register('beneficiaryName')} className="portal-input" placeholder="Leave blank if the beneficiary is the client" /></div>
+                    <div><label className="portal-label">Age</label><input type="number" min="0" {...register('beneficiaryAge')} className="portal-input" placeholder="0" /></div>
+                    <div><label className="portal-label">Sex</label><select {...register('beneficiarySex')} className="portal-input"><option value="">Select sex</option><option value="Male">Male</option><option value="Female">Female</option></select></div>
+                    <div><label className="portal-label">Civil Status</label><select {...register('beneficiaryCivilStatus')} className="portal-input"><option value="">Select status</option>{CIVIL_STATUS_OPTIONS.map((status) => <option key={status} value={status}>{status}</option>)}</select></div>
+                    <div><label className="portal-label">Occupation</label><SearchablePresetInput value={watch('beneficiaryOccupation') || ''} onChange={(value) => setValue('beneficiaryOccupation', value, { shouldDirty: true, shouldTouch: true })} options={OCCUPATION_OPTIONS} placeholder="Search occupation" /></div>
+                    <div><label className="portal-label">Requesting Party</label><input type="text" {...register('beneficiaryRequestorName')} className="portal-input" placeholder="Who is filing this on the beneficiary's behalf" /></div>
+                    <div><label className="portal-label">Requesting Party's Relationship to Beneficiary</label><select {...register('beneficiaryRequestorRelationship')} className="portal-input"><option value="">Select</option>{RELATIONSHIP_OPTIONS.map((relationship) => <option key={relationship} value={relationship}>{relationship}</option>)}</select></div>
                   </div>
                 </div>
               )}

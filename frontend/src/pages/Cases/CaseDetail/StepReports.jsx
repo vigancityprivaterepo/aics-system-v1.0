@@ -3,6 +3,7 @@ import { DownloadIcon, FileTextIcon, ChevronDownIcon } from '../../../components
 import api from '../../../lib/api'
 import toast from 'react-hot-toast'
 import CaseStudyPdfPreview from './CaseStudyPdfPreview'
+import EyeglassCaseStudyPreview from './EyeglassCaseStudyPreview'
 import GuaranteeLetterPanel from '../../../components/GuaranteeLetterPanel'
 
 export default function StepReports({ caseData, onUpdate }) {
@@ -312,8 +313,9 @@ export default function StepReports({ caseData, onUpdate }) {
       )}
 
       {isEyeglass && (
-        <div className="mt-6">
+        <div className="mt-6 space-y-6">
           <CaseStudyPdfPreview caseData={caseData} title="Eyeglass Case Study PDF Preview" />
+          <EyeglassCaseStudyPreview caseData={caseData} />
         </div>
       )}
 

@@ -114,6 +114,15 @@ export function assertEditableCase(
   }
 }
 
+// Releasing an approved case is a narrower action than editing/managing its
+// workflow: any administrative employee (not just the case owner or someone with
+// an approval level) can release, as long as they're not City Health Office or CSWDO.
+export function userCanRelease(user: Express.AuthUser | undefined): boolean {
+  if (!user) return false
+  if (user.role === 'city_health_office') return false
+  return normalizeDepartment(user.department) !== 'cswdo'
+}
+
 export function casePermissions(
   caseData: { status: CaseStatus; socialWorkerId: string | null },
   user: Express.AuthUser | undefined,
@@ -126,11 +135,13 @@ export function casePermissions(
     canBypassOwnership || (isOwner && !ownerWorkflowLocked)
   )
   const canDelete = Boolean(user) && ((user?.role === 'admin') || isOwner)
+  const canRelease = caseData.status === 'approved' && userCanRelease(user)
 
   return {
     isOwner,
     canEdit: canModify,
     canManageWorkflow: canModify,
+    canRelease,
     canDelete,
     readOnly: !canModify,
     workflowLocked,

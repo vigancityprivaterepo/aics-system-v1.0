@@ -2,7 +2,7 @@ import { canAccessModule } from './moduleAccess'
 
 export const LIMITED_CASE_TYPES = ['medical', 'hospital', 'plain']
 
-function normalizeDepartment(value) {
+export function normalizeDepartment(value) {
   return String(value ?? '').trim().toLowerCase()
 }
 

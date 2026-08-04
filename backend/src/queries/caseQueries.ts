@@ -48,10 +48,11 @@ export async function findCaseWithDetails(id: string) {
       statusLogs: {
         orderBy: { changedAt: 'desc' },
         take: 1,
+        include: { changedBy: { select: { name: true } } },
       },
       approvals: {
         orderBy: { actedAt: 'asc' },
-        include: { actedByUser: { select: { signatureParam: true, position: true } } },
+        include: { actedByUser: { select: { signatureParam: true, position: true, eSignatureUrl: true } } },
       },
     },
   })

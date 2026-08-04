@@ -4,7 +4,6 @@ import api from '../../../lib/api'
 import { DownloadIcon, FileTextIcon, ChevronLeftIcon, ChevronRightIcon } from '../../../components/ui/Icons'
 
 const DOCS = [
-  { key: 'case-study',      label: 'Eyeglass Case Study', endpoint: (id) => `/cases/${id}/report/docx`,                downloadLabel: 'case-study' },
   { key: 'endorsement',     label: 'Endorsement Letter',  endpoint: (id) => `/cases/${id}/report/endorsement-docx`,    downloadLabel: 'endorsement' },
   { key: 'acknowledgement', label: 'Acknowledgement',     endpoint: (id) => `/cases/${id}/report/acknowledgement-docx`,downloadLabel: 'acknowledgement' },
 ]
@@ -25,13 +24,12 @@ const RENDER_OPTIONS = {
 
 export default function EyeglassCaseStudyPreview({ caseData }) {
   const [docIndex, setDocIndex] = useState(0)
-  const [docState, setDocState] = useState({ 'case-study': { loading: true, error: false } })
+  const [docState, setDocState] = useState({ endorsement: { loading: true, error: false } })
   const abCache = useRef({})
   const containerRef = useRef(null)
 
   const currentDoc = DOCS[docIndex]
   const { loading = true, error = false } = docState[currentDoc.key] ?? {}
-  const templateTypeLabel = caseData.eyeglassDetails?.templateType === 'proxy' ? 'Proxy' : 'Personal'
 
   const doRender = useCallback(async (key, arrayBuffer) => {
     if (!containerRef.current) return
@@ -109,9 +107,7 @@ export default function EyeglassCaseStudyPreview({ caseData }) {
 
           <div className="flex items-center gap-1.5 px-2">
             <FileTextIcon className="h-4 w-4 text-amber-500" />
-            <span className="text-sm font-semibold text-slate-700">
-              {currentDoc.key === 'case-study' ? `${currentDoc.label} (${templateTypeLabel})` : currentDoc.label}
-            </span>
+            <span className="text-sm font-semibold text-slate-700">{currentDoc.label}</span>
             <span className="text-xs text-slate-400">({docIndex + 1} / {DOCS.length})</span>
           </div>
 

@@ -44,6 +44,7 @@ const PLAIN_REQUIREMENTS = [
   { key: 'indigency', label: 'Certificate of Indigency' },
   { key: 'id_copy', label: 'Photocopy of ID' },
   { key: 'personal_letter', label: 'Personal Letter addressed to the LCE' },
+  { key: 'sales_invoice', label: 'Sales Invoice' },
 ]
 
 const REQUIREMENTS_BY_TYPE = {
@@ -72,6 +73,8 @@ const CGV_TYPES = [
   { key: 'eyeglass', label: 'Eyeglass' },
 ]
 
+const PLAIN_ONLY_REQUIREMENT = { key: 'sales_invoice', label: 'Sales Invoice' }
+
 export default function RequirementsChecklist({ assistanceType, requirements = {}, onChange, readOnly = false, variant = 'list', plainAssistanceKinds = [] }) {
   const items = REQUIREMENTS_BY_TYPE[assistanceType] ?? MEDICINE_REQUIREMENTS
 
@@ -93,6 +96,7 @@ export default function RequirementsChecklist({ assistanceType, requirements = {
     const activeKeys = [...new Set(CGV_REQUIREMENT_ROWS.map((row) => (
       CGV_TYPES.filter((type) => activeTypes.has(type.key)).map((type) => row[type.key]).filter(Boolean)
     )).flat().map((item) => item.key))]
+    if (assistanceType === 'plain') activeKeys.push(PLAIN_ONLY_REQUIREMENT.key)
     const completedCgvCount = activeKeys.filter((key) => requirements[key]).length
 
     return (
@@ -156,6 +160,24 @@ export default function RequirementsChecklist({ assistanceType, requirements = {
                   })}
                 </tr>
               ))}
+              {assistanceType === 'plain' && (
+                <tr className="bg-amber-600/80 text-white">
+                  <td className="border border-slate-800 px-2 py-3 text-center font-semibold">•</td>
+                  <td colSpan={CGV_TYPES.length * 2 - 1} className="border border-slate-800 px-3 py-3 text-left font-medium">
+                    {PLAIN_ONLY_REQUIREMENT.label} <span className="font-normal text-white/80">(required for Plain AICS)</span>
+                  </td>
+                  <td className="w-12 border border-slate-800 px-2 py-3 text-center align-middle">
+                    <input
+                      type="checkbox"
+                      checked={!!requirements[PLAIN_ONLY_REQUIREMENT.key]}
+                      disabled={readOnly}
+                      onChange={() => handleToggle(PLAIN_ONLY_REQUIREMENT.key)}
+                      className="h-4 w-4 accent-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+                      title={PLAIN_ONLY_REQUIREMENT.label}
+                    />
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

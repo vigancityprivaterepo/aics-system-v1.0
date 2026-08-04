@@ -321,16 +321,16 @@ function renderFixedCaseReportPdf(payload: CaseReportPayload, renderable: Serial
   const beneficiaryAddress = normalizeText(renderable.beneficiaryAddress)
   const age = renderable.assistanceType === 'burial'
     ? normalizeText(renderable.burialDetails?.deceasedAge)
-    : calculateAge(renderable.client?.dateOfBirth ?? null)
+    : normalizeText(renderable.beneficiaryAge) || calculateAge(renderable.client?.dateOfBirth ?? null)
   const sex = renderable.assistanceType === 'burial'
     ? normalizeText(renderable.burialDetails?.deceasedSex)
-    : normalizeText(client?.sex)
+    : normalizeText(renderable.beneficiarySex) || normalizeText(client?.sex)
   const civilStatus = renderable.assistanceType === 'burial'
     ? normalizeText(renderable.burialDetails?.deceasedCivilStatus)
-    : normalizeText(client?.civilStatus)
+    : normalizeText(renderable.beneficiaryCivilStatus) || normalizeText(client?.civilStatus)
   const occupation = renderable.assistanceType === 'burial'
     ? normalizeText(renderable.burialDetails?.deceasedOccupation)
-    : normalizeText(client?.occupation)
+    : normalizeText(renderable.beneficiaryOccupation) || normalizeText(client?.occupation)
   const relationship = normalizeText(renderable.proxyRelationship)
   const contactNumber = normalizeText(client?.contactNumber)
   const religion = normalizeText(client?.religion)

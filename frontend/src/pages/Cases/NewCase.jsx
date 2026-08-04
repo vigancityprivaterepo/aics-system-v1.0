@@ -7,7 +7,7 @@ import { useAuthStore } from '../../store/authStore'
 import { allowedCaseTypesForUser } from '../../utils/accessRules'
 import {
   PillIcon, CrossIcon, ArrowRightIcon, PlusIcon, ChevronLeftIcon,
-  HospitalIcon, GlassesIcon, HeadstonIcon, FileTextIcon,
+  HospitalIcon, GlassesIcon, HeadstonIcon, FileTextIcon, UsersIcon,
 } from '../../components/ui/Icons'
 
 const CASE_TYPES = [
@@ -34,6 +34,7 @@ export default function NewCase() {
   const [step, setStep] = useState(presetType ? 'client' : 'type')
   const [assistanceType, setAssistanceType] = useState(presetType || null)
   const [selectedClient, setSelectedClient] = useState(null)
+  const [beneficiaryOverride, setBeneficiaryOverride] = useState(null)
   const [loading, setLoading] = useState(false)
 
   const handleSelectType = (type) => {
@@ -41,7 +42,37 @@ export default function NewCase() {
     setStep('client')
   }
 
-  const handleClientSelect = (client) => setSelectedClient(client)
+  const handleClientSelect = (client) => {
+    setSelectedClient(client)
+    setBeneficiaryOverride(null)
+  }
+
+  // A family match has no client record of its own — the case is created under the
+  // source client's existing profile, with the matched person's details carried as a
+  // beneficiary override so the case (and its report) reflect them, not the source client.
+  // Who is actually filing on the beneficiary's behalf is NOT assumed here (the source
+  // client isn't necessarily "Self" or even the requestor) - that's left blank for the
+  // case maker to fill in during case study encoding.
+  const handleFamilyMatchSelect = async (match) => {
+    try {
+      const { data: sourceClient } = await api.get(`/clients/${match.sourceClientId}`)
+      const otherMembers = (sourceClient.familyComposition || []).filter((_, idx) => idx !== match.memberIndex)
+      const familyComposition = [
+        { name: `${sourceClient.firstName} ${sourceClient.lastName}`.trim(), age: '', relationship: '', relationshipOther: '', occupation: sourceClient.occupation || '' },
+        ...otherMembers,
+      ]
+      setSelectedClient(sourceClient)
+      setBeneficiaryOverride({
+        name: match.name,
+        age: match.age || '',
+        occupation: match.occupation || '',
+        relationshipOnRecord: match.relationship || '',
+        familyComposition,
+      })
+    } catch {
+      toast.error('Failed to load that family member\'s record.')
+    }
+  }
 
   const handleCreateCase = async () => {
     if (!selectedClient || !assistanceType) return
@@ -51,6 +82,12 @@ export default function NewCase() {
       const res = await api.post('/cases', {
         clientId: selectedClient.id,
         assistanceType,
+        ...(beneficiaryOverride ? {
+          beneficiaryName: beneficiaryOverride.name,
+          beneficiaryAge: beneficiaryOverride.age || null,
+          beneficiaryOccupation: beneficiaryOverride.occupation || null,
+          familyComposition: beneficiaryOverride.familyComposition,
+        } : {}),
       })
       let movedToEncoding = false
 
@@ -139,7 +176,7 @@ export default function NewCase() {
         <div className="space-y-4">
           <div className="card mx-auto w-full max-w-6xl">
             <div className="form-section-title mb-4">Search Client Profile</div>
-            <ClientSearchBar onSelect={handleClientSelect} />
+            <ClientSearchBar onSelect={handleClientSelect} onFamilyMatchSelect={handleFamilyMatchSelect} includeFamilyMatches returnTo={{ assistanceType }} />
 
             {!selectedClient && (
               <>
@@ -147,13 +184,30 @@ export default function NewCase() {
                   <span className="text-slate-400 text-xs">- or -</span>
                 </div>
                 <button
-                  onClick={() => navigate('/clients/new')}
+                  onClick={() => navigate('/clients/new', { state: { returnTo: { assistanceType } } })}
                   className="portal-button-secondary w-full mt-2 justify-center"
                 >
                   <PlusIcon className="h-4 w-4" />
                   Create New Client Profile
                 </button>
               </>
+            )}
+
+            {selectedClient && beneficiaryOverride && (
+              <div className="mt-4 rounded-xl border border-amber-300 bg-amber-50 p-4">
+                <div className="flex items-start gap-3">
+                  <UsersIcon className="h-5 w-5 shrink-0 text-amber-600" />
+                  <div>
+                    <p className="font-semibold text-amber-900">
+                      Creating a case for <strong>{beneficiaryOverride.name}</strong>
+                      {beneficiaryOverride.relationshipOnRecord ? ` (${beneficiaryOverride.relationshipOnRecord})` : ''}
+                    </p>
+                    <p className="text-xs text-amber-700 mt-0.5">
+                      Filed under {selectedClient.lastName}, {selectedClient.firstName}'s profile ({selectedClient.caseNumber}) — this new case will appear in their case history.
+                    </p>
+                  </div>
+                </div>
+              </div>
             )}
 
             {selectedClient && (

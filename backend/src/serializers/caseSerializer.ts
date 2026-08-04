@@ -79,7 +79,11 @@ export function serializeCase(caseRow: any, assigneesByStage?: ApprovalAssigneeB
           actedByUserId: row.actedByUserId ?? null,
           actedByName: row.actedByName,
           actedByTitle: row.actedByTitle ?? approvalActorTitle(stage),
-          signatureUrl: row.signatureUrlSnapshot ?? null,
+          // Always use the signer's current e-signature rather than the frozen snapshot
+          // captured at approval time, so a re-uploaded signature shows up immediately on
+          // every report from then on. Fall back to the snapshot only if their profile no
+          // longer has a signature on file at all.
+          signatureUrl: row.actedByUser?.eSignatureUrl ?? row.signatureUrlSnapshot ?? null,
           signatureParam: row.actedByUser?.signatureParam ?? null,
           position: row.actedByUser?.position ?? null,
           actedAt: row.actedAt ? new Date(row.actedAt).toISOString().slice(0, 10) : null,
@@ -129,10 +133,12 @@ export function serializeCase(caseRow: any, assigneesByStage?: ApprovalAssigneeB
     .filter(Boolean)
     .join(', ')
 
+  const beneficiaryNameOverride = String(caseRow.beneficiaryName ?? '').trim() || null
+
   const beneficiaryName =
     caseRow.assistanceType === 'burial'
       ? String(caseRow.burialDetails?.deceasedName ?? '').trim() || clientFullName
-      : clientFullName
+      : beneficiaryNameOverride || clientFullName
 
   const beneficiaryAddress =
     caseRow.assistanceType === 'burial'
@@ -140,18 +146,30 @@ export function serializeCase(caseRow: any, assigneesByStage?: ApprovalAssigneeB
       : clientAddress
 
   const proxyName =
-    caseRow.assistanceType === 'burial' ? (caseRow.burialDetails?.conformeName ?? clientFullName)
+    beneficiaryNameOverride ? (caseRow.beneficiaryRequestorName ?? clientFullName)
+    : caseRow.assistanceType === 'burial' ? (caseRow.burialDetails?.conformeName ?? clientFullName)
     : caseRow.assistanceType === 'medicine' ? medicineConformeName
     : caseRow.assistanceType === 'hospital' ? (caseRow.hospitalDetails?.conformeName ?? null)
     : caseRow.assistanceType === 'medical' ? (caseRow.medicalDetails?.conformeName ?? null)
     : caseRow.assistanceType === 'eyeglass' ? (caseRow.eyeglassDetails?.conformeName ?? null)
     : null
   const proxyRelationship =
-    caseRow.assistanceType === 'burial' ? (caseRow.burialDetails?.conformeRelationship ?? null)
+    beneficiaryNameOverride ? (caseRow.beneficiaryRequestorRelationship ?? null)
+    : caseRow.assistanceType === 'burial' ? (caseRow.burialDetails?.conformeRelationship ?? null)
     : caseRow.assistanceType === 'medicine' ? medicineConformeRelationship
     : caseRow.assistanceType === 'hospital' ? (caseRow.hospitalDetails?.conformeRelationship ?? null)
     : caseRow.assistanceType === 'medical' ? (caseRow.medicalDetails?.conformeRelationship ?? null)
     : caseRow.assistanceType === 'eyeglass' ? (caseRow.eyeglassDetails?.conformeRelationship ?? null)
+    : null
+
+  // 'released' is a terminal status, so the most recent status log (if it's the
+  // release transition) tells us when and by whom the case was actually released.
+  const latestStatusLog = Array.isArray(caseRow.statusLogs) ? caseRow.statusLogs[0] : null
+  const releasedAt = caseRow.status === 'released' && latestStatusLog?.toStatus === 'released'
+    ? latestStatusLog.changedAt?.toISOString() ?? null
+    : null
+  const releasedByName = caseRow.status === 'released' && latestStatusLog?.toStatus === 'released'
+    ? latestStatusLog.changedBy?.name ?? null
     : null
 
   return {
@@ -169,8 +187,16 @@ export function serializeCase(caseRow: any, assigneesByStage?: ApprovalAssigneeB
     hospitalClinic: caseRow.hospitalClinic,
     amount: currencyFromDb(caseRow.amount),
     remarks: caseRow.remarks,
+    releasedAt,
+    releasedByName,
     beneficiaryName,
     beneficiaryAddress,
+    beneficiaryAge: caseRow.beneficiaryAge ?? null,
+    beneficiarySex: caseRow.beneficiarySex ?? null,
+    beneficiaryCivilStatus: caseRow.beneficiaryCivilStatus ?? null,
+    beneficiaryOccupation: caseRow.beneficiaryOccupation ?? null,
+    beneficiaryRequestorName: caseRow.beneficiaryRequestorName ?? null,
+    beneficiaryRequestorRelationship: caseRow.beneficiaryRequestorRelationship ?? null,
     proxyName,
     proxyRelationship,
     ...workflow,

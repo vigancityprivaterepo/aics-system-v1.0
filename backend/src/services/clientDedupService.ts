@@ -248,6 +248,57 @@ export async function findClientDuplicateMatches(
   }
 }
 
+export type FamilyCompositionMatch = {
+  sourceClientId: string
+  sourceClientName: string
+  sourceCaseNumber: string
+  memberIndex: number
+  name: string
+  relationship: string | null
+  relationshipOther: string | null
+  age: string | null
+  occupation: string | null
+}
+
+type FamilyMatchRow = {
+  source_client_id: string
+  first_name: string
+  last_name: string
+  case_number: string
+  member_index: number
+  member: Record<string, unknown>
+}
+
+export async function findFamilyCompositionMatches(
+  prisma: PrismaClient | Prisma.TransactionClient,
+  search: string
+): Promise<FamilyCompositionMatch[]> {
+  const trimmed = search.trim()
+  if (trimmed.length < 2) return []
+
+  const rows = await prisma.$queryRaw<FamilyMatchRow[]>`
+    SELECT c.id AS source_client_id, c.first_name, c.last_name, c.case_number,
+           (elem.ord - 1) AS member_index, elem.value AS member
+    FROM clients c, jsonb_array_elements(c.family_composition) WITH ORDINALITY AS elem(value, ord)
+    WHERE c.merged_into_client_id IS NULL
+      AND jsonb_typeof(c.family_composition) = 'array'
+      AND elem.value->>'name' ILIKE '%' || ${trimmed} || '%'
+    LIMIT 10
+  `
+
+  return rows.map((row) => ({
+    sourceClientId: row.source_client_id,
+    sourceClientName: [row.first_name, row.last_name].filter(Boolean).join(' '),
+    sourceCaseNumber: row.case_number,
+    memberIndex: Number(row.member_index),
+    name: String(row.member?.name ?? ''),
+    relationship: (row.member?.relationship as string) ?? null,
+    relationshipOther: (row.member?.relationshipOther as string) ?? null,
+    age: row.member?.age != null ? String(row.member.age) : null,
+    occupation: (row.member?.occupation as string) ?? null,
+  }))
+}
+
 export function duplicateConflict(message: string, result: DuplicateCheckResult, extra: Record<string, unknown> = {}) {
   return new HttpError(409, message, {
     duplicateStatus: result.duplicateStatus,

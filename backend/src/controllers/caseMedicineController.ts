@@ -7,6 +7,33 @@ import { saveMedicinesSchema } from '../schemas/caseSchemas.js'
 import { resetApprovalsAfterMaterialEdit, valuesDiffer } from '../services/workflowIntegrityService.js'
 import { currencyFromDb, parseOptionalCurrency, roundCurrency } from '../utils/currency.js'
 
+async function resolveOrCreateMedicineId(medicineName: string, unit: string | null, unitPrice: number): Promise<string> {
+  const trimmedName = medicineName.trim()
+  const existing = await prisma.medicineItem.findFirst({
+    where: {
+      OR: [
+        { genericName: { equals: trimmedName, mode: 'insensitive' } },
+        { brandName: { equals: trimmedName, mode: 'insensitive' } },
+      ],
+    },
+  })
+  if (existing) return existing.id
+
+  // Case worker encoded a medicine that isn't in CHO's record of available medicines yet.
+  // Auto-add it to the master list as unavailable so CHO can flip it later instead of every
+  // encoded prescription needing to be manually checked with CHO first.
+  const created = await prisma.medicineItem.create({
+    data: {
+      genericName: trimmedName,
+      unit: unit || null,
+      unitPrice: unitPrice > 0 ? roundCurrency(unitPrice) : 0,
+      isAvailable: false,
+      unavailableUpdatedAt: new Date(),
+    },
+  })
+  return created.id
+}
+
 function serializeCaseMedicineRow(m: any) {
   return {
     id: m.id,
@@ -64,12 +91,32 @@ export async function saveMedicines(req: Request, res: Response) {
   assertEditableCase(caseData, req.user, 'Medicine encoding')
   if (caseData.assistanceType !== 'medicine') throw new HttpError(400, 'Only medicine cases can store medicines')
 
-  const normalized = medicines.map((m) => {
+  const resolvedMedicineIds = new Map<string, string>()
+  const normalized: Array<{
+    medicineId: string | null
+    medicineName: string
+    quantity: number
+    unit: string | null
+    unitPrice: number
+    totalPrice: number
+  }> = []
+  for (const m of medicines) {
     const quantity = Number(m.quantity || 1)
     const unitPrice = Number(m.unitPrice || 0)
     const calculated = roundCurrency(Number(m.totalPrice ?? quantity * unitPrice))
-    return { medicineId: m.medicineId ?? null, medicineName: m.medicineName, quantity, unit: m.unit ?? null, unitPrice: roundCurrency(unitPrice), totalPrice: calculated }
-  })
+
+    let medicineId = m.medicineId ?? null
+    if (!medicineId) {
+      const cacheKey = m.medicineName.trim().toLowerCase()
+      medicineId = resolvedMedicineIds.get(cacheKey) ?? null
+      if (!medicineId) {
+        medicineId = await resolveOrCreateMedicineId(m.medicineName, m.unit ?? null, unitPrice)
+        resolvedMedicineIds.set(cacheKey, medicineId)
+      }
+    }
+
+    normalized.push({ medicineId, medicineName: m.medicineName, quantity, unit: m.unit ?? null, unitPrice: roundCurrency(unitPrice), totalPrice: calculated })
+  }
 
   const existingItems = await prisma.caseMedicine.findMany({ where: { caseId: caseData.id }, orderBy: { createdAt: 'asc' } })
   const currentNormalized = existingItems.map((item) => ({

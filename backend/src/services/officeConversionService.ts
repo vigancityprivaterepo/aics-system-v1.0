@@ -7,6 +7,7 @@ import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import { pathToFileURL } from 'node:url'
 import { env } from '../config/env.js'
+import { stripBlankPdfPages } from './pdfBlankPageService.js'
 
 const execFileAsync = promisify(execFile)
 const LIBREOFFICE_PROFILE_DIR = path.join(os.tmpdir(), 'aics-libreoffice-profile-v1')
@@ -146,10 +147,12 @@ async function convertDocxBufferToPdfUncached(buffer: Buffer, baseFilename: stri
     const converted = await fs.readFile(outputPath)
     if (!isPdfBuffer(converted)) return null
 
+    const cleaned = await stripBlankPdfPages(converted)
+
     await fs.mkdir(PDF_CONVERSION_CACHE_DIR, { recursive: true })
-    await fs.writeFile(cachePath, converted)
+    await fs.writeFile(cachePath, cleaned)
     void prunePdfConversionCache()
-    return converted
+    return cleaned
   } catch (error) {
     console.warn('[GuaranteeLetter PDF Conversion] Falling back to PDFKit output.', error)
     return null

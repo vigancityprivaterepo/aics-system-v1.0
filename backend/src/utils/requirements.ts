@@ -38,6 +38,7 @@ export const REQUIREMENT_DEFINITIONS: Record<AssistanceType, Array<{ key: string
     { key: 'indigency', label: 'Certificate of Indigency' },
     { key: 'id_copy', label: 'Photocopy of ID' },
     { key: 'personal_letter', label: 'Personal Letter addressed to the LCE' },
+    { key: 'sales_invoice', label: 'Sales Invoice' },
   ],
 }
 
@@ -105,6 +106,7 @@ const PORTAL_DOCUMENT_REQUIREMENT_MAP: Record<AssistanceType, Record<string, str
     'valid government id': 'id_copy',
     'letter of request or explanation': 'personal_letter',
     'barangay indigency certification': 'indigency',
+    'sales invoice': 'sales_invoice',
   },
 }
 

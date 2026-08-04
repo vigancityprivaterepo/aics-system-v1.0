@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
 import api from '../../lib/api'
@@ -14,15 +14,24 @@ const RELATIONSHIP_OPTIONS = [...STANDARD_RELATIONSHIPS, 'Other']
 
 export default function ClientForm() {
   const navigate = useNavigate()
+  const location = useLocation()
+  const prefill = location.state?.prefill ?? null
+  const returnTo = location.state?.returnTo ?? null
   const [saving, setSaving] = useState(false)
-  const [family, setFamily] = useState([])
+  const [family, setFamily] = useState(prefill?.familyComposition ?? [])
   const [duplicateModal, setDuplicateModal] = useState(null)
   const { register, handleSubmit } = useForm({
     defaultValues: {
       clientCategory: 'walk-in', sex: '', civilStatus: '',
       region: 'Region I', municipality: 'Vigan City', province: 'Ilocos Sur',
+      firstName: prefill?.firstName ?? '', lastName: prefill?.lastName ?? '', occupation: prefill?.occupation ?? '',
     },
   })
+
+  const navigateAfterSave = (clientId) => {
+    if (returnTo?.assistanceType) navigate(`/cases/new?type=${returnTo.assistanceType}&clientId=${clientId}`)
+    else navigate(`/clients/${clientId}`)
+  }
 
   const addFamilyMember = () => setFamily((current) => [...current, { ...defaultFamilyMember }])
   const removeFamilyMember = (index) => setFamily((current) => current.filter((_, idx) => idx !== index))
@@ -61,7 +70,7 @@ export default function ClientForm() {
 
       const res = await api.post('/clients', payload)
       toast.success('Client profile created')
-      navigate(`/clients/${res.data.id}`)
+      navigateAfterSave(res.data.id)
     } catch (err) {
       if (err.response?.status === 409 && err.response?.data?.matches) {
         setDuplicateModal({
@@ -87,7 +96,7 @@ export default function ClientForm() {
         overrideDuplicateReason: `Reused existing client ${match.caseNumber} after duplicate review.`,
       })
       toast.success('Existing client profile reused')
-      navigate(`/clients/${res.data.id}`)
+      navigateAfterSave(res.data.id)
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to reuse existing client')
     } finally {
@@ -105,7 +114,7 @@ export default function ClientForm() {
         overrideDuplicateReason: reason,
       })
       toast.success('Client profile created with override')
-      navigate(`/clients/${res.data.id}`)
+      navigateAfterSave(res.data.id)
     } catch (err) {
       if (err.response?.status === 409 && err.response?.data?.matches) {
         setDuplicateModal({

@@ -288,7 +288,12 @@ export default function CaseList() {
                     </Link>
                   </td>
                   <td className="table-cell font-medium text-slate-800">
-                    {c.client?.lastName}, {c.client?.firstName}
+                    {c.beneficiaryName || `${c.client?.lastName}, ${c.client?.firstName}`}
+                    {c.beneficiaryName && (
+                      <p className="mt-0.5 text-xs font-normal text-slate-400">
+                        Filed under {c.client?.lastName}, {c.client?.firstName}
+                      </p>
+                    )}
                   </td>
                   <td className="table-cell">
                     <span className={`badge ${

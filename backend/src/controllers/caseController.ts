@@ -129,6 +129,7 @@ export async function listCases(req: Request, res: Response) {
             { client: { is: { caseNumber: { contains: search, mode: 'insensitive' } } } },
             { client: { is: { firstName: { contains: search, mode: 'insensitive' } } } },
             { client: { is: { lastName: { contains: search, mode: 'insensitive' } } } },
+            { beneficiaryName: { contains: search, mode: 'insensitive' } },
           ],
         }
       : {}),
@@ -189,6 +190,7 @@ export async function listCases(req: Request, res: Response) {
         lastName: c.client.lastName,
       },
       clientName: `${c.client.lastName}, ${c.client.firstName}`,
+      beneficiaryName: (c as any).beneficiaryName ?? null,
       assistanceType: c.assistanceType,
       status: normalizeWorkflowStatus(c.status),
       socialWorkerId: c.socialWorkerId,
@@ -297,6 +299,7 @@ export async function createCase(req: Request, res: Response) {
   const repeatConflicts = await findRepeatAssistanceConflicts(prisma, {
     clientId,
     cooldownDays,
+    beneficiaryName: body.beneficiaryName ?? null,
   })
   if (repeatConflicts.hasConflicts) {
     throw repeatAssistanceConflict(repeatConflicts)
@@ -321,6 +324,13 @@ export async function createCase(req: Request, res: Response) {
         recommendation: body.recommendation ?? null,
         hospitalClinic: body.hospitalClinic ?? null,
         remarks: body.remarks ?? null,
+        beneficiaryName: body.beneficiaryName ?? null,
+        beneficiaryAge: body.beneficiaryAge != null ? String(body.beneficiaryAge) : null,
+        beneficiarySex: body.beneficiarySex ?? null,
+        beneficiaryCivilStatus: body.beneficiaryCivilStatus ?? null,
+        beneficiaryOccupation: body.beneficiaryOccupation ?? null,
+        beneficiaryRequestorName: body.beneficiaryRequestorName ?? null,
+        beneficiaryRequestorRelationship: body.beneficiaryRequestorRelationship ?? null,
       },
       include: { client: true },
     })
@@ -429,6 +439,13 @@ export async function updateCase(req: Request, res: Response) {
   const nextRecommendation = body.recommendation !== undefined ? body.recommendation : current.recommendation
   const nextHospitalClinic = body.hospitalClinic !== undefined ? body.hospitalClinic : current.hospitalClinic
   const nextRemarks = body.remarks !== undefined ? body.remarks : current.remarks
+  const nextBeneficiaryName = body.beneficiaryName !== undefined ? body.beneficiaryName : current.beneficiaryName
+  const nextBeneficiaryAge = body.beneficiaryAge !== undefined ? (body.beneficiaryAge != null ? String(body.beneficiaryAge) : null) : current.beneficiaryAge
+  const nextBeneficiarySex = body.beneficiarySex !== undefined ? body.beneficiarySex : current.beneficiarySex
+  const nextBeneficiaryCivilStatus = body.beneficiaryCivilStatus !== undefined ? body.beneficiaryCivilStatus : current.beneficiaryCivilStatus
+  const nextBeneficiaryOccupation = body.beneficiaryOccupation !== undefined ? body.beneficiaryOccupation : current.beneficiaryOccupation
+  const nextBeneficiaryRequestorName = body.beneficiaryRequestorName !== undefined ? body.beneficiaryRequestorName : current.beneficiaryRequestorName
+  const nextBeneficiaryRequestorRelationship = body.beneficiaryRequestorRelationship !== undefined ? body.beneficiaryRequestorRelationship : current.beneficiaryRequestorRelationship
   const nextSocialWorkerName = body.socialWorkerName !== undefined ? body.socialWorkerName : current.socialWorkerName
   const nextSocialWorkerEmpId = body.socialWorkerEmpId !== undefined ? body.socialWorkerEmpId : current.socialWorkerEmpId
   const nextPresentingProblem = body.presentingProblem !== undefined ? body.presentingProblem : current.presentingProblem
@@ -451,6 +468,13 @@ export async function updateCase(req: Request, res: Response) {
   if (body.amount !== undefined && valuesDiffer(current.amount == null ? null : Number(current.amount), nextAmount)) changedFields.push('amount')
   if (body.hospitalClinic !== undefined && valuesDiffer(current.hospitalClinic ?? null, nextHospitalClinic ?? null)) changedFields.push('hospitalClinic')
   if (body.remarks !== undefined && valuesDiffer(current.remarks ?? null, nextRemarks ?? null)) changedFields.push('remarks')
+  if (body.beneficiaryName !== undefined && valuesDiffer(current.beneficiaryName ?? null, nextBeneficiaryName ?? null)) changedFields.push('beneficiaryName')
+  if (body.beneficiaryAge !== undefined && valuesDiffer(current.beneficiaryAge ?? null, nextBeneficiaryAge ?? null)) changedFields.push('beneficiaryAge')
+  if (body.beneficiarySex !== undefined && valuesDiffer(current.beneficiarySex ?? null, nextBeneficiarySex ?? null)) changedFields.push('beneficiarySex')
+  if (body.beneficiaryCivilStatus !== undefined && valuesDiffer(current.beneficiaryCivilStatus ?? null, nextBeneficiaryCivilStatus ?? null)) changedFields.push('beneficiaryCivilStatus')
+  if (body.beneficiaryOccupation !== undefined && valuesDiffer(current.beneficiaryOccupation ?? null, nextBeneficiaryOccupation ?? null)) changedFields.push('beneficiaryOccupation')
+  if (body.beneficiaryRequestorName !== undefined && valuesDiffer(current.beneficiaryRequestorName ?? null, nextBeneficiaryRequestorName ?? null)) changedFields.push('beneficiaryRequestorName')
+  if (body.beneficiaryRequestorRelationship !== undefined && valuesDiffer(current.beneficiaryRequestorRelationship ?? null, nextBeneficiaryRequestorRelationship ?? null)) changedFields.push('beneficiaryRequestorRelationship')
   if (current.assistanceType === 'medicine') {
     const currentMedicineTemplateType = typeof (current.auditFlags as any)?.medicine_template_type === 'string' && (current.auditFlags as any).medicine_template_type === 'proxy' ? 'proxy' : 'personal'
     const currentMedicineConformeName = typeof (current.auditFlags as any)?.medicine_conforme_name === 'string' ? (current.auditFlags as any).medicine_conforme_name : null
@@ -483,6 +507,13 @@ export async function updateCase(req: Request, res: Response) {
         amount: requestedAmount,
         hospitalClinic: body.hospitalClinic,
         remarks: body.remarks,
+        beneficiaryName: body.beneficiaryName,
+        beneficiaryAge: body.beneficiaryAge !== undefined ? (body.beneficiaryAge != null ? String(body.beneficiaryAge) : null) : undefined,
+        beneficiarySex: body.beneficiarySex,
+        beneficiaryCivilStatus: body.beneficiaryCivilStatus,
+        beneficiaryOccupation: body.beneficiaryOccupation,
+        beneficiaryRequestorName: body.beneficiaryRequestorName,
+        beneficiaryRequestorRelationship: body.beneficiaryRequestorRelationship,
         auditFlags: auditFlags as Prisma.InputJsonValue,
       },
     })

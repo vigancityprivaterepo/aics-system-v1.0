@@ -17,6 +17,13 @@ export const createCaseSchema = z.object({
   funeralHome: z.string().optional().nullable(),
   funeralHomeOwner: z.string().optional().nullable(),
   funeralOwnerAddress: z.string().optional().nullable(),
+  beneficiaryName: z.string().optional().nullable(),
+  beneficiaryAge: z.union([z.number(), z.string()]).optional().nullable(),
+  beneficiarySex: z.string().optional().nullable(),
+  beneficiaryCivilStatus: z.string().optional().nullable(),
+  beneficiaryOccupation: z.string().optional().nullable(),
+  beneficiaryRequestorName: z.string().optional().nullable(),
+  beneficiaryRequestorRelationship: z.string().optional().nullable(),
 })
 
 export const updateCaseSchema = z.object({
@@ -36,6 +43,13 @@ export const updateCaseSchema = z.object({
   overrideReason: z.string().optional().nullable(),
   hospitalClinic: z.string().optional().nullable(),
   remarks: z.string().optional().nullable(),
+  beneficiaryName: z.string().optional().nullable(),
+  beneficiaryAge: z.union([z.number(), z.string()]).optional().nullable(),
+  beneficiarySex: z.string().optional().nullable(),
+  beneficiaryCivilStatus: z.string().optional().nullable(),
+  beneficiaryOccupation: z.string().optional().nullable(),
+  beneficiaryRequestorName: z.string().optional().nullable(),
+  beneficiaryRequestorRelationship: z.string().optional().nullable(),
 })
 
 export const updateStatusSchema = z.object({
@@ -118,7 +132,7 @@ export const updatePlainSchema = z.object({
 export const saveMedicinesSchema = z.object({
   amount: z.union([z.number(), z.string()]).optional().nullable(),
   medicines: z.array(z.object({
-    medicineId: z.string().uuid().optional().nullable(),
+    medicineId: z.preprocess((val) => (val === '' ? null : val), z.string().uuid().optional().nullable()),
     medicineName: z.string().min(1),
     quantity: z.union([z.number(), z.string()]),
     unit: z.string().optional().nullable(),
