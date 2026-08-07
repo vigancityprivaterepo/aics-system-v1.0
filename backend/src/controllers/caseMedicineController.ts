@@ -84,7 +84,7 @@ export async function getMedicines(req: Request, res: Response) {
 
 export async function saveMedicines(req: Request, res: Response) {
   const caseId = paramId(req.params.id)
-  const { medicines, amount } = saveMedicinesSchema.parse(req.body)
+  const { medicines, amount, choCertGivenDate } = saveMedicinesSchema.parse(req.body)
 
   const caseData = await prisma.case.findUnique({ where: { id: caseId } })
   if (!caseData) throw new HttpError(404, 'Case not found')
@@ -157,7 +157,11 @@ export async function saveMedicines(req: Request, res: Response) {
     }
     await tx.case.update({
       where: { id: caseData.id },
-      data: { amount: finalTotalAmount, auditFlags: mergedAuditFlags as Prisma.InputJsonValue },
+      data: {
+        amount: finalTotalAmount,
+        auditFlags: mergedAuditFlags as Prisma.InputJsonValue,
+        choCertGivenDate: choCertGivenDate === undefined ? undefined : (choCertGivenDate ? new Date(choCertGivenDate) : null),
+      },
     })
     return resetApprovalsAfterMaterialEdit(tx, {
       caseId: caseData.id,
@@ -182,11 +186,14 @@ export async function saveMedicines(req: Request, res: Response) {
     },
   })
 
+  const updatedCase = await prisma.case.findUnique({ where: { id: caseData.id }, select: { choCertGivenDate: true } })
+
   res.status(201).json({
     medicines: savedRows.map(serializeCaseMedicineRow),
     totalAmount: finalTotalAmount,
     status: resetResult.status ?? caseData.status,
     approvalsReset: resetResult.approvalsReset,
+    choCertGivenDate: updatedCase?.choCertGivenDate?.toISOString().slice(0, 10) ?? null,
   })
 }
 

@@ -531,7 +531,14 @@ export default function Dashboard() {
                         {c.caseNumber}
                       </Link>
                     </td>
-                    <td className="table-cell font-medium">{c.clientName}</td>
+                    <td className="table-cell font-medium">
+                      {c.beneficiaryName || c.clientName}
+                      {c.beneficiaryName && (
+                        <p className="mt-0.5 text-xs font-normal text-slate-400">
+                          Filed under {c.clientName}
+                        </p>
+                      )}
+                    </td>
                     <td className="table-cell">
                       <span className={`badge ${meta.badgeClass}`}>
                         {meta.label}

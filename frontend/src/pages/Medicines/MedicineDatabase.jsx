@@ -66,6 +66,8 @@ export default function MedicineDatabase() {
   // Add / Edit modal
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState(null)
+  const [duplicateMatch, setDuplicateMatch] = useState(null)
+  const [checkingDuplicate, setCheckingDuplicate] = useState(false)
   const [form, setForm] = useState({
     genericName: '',
     unit: '',
@@ -156,6 +158,48 @@ export default function MedicineDatabase() {
     return () => { active = false }
   }, [page, search, category])
 
+  // Live duplicate check in the Add/Edit modal — same identity the backend enforces on
+  // save (generic name + strength/conc. + dosage form), just surfaced early so the case
+  // maker sees it before hitting Save instead of only from the error toast.
+  useEffect(() => {
+    if (!showForm) {
+      setDuplicateMatch(null)
+      return
+    }
+    const genericName = form.genericName.trim()
+    if (!genericName) {
+      setDuplicateMatch(null)
+      return
+    }
+
+    let active = true
+    setCheckingDuplicate(true)
+    const timer = setTimeout(async () => {
+      try {
+        const res = await api.get('/medicines', { params: { search: genericName, limit: 25 } })
+        if (!active) return
+        const unit = form.unit.trim().toLowerCase()
+        const strength = form.strength.trim().toLowerCase()
+        const match = (res.data.medicines || []).find((m) =>
+          m.id !== editing?.id &&
+          m.genericName.trim().toLowerCase() === genericName.toLowerCase() &&
+          (m.unit ?? '').trim().toLowerCase() === unit &&
+          (m.strength ?? '').trim().toLowerCase() === strength,
+        )
+        setDuplicateMatch(match ?? null)
+      } catch {
+        // Duplicate check is a soft, non-blocking hint — the save endpoint enforces this for real.
+      } finally {
+        if (active) setCheckingDuplicate(false)
+      }
+    }, 350)
+
+    return () => {
+      active = false
+      clearTimeout(timer)
+    }
+  }, [showForm, form.genericName, form.unit, form.strength, editing])
+
   // ── Handlers ─────────────────────────────────────────────────────────────
   const openAdd = () => {
     setEditing(null)
@@ -180,6 +224,10 @@ export default function MedicineDatabase() {
     if (!canManageMedicines) return
     if (!form.genericName.trim()) {
       toast.error('Generic name is required')
+      return
+    }
+    if (duplicateMatch) {
+      toast.error('This medicine (same name, strength, and dosage form) is already in the database.')
       return
     }
     try {
@@ -441,6 +489,17 @@ export default function MedicineDatabase() {
                 />
               </div>
 
+              {duplicateMatch && (
+                <div className="sm:col-span-2 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                  <p className="font-semibold">Already in the database</p>
+                  <p className="mt-0.5 text-xs">
+                    "{duplicateMatch.genericName}"
+                    {duplicateMatch.unit ? ` (${duplicateMatch.unit})` : ''}
+                    {duplicateMatch.strength ? ` — ${duplicateMatch.strength}` : ''} matches this entry exactly. Edit that one instead, or change the name/strength/dosage form to add a distinct medicine.
+                  </p>
+                </div>
+              )}
+
               {/* Category */}
               <div>
                 <label className="portal-label">Category</label>
@@ -484,7 +543,8 @@ export default function MedicineDatabase() {
               <button
                 type="button"
                 onClick={handleSave}
-                className="portal-button-primary"
+                disabled={Boolean(duplicateMatch) || checkingDuplicate}
+                className="portal-button-primary disabled:cursor-not-allowed disabled:opacity-60"
                 id="btn-save-medicine"
               >
                 {editing ? 'Update Medicine' : 'Save Medicine'}

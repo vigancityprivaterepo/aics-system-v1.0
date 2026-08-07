@@ -126,14 +126,6 @@ export default function RichTextEditor({
     onChange(normalizedHtml)
   }
 
-  const handleKeyDown = (event) => {
-    if (event.key === 'Tab') {
-      event.preventDefault()
-      document.execCommand('insertHTML', false, '&nbsp;&nbsp;&nbsp;&nbsp;')
-      syncValue({ normalize: true })
-    }
-  }
-
   return (
     <div className="rounded-xl border border-slate-200 bg-white" data-field-name={fieldName}>
       <div className="relative">
@@ -149,7 +141,6 @@ export default function RichTextEditor({
           suppressContentEditableWarning
           onInput={() => syncValue()}
           onBlur={() => syncValue({ normalize: true })}
-          onKeyDown={handleKeyDown}
           className={`portal-input rounded-none border-0 bg-transparent px-4 py-3 focus:ring-0 ${minHeightClass}`}
           style={{ whiteSpace: 'pre-wrap' }}
         />

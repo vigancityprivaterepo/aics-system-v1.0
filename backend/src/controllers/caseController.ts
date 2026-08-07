@@ -573,14 +573,24 @@ export async function pendingApprovalsByType(req: Request, res: Response) {
   if (levels.includes('approver')) pendingStatuses.push('for_approval')
 
   if (pendingStatuses.length === 0) {
-    return res.json({ byType: {}, total: 0, pendingStatuses: [] })
+    return res.json({ byType: {}, total: 0, pendingStatuses: [], recentCases: [] })
   }
 
-  const grouped = await prisma.case.groupBy({
-    by: ['assistanceType'],
-    where: { status: { in: pendingStatuses } },
-    _count: { _all: true },
-  })
+  const [grouped, recent] = await Promise.all([
+    prisma.case.groupBy({
+      by: ['assistanceType'],
+      where: { status: { in: pendingStatuses } },
+      _count: { _all: true },
+    }),
+    // Oldest-waiting-first (not newest-first) — this backs a "what needs my action"
+    // panel, not an activity feed, so the case that's been sitting longest surfaces first.
+    prisma.case.findMany({
+      where: { status: { in: pendingStatuses } },
+      orderBy: { createdAt: 'asc' },
+      take: 6,
+      include: { client: { select: { firstName: true, lastName: true } } },
+    }),
+  ])
 
   const byType: Record<string, number> = {}
   let total = 0
@@ -589,6 +599,22 @@ export async function pendingApprovalsByType(req: Request, res: Response) {
     total += row._count._all
   }
 
-  return res.json({ byType, total, pendingStatuses })
+  const queueByStatus: Record<string, string> = {
+    for_review: 'ready_for_review',
+    recommending_approval: 'waiting_for_recommender',
+    for_approval: 'waiting_for_approver',
+  }
+
+  const recentCases = recent.map((c) => ({
+    id: c.id,
+    caseNumber: c.caseNumber ?? null,
+    assistanceType: c.assistanceType,
+    beneficiaryName: (c as any).beneficiaryName ?? null,
+    clientName: `${c.client.lastName}, ${c.client.firstName}`,
+    queue: queueByStatus[c.status] ?? null,
+    createdAt: c.createdAt,
+  }))
+
+  return res.json({ byType, total, pendingStatuses, recentCases })
 }
 

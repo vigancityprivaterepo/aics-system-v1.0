@@ -8,6 +8,7 @@ import { promisify } from 'node:util'
 import { pathToFileURL } from 'node:url'
 import { env } from '../config/env.js'
 import { stripBlankPdfPages } from './pdfBlankPageService.js'
+import { adjustSignaturePositionForPdfConversion } from './docxService.js'
 
 const execFileAsync = promisify(execFile)
 const LIBREOFFICE_PROFILE_DIR = path.join(os.tmpdir(), 'aics-libreoffice-profile-v1')
@@ -161,7 +162,10 @@ async function convertDocxBufferToPdfUncached(buffer: Buffer, baseFilename: stri
   }
 }
 
-export async function convertDocxBufferToPdf(buffer: Buffer, baseFilename: string): Promise<Buffer | null> {
+export async function convertDocxBufferToPdf(inputBuffer: Buffer, baseFilename: string): Promise<Buffer | null> {
+  // Only the PDF conversion input is nudged here — the DOCX buffer served for direct
+  // download (built from the same generator, upstream of this call) is never touched.
+  const buffer = adjustSignaturePositionForPdfConversion(inputBuffer)
   const cacheKey = pdfConversionCacheKey(buffer)
   const cachePath = path.join(PDF_CONVERSION_CACHE_DIR, `${cacheKey}.pdf`)
   const cached = await readCachedPdf(cachePath)

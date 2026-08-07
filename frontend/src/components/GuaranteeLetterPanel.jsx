@@ -5,6 +5,7 @@ import api from '../lib/api'
 import { openProtectedFile } from '../lib/openProtectedFile'
 import { DownloadIcon, UploadIcon, CheckCircleIcon } from './ui/Icons'
 import GuaranteeLetterPdfPreview from './GuaranteeLetterPdfPreview'
+import { useAuthStore } from '../store/authStore'
 
 const GL_TYPES = ['burial', 'hospital', 'medical']
 
@@ -29,11 +30,17 @@ export default function GuaranteeLetterPanel({ caseData, onUploaded }) {
   const [downloadingDocx, setDownloadingDocx] = useState(false)
   const [downloadingPdf, setDownloadingPdf] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const currentUser = useAuthStore((state) => state.user)
 
   if (!GL_TYPES.includes(caseData.assistanceType)) return null
 
   const { url: signedGlUrl, at: glUploadedAt } = getSignedGlInfo(caseData)
-  const canUpload = caseData.status !== 'released' && caseData.status !== 'rejected'
+  // Before release, only the assigned approver can upload (enforced server-side). Once
+  // released, the approver's window has closed and the assigned case maker (or an admin)
+  // takes over instead, for the final scanned/signed copy that comes back after release.
+  const isReleased = caseData.status === 'released'
+  const canUploadAfterRelease = isReleased && (caseData.permissions?.isOwner || currentUser?.role === 'admin')
+  const canUpload = caseData.status !== 'rejected' && (!isReleased || canUploadAfterRelease)
   const canUploadSignedGl = canUpload
   const typeLabel =
     caseData.assistanceType === 'burial'
@@ -174,7 +181,11 @@ export default function GuaranteeLetterPanel({ caseData, onUploaded }) {
 
 
         {!canUpload && (
-          <p className="text-xs italic text-slate-400">GL upload is disabled for {caseData.status} cases.</p>
+          <p className="text-xs italic text-slate-400">
+            {isReleased
+              ? 'Only the assigned case maker or an admin can upload the signed GL once released.'
+              : `GL upload is disabled for ${caseData.status} cases.`}
+          </p>
         )}
       </div>
     </div>

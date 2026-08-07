@@ -36,12 +36,24 @@ function shouldResetSignedGl(changedFields: string[]) {
   return changedFields.length > 0
 }
 
-async function assertApproverSignedGlUploadAllowed(
+async function assertSignedGlUploadAllowed(
   caseData: { status: string; socialWorkerId: string | null; auditFlags?: unknown },
   user: Express.AuthUser | undefined,
 ) {
-  if (caseData.status === 'released' || caseData.status === 'rejected') {
+  if (caseData.status === 'rejected') {
     throw new HttpError(400, `Signed guarantee letter cannot be uploaded when case is ${caseData.status}.`)
+  }
+
+  // Once released, the approver's own upload window (below) has already closed — the case
+  // maker who owns the case takes over instead, uploading the final scanned/signed copy
+  // for record-keeping (e.g. the physical letter came back from the mayor's office after
+  // the case had already moved to released).
+  if (caseData.status === 'released') {
+    const isOwner = Boolean(user && caseData.socialWorkerId && caseData.socialWorkerId === user.id)
+    if (!isOwner && user?.role !== 'admin') {
+      throw new HttpError(403, 'Only the assigned case maker or an admin can upload the signed guarantee letter once released.')
+    }
+    return
   }
 
   const settings = await getApprovalSettings()
@@ -229,7 +241,7 @@ export async function uploadBurialGl(req: Request, res: Response) {
     if (!caseData) throw new HttpError(404, 'Case not found')
     assertCaseReadable(caseData, req.user, 'Signed guarantee letter upload')
     if (caseData.assistanceType !== 'burial') throw new HttpError(400, 'Only burial cases can upload signed GL')
-    await assertApproverSignedGlUploadAllowed(caseData, req.user)
+    await assertSignedGlUploadAllowed(caseData, req.user)
 
     const signedGlUrl = signedGlPublicUrl(file.filename)
     const burial = await prisma.burialDetail.upsert({
@@ -366,7 +378,7 @@ export async function uploadHospitalGl(req: Request, res: Response) {
     if (!caseData) throw new HttpError(404, 'Case not found')
     assertCaseReadable(caseData, req.user, 'Signed guarantee letter upload')
     if (caseData.assistanceType !== 'hospital') throw new HttpError(400, 'Only hospital cases can upload signed GL')
-    await assertApproverSignedGlUploadAllowed(caseData, req.user)
+    await assertSignedGlUploadAllowed(caseData, req.user)
 
     const signedGlUrl = signedGlPublicUrl(file.filename)
     const hospital = await prisma.hospitalDetail.upsert({
@@ -476,7 +488,7 @@ export async function uploadMedicalGl(req: Request, res: Response) {
     if (!caseData) throw new HttpError(404, 'Case not found')
     assertCaseReadable(caseData, req.user, 'Signed guarantee letter upload')
     if (caseData.assistanceType !== 'medical') throw new HttpError(400, 'Only medical cases can upload signed GL')
-    await assertApproverSignedGlUploadAllowed(caseData, req.user)
+    await assertSignedGlUploadAllowed(caseData, req.user)
 
     const signedGlUrl = signedGlPublicUrl(file.filename)
     const medical = await prisma.medicalDetail.upsert({

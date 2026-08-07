@@ -5,9 +5,10 @@ import toast from 'react-hot-toast'
 import api from '../../lib/api'
 import { ChevronLeftIcon, PlusIcon, TrashIcon } from '../../components/ui/Icons'
 import { VIGAN_BARANGAYS } from '../../lib/constants'
+import { calculateAge } from '../../lib/utils'
 import DuplicateReviewModal from '../../components/clients/DuplicateReviewModal'
 
-const defaultFamilyMember = { name: '', age: '', relationship: '', relationshipOther: '', occupation: '' }
+const defaultFamilyMember = { name: '', dateOfBirth: '', age: '', relationship: '', relationshipOther: '', occupation: '' }
 const RELIGION_OPTIONS = ['Roman Catholic', 'Iglesia ni Cristo', 'Islam', 'Born Again Christian', 'Evangelical', 'Protestant', 'Aglipayan', 'Seventh-day Adventist', "Jehovah's Witness", 'Other']
 const STANDARD_RELATIONSHIPS = ['Spouse', 'Son', 'Daughter', 'Father', 'Mother', 'Brother', 'Sister', 'Grandson', 'Granddaughter', 'Grandfather', 'Grandmother', 'Uncle', 'Aunt', 'Nephew', 'Niece', 'Son-in-Law', 'Daughter-in-Law', 'Father-in-Law', 'Mother-in-Law']
 const RELATIONSHIP_OPTIONS = [...STANDARD_RELATIONSHIPS, 'Other']
@@ -46,14 +47,16 @@ export default function ClientForm() {
       if (relSelect === 'Other') {
         finalRel = String(member.relationshipOther || '').trim() || 'Other'
       }
+      const dateOfBirth = member.dateOfBirth || null
       return {
         name: String(member.name || '').trim(),
-        age: member.age === '' ? null : member.age,
+        dateOfBirth,
+        age: dateOfBirth ? calculateAge(dateOfBirth) : (member.age === '' ? null : member.age),
         relationship: finalRel,
         occupation: String(member.occupation || '').trim(),
       }
     })
-    .filter((member) => member.name || member.relationship || member.occupation || member.age !== null)
+    .filter((member) => member.name || member.relationship || member.occupation || member.age !== null || member.dateOfBirth)
 
   const onSubmit = async (data) => {
     const payload = { ...data, familyComposition: cleanFamily() }
@@ -269,7 +272,7 @@ export default function ClientForm() {
               <thead className="bg-slate-50 text-slate-500">
                 <tr>
                   <th className="px-3 py-2 text-left">Name</th>
-                  <th className="px-3 py-2 text-left">Age</th>
+                  <th className="px-3 py-2 text-left">Date of Birth</th>
                   <th className="px-3 py-2 text-left">Relationship</th>
                   <th className="px-3 py-2 text-left">Occupation</th>
                   <th className="w-12 px-3 py-2" />
@@ -288,7 +291,17 @@ export default function ClientForm() {
                   return (
                     <tr key={index}>
                       <td className="px-3 py-2"><input value={member.name} onChange={(event) => updateFamilyMember(index, 'name', event.target.value)} className="portal-input" placeholder="Full name" /></td>
-                      <td className="px-3 py-2"><input type="number" min="0" value={member.age} onChange={(event) => updateFamilyMember(index, 'age', event.target.value)} className="portal-input" placeholder="Age" /></td>
+                      <td className="px-3 py-2">
+                        <input
+                          type="date"
+                          value={member.dateOfBirth || ''}
+                          onChange={(event) => updateFamilyMember(index, 'dateOfBirth', event.target.value)}
+                          className="portal-input"
+                        />
+                        {member.dateOfBirth && (
+                          <p className="mt-1 text-[11px] text-slate-500">Age: {calculateAge(member.dateOfBirth) ?? '-'}</p>
+                        )}
+                      </td>
                       <td className="px-3 py-2">
                         {selectVal === 'Other' ? (
                           <div className="relative flex items-center">

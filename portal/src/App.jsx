@@ -1,9 +1,6 @@
-import { useEffect } from 'react'
-import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
-import toast from 'react-hot-toast'
 import { useAuthStore } from './store/authStore'
-import { PORTAL_SESSION_EXPIRED_EVENT } from './lib/session'
 import { isApplicantProfileComplete } from './lib/profileCompletion'
 import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
@@ -38,29 +35,10 @@ function PublicRoute({ children }) {
   return !token ? children : <Navigate to={isApplicantProfileComplete(applicant) ? '/dashboard' : '/profile'} replace />
 }
 
-function SessionExpiryListener() {
-  const navigate = useNavigate()
-  const logout = useAuthStore((s) => s.logout)
-
-  useEffect(() => {
-    const handleSessionExpired = () => {
-      logout()
-      toast.error('Your session has expired. Please sign in again.')
-      navigate('/login', { replace: true, state: { sessionExpired: true } })
-    }
-
-    window.addEventListener(PORTAL_SESSION_EXPIRED_EVENT, handleSessionExpired)
-    return () => window.removeEventListener(PORTAL_SESSION_EXPIRED_EVENT, handleSessionExpired)
-  }, [logout, navigate])
-
-  return null
-}
-
 export default function App() {
   return (
     <BrowserRouter>
       <Toaster position="top-right" toastOptions={{ duration: 4000 }} />
-      <SessionExpiryListener />
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/overview" element={<LandingPage />} />

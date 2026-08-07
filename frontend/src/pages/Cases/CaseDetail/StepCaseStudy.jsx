@@ -6,10 +6,14 @@ import { FileTextIcon, PlusIcon, TrashIcon } from '../../../components/ui/Icons'
 import MedicineTable from '../../../components/MedicineTable'
 import NarrativePresetField from '../../../components/NarrativePresetField'
 import SearchablePresetInput from '../../../components/SearchablePresetInput'
+import HouseholdMemberQuickFill from '../../../components/HouseholdMemberQuickFill'
+import FieldError from '../../../components/ui/FieldError'
+import DraftRecoveryBanner from '../../../components/ui/DraftRecoveryBanner'
 import { useAuthStore } from '../../../store/authStore'
 import { OCCUPATION_OPTIONS, RELATIONSHIP_OPTIONS } from '../../../constants/caseFormOptions'
 import { scrollToFirstError } from '../../../lib/formNavigation'
 import { formatCurrency } from '../../../lib/utils'
+import { useAutosaveDraft, readLocalDraft, clearLocalDraft } from '../../../lib/localDraft'
 
 const defaultMember = { name: '', age: '', relationship: '', civilStatus: '', occupation: '', monthlyIncome: '' }
 const CIVIL_STATUS_OPTIONS = ['Single', 'Married', 'Widowed', 'Separated', 'Annulled']
@@ -76,8 +80,11 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false, on
   const [saving, setSaving] = useState(false)
   const [narrativeOptions, setNarrativeOptions] = useState([])
   const submitModeRef = useRef('save')
+  const draftKey = `case-draft:${caseData.id}:case-study`
+  const [draft, setDraft] = useState(() => (readOnly ? null : readLocalDraft(draftKey)))
 
-  const { control, register, handleSubmit, watch, setValue, getValues } = useForm({
+  const { control, register, handleSubmit, watch, setValue, getValues, reset, formState: { errors } } = useForm({
+    mode: 'onBlur',
     defaultValues: {
       dateOfAssessment: caseData.dateOfAssessment || new Date().toISOString().slice(0, 10),
       socialWorkerName: caseData.socialWorkerName || currentUser?.name || '',
@@ -96,9 +103,25 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false, on
       beneficiaryOccupation: caseData.beneficiaryOccupation || '',
       beneficiaryRequestorName: caseData.beneficiaryRequestorName || '',
       beneficiaryRequestorRelationship: caseData.beneficiaryRequestorRelationship || '',
+      choCertGivenDate: caseData.choCertGivenDate || '',
     },
   })
 
+  const formValues = watch()
+  useAutosaveDraft(draftKey, { formValues, family, medicines }, { enabled: !readOnly })
+
+  const restoreDraft = () => {
+    if (!draft) return
+    reset(draft.data.formValues)
+    if (Array.isArray(draft.data.family)) setFamily(draft.data.family)
+    if (Array.isArray(draft.data.medicines)) setMedicines(draft.data.medicines)
+    setDraft(null)
+  }
+
+  const discardDraft = () => {
+    clearLocalDraft(draftKey)
+    setDraft(null)
+  }
 
   useEffect(() => {
     let active = true
@@ -171,7 +194,7 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false, on
       if (isMedicine) {
         const [caseRes, medicinesRes] = await Promise.all([
           api.put(`/cases/${caseData.id}`, casePayload),
-          api.post(`/cases/${caseData.id}/medicines`, { medicines, amount: data.amount }),
+          api.post(`/cases/${caseData.id}/medicines`, { medicines, amount: data.amount, choCertGivenDate: data.choCertGivenDate || null }),
         ])
 
         const totalAmount = Number(medicinesRes.data?.totalAmount ?? data.amount)
@@ -179,6 +202,7 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false, on
           ...casePayload,
           medicines: normalizeMedicineRows(medicinesRes.data?.medicines ?? medicines),
           amount: totalAmount,
+          choCertGivenDate: medicinesRes.data?.choCertGivenDate ?? data.choCertGivenDate ?? null,
           status: medicinesRes.data?.status ?? caseRes.data?.status ?? caseData.status,
         })
       } else if (isBurial) {
@@ -204,6 +228,7 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false, on
         })
       }
 
+      clearLocalDraft(draftKey)
       toast.success('Case study saved')
       if (submitModeRef.current === 'next') {
         onNext?.()
@@ -251,6 +276,10 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false, on
         </div>
       )}
 
+      {draft && (
+        <DraftRecoveryBanner savedAt={draft.savedAt} onRestore={restoreDraft} onDiscard={discardDraft} />
+      )}
+
       <form onSubmit={handleSubmit(onSave, handleInvalid)}>
         <fieldset disabled={readOnly} className="space-y-4">
           <section className="rounded-lg border border-slate-200 bg-slate-50 p-4">
@@ -259,11 +288,13 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false, on
               <div>
                 <label className="portal-label">Date of Assessment *</label>
                 <input type="date" {...register('dateOfAssessment', { required: 'Date of assessment is required' })} className="portal-input" />
+                <FieldError message={errors.dateOfAssessment?.message} />
               </div>
               <div className="sm:col-span-2">
                 <label className="portal-label">Employee Name *</label>
                 <input type="text" {...register('socialWorkerName', { required: 'Employee name is required' })} className="portal-input" placeholder="Full name of assigned social worker" />
                 <p className="mt-1 text-xs text-slate-500">Auto-filled from the signed-in account. You can adjust it here if needed.</p>
+                <FieldError message={errors.socialWorkerName?.message} />
               </div>
             </div>
           </section>
@@ -321,16 +352,28 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false, on
                     <div><label className="portal-label">Sex</label><select {...register('beneficiarySex')} className="portal-input"><option value="">Select sex</option><option value="Male">Male</option><option value="Female">Female</option></select></div>
                     <div><label className="portal-label">Civil Status</label><select {...register('beneficiaryCivilStatus')} className="portal-input"><option value="">Select status</option>{CIVIL_STATUS_OPTIONS.map((status) => <option key={status} value={status}>{status}</option>)}</select></div>
                     <div><label className="portal-label">Occupation</label><SearchablePresetInput value={watch('beneficiaryOccupation') || ''} onChange={(value) => setValue('beneficiaryOccupation', value, { shouldDirty: true, shouldTouch: true })} options={OCCUPATION_OPTIONS} placeholder="Search occupation" /></div>
-                    <div><label className="portal-label">Requesting Party</label><input type="text" {...register('beneficiaryRequestorName')} className="portal-input" placeholder="Who is filing this on the beneficiary's behalf" /></div>
+                    <div>
+                      <label className="portal-label">Requesting Party</label>
+                      <input type="text" {...register('beneficiaryRequestorName')} className="portal-input" placeholder="Who is filing this on the beneficiary's behalf" />
+                      <HouseholdMemberQuickFill
+                        members={family}
+                        onSelect={(member) => {
+                          setValue('beneficiaryRequestorName', member.name || '', { shouldDirty: true, shouldTouch: true })
+                          if (member.relationship) setValue('beneficiaryRequestorRelationship', member.relationship, { shouldDirty: true, shouldTouch: true })
+                        }}
+                      />
+                    </div>
                     <div><label className="portal-label">Requesting Party's Relationship to Beneficiary</label><select {...register('beneficiaryRequestorRelationship')} className="portal-input"><option value="">Select</option>{RELATIONSHIP_OPTIONS.map((relationship) => <option key={relationship} value={relationship}>{relationship}</option>)}</select></div>
                   </div>
                 </div>
               )}
               <div>
                 <Controller name="presentingProblem" control={control} rules={{ validate: (value) => String(value ?? '').replace(/<[^>]*>/g, '').trim().length > 0 || 'Presenting problem is required' }} render={({ field }) => <NarrativePresetField label="Presenting Problem *" value={field.value} onChange={field.onChange} options={narrativeOptions.filter((item) => item.field === 'presenting_problem')} readOnly={readOnly} minHeightClass="min-h-[7rem]" placeholder="State the client's concern or reason for seeking assistance." fieldName={field.name} />} />
+                <FieldError message={errors.presentingProblem?.message} />
               </div>
               <div>
                 <Controller name="findings" control={control} rules={{ validate: (value) => String(value ?? '').replace(/<[^>]*>/g, '').trim().length > 0 || 'Findings are required' }} render={({ field }) => <NarrativePresetField label="Findings / Narrative *" value={field.value} onChange={field.onChange} options={narrativeOptions.filter((item) => item.field === 'findings')} readOnly={readOnly} minHeightClass="min-h-[12rem]" placeholder="Write the case study findings used in the generated report." fieldName={field.name} />} />
+                <FieldError message={errors.findings?.message} />
               </div>
             </div>
           </section>
@@ -339,14 +382,22 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false, on
             <section className="rounded-lg border border-slate-200 bg-white p-4">
               <EncodingSectionHeader number="4" title="Medicine Items" description="Encode prescribed medicines and quantities for this assistance." />
               <MedicineTable items={medicines} onChange={setMedicines} readOnly={readOnly} />
-              <div className="mt-5 border-t border-slate-200 pt-4 sm:max-w-sm">
-                <label className="portal-label">Total Amount Requested (PHP) *</label>
-                <input type="number" min="0" step="0.01" required {...register('amount', { required: 'Amount is required' })} className="portal-input" placeholder="0.00" />
-                <p className="mt-1 text-xs text-slate-500">Manually encode the financial assistance amount requested for this medicine case.</p>
+              <div className="mt-5 grid grid-cols-1 gap-4 border-t border-slate-200 pt-4 sm:max-w-2xl sm:grid-cols-2">
+                <div>
+                  <label className="portal-label">Total Amount Requested (PHP) *</label>
+                  <input type="number" min="0" step="0.01" required {...register('amount', { required: 'Amount is required' })} className="portal-input" placeholder="0.00" />
+                  <p className="mt-1 text-xs text-slate-500">Manually encode the financial assistance amount requested for this medicine case.</p>
+                  <FieldError message={errors.amount?.message} />
+                </div>
+                <div>
+                  <label className="portal-label">CHO Certification Given Date</label>
+                  <input type="date" {...register('choCertGivenDate')} className="portal-input" disabled={readOnly} />
+                  <p className="mt-1 text-xs text-slate-500">Date printed on the CHO certification for unavailable medicines. Leave blank to use today — set a later date if the client will actually get the medicine on a different day.</p>
+                </div>
               </div>
             </section>
           ) : (
-            <section className="rounded-lg border border-slate-200 bg-white p-4"><EncodingSectionHeader number="4" title="Assistance Amount" description="Enter the amount for the guarantee letter or cash assistance." /><div className="grid grid-cols-1 gap-4 sm:max-w-sm"><div><label className="portal-label">{amountLabelForType(caseData.assistanceType)} *</label><input type="number" min="0" step="any" {...register('amount', { required: 'Amount is required' })} className="portal-input" placeholder="0.00" />{isOverCap && <p className="mt-1 text-xs text-amber-600">Amount exceeds {formatCurrency(amountCap)}. Ensure proper authorization.</p>}</div></div></section>
+            <section className="rounded-lg border border-slate-200 bg-white p-4"><EncodingSectionHeader number="4" title="Assistance Amount" description="Enter the amount for the guarantee letter or cash assistance." /><div className="grid grid-cols-1 gap-4 sm:max-w-sm"><div><label className="portal-label">{amountLabelForType(caseData.assistanceType)} *</label><input type="number" min="0" step="any" {...register('amount', { required: 'Amount is required' })} className="portal-input" placeholder="0.00" />{isOverCap && <p className="mt-1 text-xs text-amber-600">Amount exceeds {formatCurrency(amountCap)}. Ensure proper authorization.</p>}<FieldError message={errors.amount?.message} /></div></div></section>
           )}
         </fieldset>
         {!readOnly && <div className="mt-5 flex flex-wrap justify-end gap-3"><button type="submit" onClick={() => { submitModeRef.current = 'save' }} disabled={saving} className="portal-button-secondary" id="btn-save-case-study">{saving ? 'Saving...' : 'Save Case Encoding'}</button><button type="submit" onClick={() => { submitModeRef.current = 'next' }} disabled={saving} className="portal-button-primary" id="btn-save-next-case-study">{saving ? 'Saving...' : 'Save and Next'}</button></div>}

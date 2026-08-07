@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Outlet, NavLink, Link, useNavigate, useLocation } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { Ambulance } from 'lucide-react'
@@ -10,10 +10,17 @@ import {
   LogoutIcon, MenuIcon, DocumentIcon, FileTextIcon,
   CrossIcon, HospitalIcon, GlassesIcon, HeadstonIcon,
   ClipboardIcon, QrCodeIcon, DatabaseIcon, ChevronDownIcon,
+  BellIcon,
 } from '../ui/Icons'
 import MyProfileModal from '../shared/MyProfileModal'
 import { allowedCaseTypesForUser, canAccessAllCases } from '../../utils/accessRules'
 import { canAccessModule } from '../../utils/moduleAccess'
+
+// How often the notification bell's badge count re-checks for newly-queued cases
+// while a staff member is sitting on some other page (the sidebar counts only
+// refresh on navigation otherwise, so someone parked on one screen would never
+// see new work land in their queue).
+const PENDING_POLL_MS = 45000
 
 // ── Case sub-types ────────────────────────────────────────────────────────────
 const CASE_CHILDREN = [
@@ -82,6 +89,120 @@ function NavItemWithBadge({ to, Icon, label, onClick, badge = 0, end = false }) 
         </span>
       )}
     </NavLink>
+  )
+}
+
+// ── Header notification bell ───────────────────────────────────────────────────
+// Lets a reviewer/recommender/approver see what's waiting on them without leaving
+// whatever page they're on. `items` and `count` both come from the same polled
+// /cases/pending-approvals-by-type response in AppLayout — that endpoint counts
+// cases by workflow STATUS (anyone holding that approval role sees the same
+// queue), which is the same model the Dashboard's operational-queue tiles use.
+// It deliberately does NOT reuse `/cases?owner=me`: that filter matches a single
+// fixed assignee configured in Settings, which isn't necessarily this user even
+// when they hold the role — mixing the two produced a badge that said "1" while
+// the panel said "all caught up".
+const NOTIFICATION_QUEUE_LABEL = {
+  ready_for_review: 'Ready for Review',
+  waiting_for_recommender: 'Waiting for Recommender',
+  waiting_for_approver: 'Waiting for Approver',
+}
+const QUEUE_BY_STATUS = {
+  for_review: 'ready_for_review',
+  recommending_approval: 'waiting_for_recommender',
+  for_approval: 'waiting_for_approver',
+}
+
+function NotificationBell({ count, items, viewAllHref, canView }) {
+  const navigate = useNavigate()
+  const location = useLocation()
+  const containerRef = useRef(null)
+  const [open, setOpen] = useState(false)
+
+  useEffect(() => {
+    setOpen(false)
+  }, [location.pathname])
+
+  useEffect(() => {
+    if (!open) return
+    const handleClickOutside = (event) => {
+      if (containerRef.current && !containerRef.current.contains(event.target)) setOpen(false)
+    }
+    const handleEscape = (event) => {
+      if (event.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    document.addEventListener('keydown', handleEscape)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('keydown', handleEscape)
+    }
+  }, [open])
+
+  if (!canView) return null
+
+  const typeLabel = (type) => CASE_CHILDREN.find((child) => child.type === type)?.label ?? type
+
+  return (
+    <div className="relative" ref={containerRef}>
+      <button
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        className="relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200
+          bg-slate-50 text-slate-500 transition-colors hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700
+          focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
+        title="Notifications"
+        aria-label="Notifications"
+      >
+        <BellIcon className="h-5 w-5" />
+        {count > 0 && (
+          <span className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full
+            border-2 border-white bg-rose-500 px-1 text-[10px] font-bold leading-none text-white">
+            {count > 99 ? '99+' : count}
+          </span>
+        )}
+      </button>
+
+      {open && (
+        <div className="absolute right-0 top-12 z-40 w-80 max-w-[90vw] rounded-xl border border-slate-200 bg-white shadow-xl">
+          <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+            <p className="text-sm font-semibold text-slate-800">Notifications</p>
+            {count > 0 && <span className="text-xs text-slate-400">{count} pending</span>}
+          </div>
+          <div className="max-h-80 overflow-y-auto">
+            {items.length === 0 ? (
+              <p className="px-4 py-6 text-center text-sm text-slate-400">You're all caught up — nothing pending on your queue.</p>
+            ) : (
+              <ul className="divide-y divide-slate-100">
+                {items.map((c) => (
+                  <li key={c.id}>
+                    <button
+                      type="button"
+                      onClick={() => { setOpen(false); navigate(`/cases/${c.id}`) }}
+                      className="w-full px-4 py-3 text-left hover:bg-slate-50 transition-colors"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-mono text-xs font-bold text-brand-primary">{c.caseNumber ?? '—'}</span>
+                        <span className="badge badge-slate text-[10px]">{typeLabel(c.assistanceType)}</span>
+                      </div>
+                      <p className="mt-1 truncate text-sm font-medium text-slate-700">{c.beneficiaryName || c.clientName}</p>
+                      <p className="mt-0.5 text-xs text-amber-600">{NOTIFICATION_QUEUE_LABEL[c.queue] || 'Pending your action'}</p>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => { setOpen(false); navigate(viewAllHref) }}
+            className="block w-full border-t border-slate-100 px-4 py-2.5 text-center text-xs font-medium text-brand-green hover:bg-slate-50"
+          >
+            View all pending
+          </button>
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -321,6 +442,9 @@ export default function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
   const [pendingByType, setPendingByType] = useState({})
+  const [pendingTotal, setPendingTotal] = useState(0)
+  const [pendingRecentCases, setPendingRecentCases] = useState([])
+  const [pendingStatuses, setPendingStatuses] = useState([])
   const [portalSubmittedCount, setPortalSubmittedCount] = useState(0)
   const isCityHealthOffice = user?.role === 'city_health_office'
   const canAccessCasesModule = canAccessModule(user, 'cases')
@@ -329,11 +453,29 @@ export default function AppLayout() {
   useEffect(() => {
     if (!canAccessCasesModule || isCityHealthOffice || !user?.approvalLevel?.length) {
       setPendingByType({})
+      setPendingTotal(0)
+      setPendingRecentCases([])
+      setPendingStatuses([])
       return
     }
-    api.get('/cases/pending-approvals-by-type')
-      .then((res) => setPendingByType(res.data.byType ?? {}))
-      .catch(() => {})
+    let cancelled = false
+    const fetchPending = () => {
+      api.get('/cases/pending-approvals-by-type')
+        .then((res) => {
+          if (cancelled) return
+          setPendingByType(res.data.byType ?? {})
+          setPendingTotal(res.data.total ?? 0)
+          setPendingRecentCases(res.data.recentCases ?? [])
+          setPendingStatuses(res.data.pendingStatuses ?? [])
+        })
+        .catch(() => {})
+    }
+    fetchPending()
+    const interval = setInterval(fetchPending, PENDING_POLL_MS)
+    return () => {
+      cancelled = true
+      clearInterval(interval)
+    }
   }, [canAccessCasesModule, isCityHealthOffice, location.pathname, user?.approvalLevel?.length])
 
   useEffect(() => {
@@ -345,6 +487,14 @@ export default function AppLayout() {
       .then((res) => setPortalSubmittedCount(res.data.total || 0))
       .catch(() => {})
   }, [canAccessPortalApplications, isCityHealthOffice, location.pathname])
+
+  const canViewNotifications = canAccessCasesModule && !isCityHealthOffice && !!user?.approvalLevel?.length
+  // A user can hold more than one approval role at once (reviewer + recommender, say);
+  // only route to a single filtered queue when there's exactly one in play, otherwise
+  // send them to the unfiltered list rather than guessing which queue they meant.
+  const pendingViewAllHref = pendingStatuses.length === 1
+    ? `/cases?queue=${QUEUE_BY_STATUS[pendingStatuses[0]] ?? ''}`
+    : '/cases'
 
   const handleLogout = () => {
     logout()
@@ -466,6 +616,12 @@ export default function AppLayout() {
             <span className="truncate text-slate-600">Case Management System</span>
           </div>
           <div className="flex shrink-0 items-center gap-3">
+            <NotificationBell
+              count={pendingTotal}
+              items={pendingRecentCases}
+              viewAllHref={pendingViewAllHref}
+              canView={canViewNotifications}
+            />
             <span className="text-xs text-slate-400">{new Date().toLocaleDateString('en-PH', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}</span>
             <button
               onClick={() => setProfileOpen(true)}
@@ -490,6 +646,14 @@ export default function AppLayout() {
           <div className="flex items-center gap-2">
             <img src={logo} alt="AICS Logo" className="h-5 w-5 object-contain" />
             <span className="font-display text-sm font-bold text-emerald-800">Vigan AICS</span>
+          </div>
+          <div className="ml-auto">
+            <NotificationBell
+              count={pendingTotal}
+              items={pendingRecentCases}
+              viewAllHref={pendingViewAllHref}
+              canView={canViewNotifications}
+            />
           </div>
         </header>
 

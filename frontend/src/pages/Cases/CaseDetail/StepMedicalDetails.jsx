@@ -6,6 +6,9 @@ import { FileTextIcon } from '../../../components/ui/Icons'
 import HospitalFacilityPicker from '../../../components/HospitalFacilityPicker'
 import PresetSelectField from '../../../components/PresetSelectField'
 import SearchablePresetInput from '../../../components/SearchablePresetInput'
+import HouseholdMemberQuickFill from '../../../components/HouseholdMemberQuickFill'
+import FieldError from '../../../components/ui/FieldError'
+import DraftRecoveryBanner from '../../../components/ui/DraftRecoveryBanner'
 import {
   DOCTOR_POSITION_OPTIONS,
   MEDICAL_PROCEDURE_OPTIONS,
@@ -14,13 +17,17 @@ import {
 } from '../../../constants/caseFormOptions'
 import { scrollToFirstError } from '../../../lib/formNavigation'
 import { formatCurrency } from '../../../lib/utils'
+import { useAutosaveDraft, readLocalDraft, clearLocalDraft } from '../../../lib/localDraft'
 
 const GL_MAX = 30000
 
 export default function StepMedicalDetails({ caseData, onUpdate, onNext }) {
   const [saving, setSaving] = useState(false)
   const submitModeRef = useRef('save')
-  const { register, handleSubmit, watch, setValue } = useForm({
+  const draftKey = `case-draft:${caseData.id}:medical`
+  const [draft, setDraft] = useState(() => readLocalDraft(draftKey))
+  const { register, handleSubmit, watch, setValue, reset, formState: { errors } } = useForm({
+    mode: 'onBlur',
     defaultValues: {
       templateType: caseData.medicalDetails?.templateType || 'personal',
       clinicName: caseData.medicalDetails?.clinicName || '',
@@ -36,6 +43,20 @@ export default function StepMedicalDetails({ caseData, onUpdate, onNext }) {
       amount: caseData.amount ?? '',
     },
   })
+
+  const formValues = watch()
+  useAutosaveDraft(draftKey, { formValues }, { enabled: true })
+
+  const restoreDraft = () => {
+    if (!draft) return
+    reset(draft.data.formValues)
+    setDraft(null)
+  }
+
+  const discardDraft = () => {
+    clearLocalDraft(draftKey)
+    setDraft(null)
+  }
 
   const amount = watch('amount')
   const mdPosition = watch('mdPosition')
@@ -72,6 +93,7 @@ export default function StepMedicalDetails({ caseData, onUpdate, onNext }) {
 
       const res = await api.put(`/cases/${caseData.id}/medical`, payload)
       onUpdate({ medicalDetails: res.data, amount: res.data?.amount ?? data.amount, proxyName: data.conformeName || null, proxyRelationship: data.conformeRelationship || null, status: res.data?.status ?? caseData.status })
+      clearLocalDraft(draftKey)
       toast.success(res.data?.approvalsReset ? 'Medical details saved. Case returned to encoding for re-review.' : 'Medical details saved')
       if (submitModeRef.current === 'next') {
         onNext?.()
@@ -94,6 +116,10 @@ export default function StepMedicalDetails({ caseData, onUpdate, onNext }) {
         <FileTextIcon className="h-4 w-4 text-brand-primary" />
         Medical Details &amp; Guarantee Letter
       </div>
+
+      {draft && (
+        <DraftRecoveryBanner savedAt={draft.savedAt} onRestore={restoreDraft} onDiscard={discardDraft} />
+      )}
 
       <form onSubmit={handleSubmit(onSave, handleInvalid)} className="space-y-4">
         <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm">
@@ -153,6 +179,7 @@ export default function StepMedicalDetails({ caseData, onUpdate, onNext }) {
                 placeholder="Search clinic, hospital, or facility..."
               />
             </div>
+            <FieldError message={errors.clinicName?.message} />
           </div>
           <div>
             <label className="portal-label">Clinic Address</label>
@@ -192,6 +219,13 @@ export default function StepMedicalDetails({ caseData, onUpdate, onNext }) {
           <div>
             <label className="portal-label">Conforme Name</label>
             <input type="text" {...register('conformeName')} className="portal-input" placeholder="Full name of representative / next of kin" />
+            <HouseholdMemberQuickFill
+              members={caseData.familyComposition || []}
+              onSelect={(member) => {
+                setValue('conformeName', member.name || '', { shouldDirty: true, shouldTouch: true })
+                if (member.relationship) setValue('conformeRelationship', member.relationship, { shouldDirty: true, shouldTouch: true })
+              }}
+            />
           </div>
           <div>
             <label className="portal-label">Relationship to Patient</label>
@@ -212,6 +246,8 @@ export default function StepMedicalDetails({ caseData, onUpdate, onNext }) {
           <div>
             <label className="portal-label">Guarantee Letter Amount (PHP) *</label>
             <input type="number" min="0" step="any" {...register('amount', { required: 'Amount is required' })} className="portal-input" placeholder="0.00" />
+            <p className="mt-1 text-xs text-slate-400">Same amount shown in Case Encoding — saving here updates it there too.</p>
+            <FieldError message={errors.amount?.message} />
             {isOverCap && (
               <p className="mt-1 text-xs text-amber-600">                Amount exceeds the maximum cap of {formatCurrency(GL_MAX)} per DSWD MC.
               </p>

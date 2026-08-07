@@ -21,11 +21,9 @@ export const useAuthStore = create(
           try {
             const { data } = await api.get('/users/me')
             set({ user: data })
-          } catch (err) {
-            if (err.response?.status === 401) {
-              delete api.defaults.headers.common['Authorization']
-              set({ user: null, token: null })
-            }
+          } catch {
+            // Keep the stored session even if this refresh fails — only an
+            // explicit sign-out should clear it.
           }
         } else {
           delete api.defaults.headers.common['Authorization']

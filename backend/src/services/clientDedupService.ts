@@ -299,6 +299,75 @@ export async function findFamilyCompositionMatches(
   }))
 }
 
+export type FamilyRfidMatch = {
+  sourceClientId: string
+  sourceClientName: string
+  sourceCaseNumber: string
+  memberIndex: number
+  name: string
+  relationship: string | null
+  relationshipOther: string | null
+  age: string | null
+  occupation: string | null
+}
+
+function toFamilyRfidMatch(row: FamilyMatchRow): FamilyRfidMatch {
+  return {
+    sourceClientId: row.source_client_id,
+    sourceClientName: [row.first_name, row.last_name].filter(Boolean).join(' '),
+    sourceCaseNumber: row.case_number,
+    memberIndex: Number(row.member_index),
+    name: String(row.member?.name ?? ''),
+    relationship: (row.member?.relationship as string) ?? null,
+    relationshipOther: (row.member?.relationshipOther as string) ?? null,
+    age: row.member?.age != null ? String(row.member.age) : null,
+    occupation: (row.member?.occupation as string) ?? null,
+  }
+}
+
+// Family members have no row of their own — a card enrolled to one is stored as an
+// `rfidUid` key inside that member's element in the client's family_composition JSON,
+// addressed by its position in the array (same convention findFamilyCompositionMatches
+// uses for name search), so removing/reordering members shifts later members' identity.
+export async function findFamilyMemberByRfid(
+  prisma: PrismaClient | Prisma.TransactionClient,
+  rfidUid: string
+): Promise<FamilyRfidMatch | null> {
+  const rows = await prisma.$queryRaw<FamilyMatchRow[]>`
+    SELECT c.id AS source_client_id, c.first_name, c.last_name, c.case_number,
+           (elem.ord - 1) AS member_index, elem.value AS member
+    FROM clients c, jsonb_array_elements(c.family_composition) WITH ORDINALITY AS elem(value, ord)
+    WHERE c.merged_into_client_id IS NULL
+      AND jsonb_typeof(c.family_composition) = 'array'
+      AND elem.value->>'rfidUid' = ${rfidUid}
+    LIMIT 1
+  `
+
+  const row = rows[0]
+  return row ? toFamilyRfidMatch(row) : null
+}
+
+export async function findFamilyRfidConflict(
+  prisma: PrismaClient | Prisma.TransactionClient,
+  rfidUid: string,
+  excludeClientId: string,
+  excludeMemberIndex: number
+): Promise<FamilyRfidMatch | null> {
+  const rows = await prisma.$queryRaw<FamilyMatchRow[]>`
+    SELECT c.id AS source_client_id, c.first_name, c.last_name, c.case_number,
+           (elem.ord - 1) AS member_index, elem.value AS member
+    FROM clients c, jsonb_array_elements(c.family_composition) WITH ORDINALITY AS elem(value, ord)
+    WHERE c.merged_into_client_id IS NULL
+      AND jsonb_typeof(c.family_composition) = 'array'
+      AND elem.value->>'rfidUid' = ${rfidUid}
+      AND NOT (c.id = ${excludeClientId}::uuid AND (elem.ord - 1) = ${excludeMemberIndex})
+    LIMIT 1
+  `
+
+  const row = rows[0]
+  return row ? toFamilyRfidMatch(row) : null
+}
+
 export function duplicateConflict(message: string, result: DuplicateCheckResult, extra: Record<string, unknown> = {}) {
   return new HttpError(409, message, {
     duplicateStatus: result.duplicateStatus,

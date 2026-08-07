@@ -51,8 +51,27 @@ export default function ClientSearchBar({ onSelect, onFamilyMatchSelect, placeho
     setOpen(false)
   }
 
-  // Called by RfidScanButton when a card is matched
+  // Called by RfidScanButton when a card is matched — a card enrolled to a family
+  // member (rather than the household's own card) resolves to that member instead,
+  // the same way a name-search family match does.
   const handleRfidFound = (client) => {
+    const member = client.matchedFamilyMember
+    if (member && onFamilyMatchSelect) {
+      setOpen(false)
+      setQuery(member.name)
+      onFamilyMatchSelect({
+        sourceClientId: client.id,
+        sourceClientName: `${client.firstName} ${client.lastName}`.trim(),
+        sourceCaseNumber: client.caseNumber,
+        memberIndex: member.memberIndex,
+        name: member.name,
+        relationship: member.relationship,
+        relationshipOther: member.relationshipOther,
+        age: member.age,
+        occupation: member.occupation,
+      })
+      return
+    }
     handleSelect(client)
   }
 

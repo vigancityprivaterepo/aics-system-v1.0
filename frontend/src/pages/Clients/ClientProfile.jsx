@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import api from '../../lib/api'
-import { formatDate } from '../../lib/utils'
+import { formatDate, calculateAge } from '../../lib/utils'
 import { VIGAN_BARANGAYS } from '../../lib/constants'
 import { useAuthStore } from '../../store/authStore'
 import { ChevronLeftIcon, IdCardIcon, EditIcon, TrashIcon, ClipboardIcon, ArrowRightIcon } from '../../components/ui/Icons'
@@ -31,6 +31,49 @@ function RfidIcon() {
       <path strokeLinecap="round" d="M17.5 8.5a6 6 0 0 1 0 8" />
       <rect x="6" y="10" width="5" height="4" rx="0.5" />
     </svg>
+  )
+}
+
+function RfidEnrollBanner({ label, manualUid, onManualUidChange, onCancel, saving, onSubmit }) {
+  return (
+    <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-4">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <span className="relative flex h-3 w-3">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+            <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500" />
+          </span>
+          <div>
+            <p className="text-sm font-semibold text-emerald-800">
+              {saving ? 'Saving card...' : `Ready — tap the RFID card for ${label} now`}
+            </p>
+            <p className="text-xs text-emerald-600 mt-0.5">
+              Tap the card, or paste/type the UID from the ACS reader utility below.
+            </p>
+          </div>
+        </div>
+        <button type="button" onClick={onCancel} className="text-slate-400 hover:text-slate-600 text-xs font-medium">
+          Cancel
+        </button>
+      </div>
+      <form onSubmit={onSubmit} className="mt-3 flex flex-col gap-2 sm:flex-row">
+        <input
+          type="text"
+          value={manualUid}
+          onChange={(event) => onManualUidChange(event.target.value)}
+          placeholder="ACS UID, e.g. 04A1B2C3"
+          className="portal-input font-mono uppercase"
+          autoComplete="off"
+        />
+        <button
+          type="submit"
+          disabled={saving || normalizeRfidUid(manualUid).length < 4}
+          className="portal-button-green text-sm disabled:opacity-50"
+        >
+          Enroll
+        </button>
+      </form>
+    </div>
   )
 }
 
@@ -74,7 +117,7 @@ function buildCaseDescription(h) {
   }
 }
 
-const defaultFamilyMember = { name: '', age: '', relationship: '', relationshipOther: '', occupation: '' }
+const defaultFamilyMember = { name: '', dateOfBirth: '', age: '', relationship: '', relationshipOther: '', occupation: '' }
 const RELIGION_OPTIONS = ['Roman Catholic', 'Iglesia ni Cristo', 'Islam', 'Born Again Christian', 'Evangelical', 'Protestant', 'Aglipayan', 'Seventh-day Adventist', "Jehovah's Witness", 'Other']
 const STANDARD_RELATIONSHIPS = ['Spouse', 'Son', 'Daughter', 'Father', 'Mother', 'Brother', 'Sister', 'Grandson', 'Granddaughter', 'Grandfather', 'Grandmother', 'Uncle', 'Aunt', 'Nephew', 'Niece', 'Son-in-Law', 'Daughter-in-Law', 'Father-in-Law', 'Mother-in-Law']
 const RELATIONSHIP_OPTIONS = [...STANDARD_RELATIONSHIPS, 'Other']
@@ -100,6 +143,7 @@ function toEditForm(client) {
           const isStd = STANDARD_RELATIONSHIPS.includes(m.relationship)
           return {
             ...m,
+            dateOfBirth: m.dateOfBirth ?? '',
             relationshipOther: isStd ? '' : (m.relationship || ''),
             relationship: isStd ? m.relationship : 'Other',
           }
@@ -127,8 +171,8 @@ export default function ClientProfile() {
   const [mergeTarget, setMergeTarget] = useState(null)
   const [mergeNotes, setMergeNotes] = useState('')
   const [merging, setMerging] = useState(false)
-  // RFID enrollment state
-  const [rfidEnrollMode, setRfidEnrollMode] = useState(false)
+  // RFID enrollment state — target is null | { type: 'client' } | { type: 'family', index, name }
+  const [rfidEnrollTarget, setRfidEnrollTarget] = useState(null)
   const [rfidSaving, setRfidSaving] = useState(false)
   const [manualRfidUid, setManualRfidUid] = useState('')
   const [form, setForm] = useState({
@@ -245,14 +289,17 @@ export default function ClientProfile() {
           if (member.relationship === 'Other') {
             finalRel = String(member.relationshipOther || '').trim() || 'Other'
           }
+          const dateOfBirth = member.dateOfBirth || null
           return {
             name: String(member.name || '').trim(),
-            age: member.age === '' ? null : member.age,
+            dateOfBirth,
+            age: dateOfBirth ? calculateAge(dateOfBirth) : (member.age === '' ? null : member.age),
             relationship: finalRel,
             occupation: String(member.occupation || '').trim(),
+            rfidUid: member.rfidUid ?? null,
           }
         })
-        .filter((member) => member.name || member.relationship || member.occupation || member.age !== null),
+        .filter((member) => member.name || member.relationship || member.occupation || member.age !== null || member.dateOfBirth),
     }
 
     setSaving(true)
@@ -318,25 +365,29 @@ export default function ClientProfile() {
     }
   }
 
-  // RFID enrollment — called when scanner fires while rfidEnrollMode is ON
+  // RFID enrollment — called when scanner fires while rfidEnrollTarget is set
   const handleRfidEnrollScan = useCallback(
     async (rawUid) => {
       const uid = normalizeRfidUid(rawUid)
-      if (rfidSaving || !client || uid.length < 4) return
+      if (rfidSaving || !client || !rfidEnrollTarget || uid.length < 4) return
       setRfidSaving(true)
       try {
-        const res = await api.patch(`/clients/${client.id}/rfid`, { rfidUid: uid })
+        const endpoint = rfidEnrollTarget.type === 'family'
+          ? `/clients/${client.id}/family/${rfidEnrollTarget.index}/rfid`
+          : `/clients/${client.id}/rfid`
+        const res = await api.patch(endpoint, { rfidUid: uid })
         setClient(res.data)
-        setRfidEnrollMode(false)
+        const label = rfidEnrollTarget.type === 'family' ? (rfidEnrollTarget.name || 'family member') : 'client'
+        setRfidEnrollTarget(null)
         setManualRfidUid('')
-        toast.success(`RFID card enrolled successfully (UID: ${uid})`)
+        toast.success(`RFID card enrolled for ${label} (UID: ${uid})`)
       } catch (err) {
         toast.error(err.response?.data?.message ?? 'Failed to enroll RFID card.')
       } finally {
         setRfidSaving(false)
       }
     },
-    [client, rfidSaving]
+    [client, rfidSaving, rfidEnrollTarget]
   )
 
   const handleManualRfidEnroll = (event) => {
@@ -344,12 +395,16 @@ export default function ClientProfile() {
     handleRfidEnrollScan(manualRfidUid)
   }
 
-  const handleRfidRemove = async () => {
+  const handleRfidRemove = async (target) => {
     if (!client) return
-    if (!window.confirm('Remove the RFID card from this client? They will need to be re-enrolled.')) return
+    const label = target.type === 'family' ? (target.name || 'this family member') : 'this client'
+    if (!window.confirm(`Remove the RFID card from ${label}? They will need to be re-enrolled.`)) return
     setRfidSaving(true)
     try {
-      const res = await api.patch(`/clients/${client.id}/rfid`, { rfidUid: null })
+      const endpoint = target.type === 'family'
+        ? `/clients/${client.id}/family/${target.index}/rfid`
+        : `/clients/${client.id}/rfid`
+      const res = await api.patch(endpoint, { rfidUid: null })
       setClient(res.data)
       toast.success('RFID card removed.')
     } catch (err) {
@@ -359,7 +414,7 @@ export default function ClientProfile() {
     }
   }
 
-  useRfidScanner({ onScan: handleRfidEnrollScan, enabled: rfidEnrollMode })
+  useRfidScanner({ onScan: handleRfidEnrollScan, enabled: !!rfidEnrollTarget })
 
   if (loading) {
     return (
@@ -622,23 +677,72 @@ export default function ClientProfile() {
                   <th className="px-3 py-2 text-left">Age</th>
                   <th className="px-3 py-2 text-left">Relationship</th>
                   <th className="px-3 py-2 text-left">Occupation</th>
+                  <th className="px-3 py-2 text-left">RFID</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {client.familyComposition?.length ? client.familyComposition.map((member, index) => (
                   <tr key={`${member.name || 'member'}-${index}`}>
                     <td className="px-3 py-2 font-medium text-slate-800">{member.name || '-'}</td>
-                    <td className="px-3 py-2 text-slate-600">{member.age ?? '-'}</td>
+                    <td className="px-3 py-2 text-slate-600">{member.dateOfBirth ? (calculateAge(member.dateOfBirth) ?? '-') : (member.age ?? '-')}</td>
                     <td className="px-3 py-2 text-slate-600">{member.relationship || '-'}</td>
                     <td className="px-3 py-2 text-slate-600">{member.occupation || '-'}</td>
+                    <td className="px-3 py-2">
+                      {!client.mergedIntoClient && (
+                        member.rfidUid ? (
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono rounded bg-slate-100 px-1.5 py-0.5 text-[10px] tracking-widest text-slate-600">
+                              {maskRfidUid(member.rfidUid)}
+                            </span>
+                            <button
+                              type="button"
+                              disabled={rfidSaving}
+                              onClick={() => { setManualRfidUid(''); setRfidEnrollTarget({ type: 'family', index, name: member.name }) }}
+                              className="text-[11px] font-medium text-brand-primary hover:underline disabled:opacity-50"
+                            >
+                              Replace
+                            </button>
+                            <button
+                              type="button"
+                              disabled={rfidSaving}
+                              onClick={() => handleRfidRemove({ type: 'family', index, name: member.name })}
+                              className="text-[11px] font-medium text-rose-600 hover:underline disabled:opacity-50"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            disabled={rfidSaving}
+                            onClick={() => { setManualRfidUid(''); setRfidEnrollTarget({ type: 'family', index, name: member.name }) }}
+                            className="text-[11px] font-medium text-emerald-700 hover:underline disabled:opacity-50"
+                          >
+                            + Enroll RFID
+                          </button>
+                        )
+                      )}
+                    </td>
                   </tr>
                 )) : (
                   <tr>
-                    <td colSpan="4" className="px-3 py-4 text-center text-slate-400">No household members saved.</td>
+                    <td colSpan="5" className="px-3 py-4 text-center text-slate-400">No household members saved.</td>
                   </tr>
                 )}
               </tbody>
             </table>
+            {rfidEnrollTarget?.type === 'family' && (
+              <div className="p-3 pt-0">
+                <RfidEnrollBanner
+                  label={rfidEnrollTarget.name || 'this family member'}
+                  manualUid={manualRfidUid}
+                  onManualUidChange={setManualRfidUid}
+                  onCancel={() => setRfidEnrollTarget(null)}
+                  saving={rfidSaving}
+                  onSubmit={handleManualRfidEnroll}
+                />
+              </div>
+            )}
           </div>
         ) : (
           <div className="overflow-x-auto rounded-lg border border-slate-200">
@@ -646,7 +750,7 @@ export default function ClientProfile() {
               <thead className="bg-slate-50 text-slate-500">
                 <tr>
                   <th className="px-3 py-2 text-left">Name</th>
-                  <th className="px-3 py-2 text-left">Age</th>
+                  <th className="px-3 py-2 text-left">Date of Birth</th>
                   <th className="px-3 py-2 text-left">Relationship</th>
                   <th className="px-3 py-2 text-left">Occupation</th>
                   <th className="w-12 px-3 py-2" />
@@ -661,7 +765,17 @@ export default function ClientProfile() {
                   return (
                     <tr key={index}>
                       <td className="px-3 py-2"><input value={member.name || ''} onChange={(e) => updateFamilyMember(index, 'name', e.target.value)} className="portal-input" /></td>
-                      <td className="px-3 py-2"><input type="number" min="0" value={member.age ?? ''} onChange={(e) => updateFamilyMember(index, 'age', e.target.value)} className="portal-input" /></td>
+                      <td className="px-3 py-2">
+                        <input
+                          type="date"
+                          value={member.dateOfBirth || ''}
+                          onChange={(e) => updateFamilyMember(index, 'dateOfBirth', e.target.value)}
+                          className="portal-input"
+                        />
+                        {member.dateOfBirth && (
+                          <p className="mt-1 text-[11px] text-slate-500">Age: {calculateAge(member.dateOfBirth) ?? '-'}</p>
+                        )}
+                      </td>
                       <td className="px-3 py-2">
                         {selectVal === 'Other' ? (
                           <div className="relative flex items-center">
@@ -745,7 +859,7 @@ export default function ClientProfile() {
               <div className="flex gap-2">
                 <button
                   type="button"
-                  onClick={() => { setManualRfidUid(''); setRfidEnrollMode(true) }}
+                  onClick={() => { setManualRfidUid(''); setRfidEnrollTarget({ type: 'client' }) }}
                   disabled={rfidSaving}
                   className="portal-button-secondary text-sm"
                 >
@@ -753,7 +867,7 @@ export default function ClientProfile() {
                 </button>
                 <button
                   type="button"
-                  onClick={handleRfidRemove}
+                  onClick={() => handleRfidRemove({ type: 'client' })}
                   disabled={rfidSaving}
                   className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-600 transition hover:bg-red-100 disabled:opacity-50"
                 >
@@ -767,10 +881,10 @@ export default function ClientProfile() {
                 <p className="text-sm font-medium text-slate-800">No RFID card enrolled</p>
                 <p className="mt-1 text-xs text-slate-500">Enroll a card so this client can be found instantly by tapping at the front desk.</p>
               </div>
-              {!rfidEnrollMode && (
+              {rfidEnrollTarget?.type !== 'client' && (
                 <button
                   type="button"
-                  onClick={() => { setManualRfidUid(''); setRfidEnrollMode(true) }}
+                  onClick={() => { setManualRfidUid(''); setRfidEnrollTarget({ type: 'client' }) }}
                   disabled={rfidSaving}
                   className="portal-button-green text-sm"
                 >
@@ -780,49 +894,15 @@ export default function ClientProfile() {
             </div>
           )}
 
-          {rfidEnrollMode && (
-            <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-4">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <span className="relative flex h-3 w-3">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                    <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500" />
-                  </span>
-                  <div>
-                    <p className="text-sm font-semibold text-emerald-800">
-                      {rfidSaving ? 'Saving card...' : 'Ready — tap the RFID card now'}
-                    </p>
-                    <p className="text-xs text-emerald-600 mt-0.5">
-                      Tap the card, or paste/type the UID from the ACS reader utility below.
-                    </p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setRfidEnrollMode(false)}
-                  className="text-slate-400 hover:text-slate-600 text-xs font-medium"
-                >
-                  Cancel
-                </button>
-              </div>
-              <form onSubmit={handleManualRfidEnroll} className="mt-3 flex flex-col gap-2 sm:flex-row">
-                <input
-                  type="text"
-                  value={manualRfidUid}
-                  onChange={(event) => setManualRfidUid(event.target.value)}
-                  placeholder="ACS UID, e.g. 04A1B2C3"
-                  className="portal-input font-mono uppercase"
-                  autoComplete="off"
-                />
-                <button
-                  type="submit"
-                  disabled={rfidSaving || normalizeRfidUid(manualRfidUid).length < 4}
-                  className="portal-button-green text-sm disabled:opacity-50"
-                >
-                  Enroll
-                </button>
-              </form>
-            </div>
+          {rfidEnrollTarget?.type === 'client' && (
+            <RfidEnrollBanner
+              label="this client"
+              manualUid={manualRfidUid}
+              onManualUidChange={setManualRfidUid}
+              onCancel={() => setRfidEnrollTarget(null)}
+              saving={rfidSaving}
+              onSubmit={handleManualRfidEnroll}
+            />
           )}
         </div>
       )}

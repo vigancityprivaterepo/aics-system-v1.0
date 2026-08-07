@@ -3,12 +3,19 @@ import { useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
 import api from '../../../lib/api'
 import { GlassesIcon } from '../../../components/ui/Icons'
+import HouseholdMemberQuickFill from '../../../components/HouseholdMemberQuickFill'
+import FieldError from '../../../components/ui/FieldError'
+import DraftRecoveryBanner from '../../../components/ui/DraftRecoveryBanner'
 import { scrollToFirstError } from '../../../lib/formNavigation'
+import { useAutosaveDraft, readLocalDraft, clearLocalDraft } from '../../../lib/localDraft'
 
 export default function StepEyeglassDetails({ caseData, onUpdate, onNext }) {
   const [saving, setSaving] = useState(false)
   const submitModeRef = useRef('save')
-  const { register, handleSubmit } = useForm({
+  const draftKey = `case-draft:${caseData.id}:eyeglass`
+  const [draft, setDraft] = useState(() => readLocalDraft(draftKey))
+  const { register, handleSubmit, watch, setValue, reset, formState: { errors } } = useForm({
+    mode: 'onBlur',
     defaultValues: {
       doctorName: caseData.eyeglassDetails?.doctorName || '',
       clinicName: caseData.eyeglassDetails?.clinicName || '',
@@ -18,6 +25,20 @@ export default function StepEyeglassDetails({ caseData, onUpdate, onNext }) {
       amount: caseData.amount ?? '',
     },
   })
+
+  const formValues = watch()
+  useAutosaveDraft(draftKey, { formValues }, { enabled: true })
+
+  const restoreDraft = () => {
+    if (!draft) return
+    reset(draft.data.formValues)
+    setDraft(null)
+  }
+
+  const discardDraft = () => {
+    clearLocalDraft(draftKey)
+    setDraft(null)
+  }
 
   const handleInvalid = (validationErrors) => {
     scrollToFirstError(validationErrors)
@@ -29,6 +50,7 @@ export default function StepEyeglassDetails({ caseData, onUpdate, onNext }) {
     try {
       const res = await api.put(`/cases/${caseData.id}/eyeglass`, data)
       onUpdate({ eyeglassDetails: res.data, amount: res.data?.amount ?? data.amount, proxyName: data.conformeName || null, proxyRelationship: data.conformeRelationship || null, status: res.data?.status ?? caseData.status })
+      clearLocalDraft(draftKey)
       toast.success(res.data?.approvalsReset ? 'Eyeglass details saved. Case returned to encoding for re-review.' : 'Eyeglass details saved')
       if (submitModeRef.current === 'next') {
         onNext?.()
@@ -52,6 +74,10 @@ export default function StepEyeglassDetails({ caseData, onUpdate, onNext }) {
         Eyeglass Details
       </div>
 
+      {draft && (
+        <DraftRecoveryBanner savedAt={draft.savedAt} onRestore={restoreDraft} onDiscard={discardDraft} />
+      )}
+
       <form onSubmit={handleSubmit(onSave, handleInvalid)} className="space-y-4">
         <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm">
           <p className="font-semibold text-slate-800">
@@ -69,6 +95,7 @@ export default function StepEyeglassDetails({ caseData, onUpdate, onNext }) {
           <div>
             <label className="portal-label">Doctor / Optometrist Name *</label>
             <input type="text" {...register('doctorName', { required: 'Doctor / optometrist name is required' })} className="portal-input" placeholder="Full name of the optometrist or doctor" />
+            <FieldError message={errors.doctorName?.message} />
           </div>
           <div>
             <label className="portal-label">Clinic / Optical Shop Name</label>
@@ -88,6 +115,13 @@ export default function StepEyeglassDetails({ caseData, onUpdate, onNext }) {
           <div>
             <label className="portal-label">Conforme Name</label>
             <input type="text" {...register('conformeName')} className="portal-input" placeholder="Full name of representative / next of kin" />
+            <HouseholdMemberQuickFill
+              members={caseData.familyComposition || []}
+              onSelect={(member) => {
+                setValue('conformeName', member.name || '', { shouldDirty: true, shouldTouch: true })
+                if (member.relationship) setValue('conformeRelationship', member.relationship, { shouldDirty: true, shouldTouch: true })
+              }}
+            />
           </div>
           <div>
             <label className="portal-label">Relationship to Patient</label>
@@ -102,6 +136,8 @@ export default function StepEyeglassDetails({ caseData, onUpdate, onNext }) {
           <div>
             <label className="portal-label">Amount (PHP) *</label>
             <input type="number" min="0" step="any" {...register('amount', { required: 'Amount is required' })} className="portal-input" placeholder="0.00" />
+            <p className="mt-1 text-xs text-slate-400">Same amount shown in Case Encoding — saving here updates it there too.</p>
+            <FieldError message={errors.amount?.message} />
           </div>
         </div>
 

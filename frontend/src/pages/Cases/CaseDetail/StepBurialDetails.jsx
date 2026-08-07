@@ -5,12 +5,16 @@ import api from '../../../lib/api'
 import { CrossIcon } from '../../../components/ui/Icons'
 import FuneralHomePicker from '../../../components/FuneralHomePicker'
 import PresetSelectField from '../../../components/PresetSelectField'
+import HouseholdMemberQuickFill from '../../../components/HouseholdMemberQuickFill'
+import FieldError from '../../../components/ui/FieldError'
+import DraftRecoveryBanner from '../../../components/ui/DraftRecoveryBanner'
 import {
   BURIAL_BILL_TYPE_OPTIONS,
   RELATIONSHIP_OPTIONS,
 } from '../../../constants/caseFormOptions'
 import { scrollToFirstError } from '../../../lib/formNavigation'
 import { formatCurrency } from '../../../lib/utils'
+import { useAutosaveDraft, readLocalDraft, clearLocalDraft } from '../../../lib/localDraft'
 
 const GL_MAX = 10000
 const INTERMENT_PRESETS = [
@@ -24,7 +28,10 @@ const INTERMENT_PRESETS = [
 export default function StepBurialDetails({ caseData, onUpdate, onNext }) {
   const [saving, setSaving] = useState(false)
   const submitModeRef = useRef('save')
-  const { register, handleSubmit, watch, setValue } = useForm({
+  const draftKey = `case-draft:${caseData.id}:burial`
+  const [draft, setDraft] = useState(() => readLocalDraft(draftKey))
+  const { register, handleSubmit, watch, setValue, reset, formState: { errors } } = useForm({
+    mode: 'onBlur',
     defaultValues: {
       deceasedName: caseData.burialDetails?.deceasedName || '',
       dateOfDeath: caseData.burialDetails?.dateOfDeath || '',
@@ -44,6 +51,21 @@ export default function StepBurialDetails({ caseData, onUpdate, onNext }) {
   const [intermentPreset, setIntermentPreset] = useState(
     INTERMENT_PRESETS.includes(_existingInterment) ? _existingInterment : (_existingInterment ? 'others' : '')
   )
+
+  const formValues = watch()
+  useAutosaveDraft(draftKey, { formValues, intermentPreset }, { enabled: true })
+
+  const restoreDraft = () => {
+    if (!draft) return
+    reset(draft.data.formValues)
+    if (draft.data.intermentPreset) setIntermentPreset(draft.data.intermentPreset)
+    setDraft(null)
+  }
+
+  const discardDraft = () => {
+    clearLocalDraft(draftKey)
+    setDraft(null)
+  }
 
   const amount = watch('amount')
   const funeralHomeValue = watch('funeralHome')
@@ -75,6 +97,7 @@ export default function StepBurialDetails({ caseData, onUpdate, onNext }) {
         proxyRelationship: data.conformeRelationship || null,
         status: res.data?.status ?? caseData.status,
       })
+      clearLocalDraft(draftKey)
       toast.success(res.data?.approvalsReset ? 'Burial details saved. Case returned to encoding for re-review.' : 'Burial details saved')
       if (submitModeRef.current === 'next') {
         onNext?.()
@@ -104,6 +127,10 @@ export default function StepBurialDetails({ caseData, onUpdate, onNext }) {
         Burial Details &amp; Guarantee Letter
       </div>
 
+      {draft && (
+        <DraftRecoveryBanner savedAt={draft.savedAt} onRestore={restoreDraft} onDiscard={discardDraft} />
+      )}
+
       <form onSubmit={handleSubmit(onSave, handleInvalid)} className="space-y-4">
         <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm">
           <p className="font-semibold text-slate-800">Beneficiary: {caseData.beneficiaryName || caseData.burialDetails?.deceasedName || 'No deceased name recorded'}</p>
@@ -121,7 +148,8 @@ export default function StepBurialDetails({ caseData, onUpdate, onNext }) {
 
           <div className="sm:col-span-2">
             <label className="portal-label">Name of Deceased *</label>
-            <input type="text" {...register('deceasedName', { required: true })} className="portal-input" placeholder="Full name of the deceased" />
+            <input type="text" {...register('deceasedName', { required: 'Name of deceased is required' })} className="portal-input" placeholder="Full name of the deceased" />
+            <FieldError message={errors.deceasedName?.message} />
           </div>
           <div>
             <label className="portal-label">Interment Date</label>
@@ -209,6 +237,13 @@ export default function StepBurialDetails({ caseData, onUpdate, onNext }) {
           <div>
             <label className="portal-label">Conforme Name</label>
             <input type="text" {...register('conformeName')} className="portal-input" placeholder="Full name of representative/next of kin" />
+            <HouseholdMemberQuickFill
+              members={caseData.familyComposition || []}
+              onSelect={(member) => {
+                setValue('conformeName', member.name || '', { shouldDirty: true, shouldTouch: true })
+                if (member.relationship) setValue('conformeRelationship', member.relationship, { shouldDirty: true, shouldTouch: true })
+              }}
+            />
           </div>
           <div>
             <label className="portal-label">Relationship to Deceased</label>
@@ -231,6 +266,8 @@ export default function StepBurialDetails({ caseData, onUpdate, onNext }) {
           <div>
             <label className="portal-label">Guarantee Letter Amount (PHP)</label>
             <input type="number" min="0" step="any" {...register('amount', { required: 'Amount is required' })} className="portal-input" placeholder="0.00" />
+            <p className="mt-1 text-xs text-slate-400">Same amount shown in Case Encoding — saving here updates it there too.</p>
+            <FieldError message={errors.amount?.message} />
             {isOverCap && (
               <p className="mt-1 text-xs text-amber-600">
                 Warning: Amount exceeds the maximum cap of {formatCurrency(GL_MAX)} per DSWD MC.

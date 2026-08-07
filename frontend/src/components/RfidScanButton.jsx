@@ -19,7 +19,12 @@ export default function RfidScanButton({ onClientFound, disabled = false, classN
       })
       setActive(false)
       onClientFound?.(res.data)
-      toast.success(`Card matched: ${res.data.lastName}, ${res.data.firstName}`)
+      const member = res.data.matchedFamilyMember
+      toast.success(
+        member
+          ? `Card matched: ${member.name} (household: ${res.data.lastName}, ${res.data.firstName})`
+          : `Card matched: ${res.data.lastName}, ${res.data.firstName}`
+      )
     } catch (err) {
       if (err.response?.status === 404) toast.error('Card not registered to any client. Please enroll the card first.')
       else toast.error(err.response?.data?.message ?? 'RFID lookup failed.')

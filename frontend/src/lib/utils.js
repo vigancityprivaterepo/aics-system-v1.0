@@ -16,6 +16,14 @@ export function formatDateTime(date) {
   return dayjs(date).format('MMM DD, YYYY h:mm A')
 }
 
+export function calculateAge(dateOfBirth) {
+  if (!dateOfBirth) return null
+  const birth = dayjs(dateOfBirth)
+  if (!birth.isValid()) return null
+  const age = dayjs().diff(birth, 'year')
+  return age >= 0 ? age : null
+}
+
 export function formatCurrency(amount) {
   if (amount == null) return '₱0.00'
   return new Intl.NumberFormat('en-PH', {

@@ -6,7 +6,7 @@ import { asyncHandler } from '../utils/asyncHandler.js'
 import { generateClientCaseNumber } from '../utils/caseNumber.js'
 import { HttpError } from '../utils/httpError.js'
 import { requireRole } from '../middleware/auth.js'
-import { buildPersonMatchInput, duplicateConflict, findClientDuplicateMatches, findFamilyCompositionMatches, mergeClientRecords, recordClientDedupEvent } from '../services/clientDedupService.js'
+import { buildPersonMatchInput, duplicateConflict, findClientDuplicateMatches, findFamilyCompositionMatches, findFamilyMemberByRfid, findFamilyRfidConflict, mergeClientRecords, recordClientDedupEvent } from '../services/clientDedupService.js'
 
 const router = Router()
 
@@ -274,64 +274,102 @@ router.post('/', asyncHandler(async (req, res) => {
 
 // RFID Lookup
 
+const rfidHistoryInclude = {
+  cases: {
+    orderBy: { createdAt: 'desc' as const },
+    take: 5,
+    select: {
+      id: true,
+      caseNumber: true,
+      assistanceType: true,
+      status: true,
+      amount: true,
+      dateOfAssessment: true,
+      createdAt: true,
+      medicines: { select: { medicineName: true } },
+      burialDetails: { select: { funeralHome: true, typeOfBill: true, deceasedName: true } },
+      hospitalDetails: { select: { hospitalName: true, patientName: true } },
+      medicalDetails: { select: { clinicName: true, doctorName: true } },
+      eyeglassDetails: { select: { clinicName: true, doctorName: true } },
+      plainDetails: { select: { natureOfAssistance: true } },
+    },
+  },
+}
+
+function serializeCaseHistory(cases: any[]) {
+  return cases.map((c) => ({
+    id: c.id,
+    caseNumber: c.caseNumber ?? null,
+    assistanceType: c.assistanceType,
+    status: c.status,
+    amount: Number(c.amount ?? 0),
+    dateOfAssessment: c.dateOfAssessment?.toISOString().slice(0, 10) ?? null,
+    createdAt: c.createdAt,
+    detail: {
+      medicines: c.medicines?.map((m: any) => m.medicineName) ?? [],
+      funeralHome: c.burialDetails?.funeralHome ?? null,
+      typeOfBill: c.burialDetails?.typeOfBill ?? null,
+      deceasedName: c.burialDetails?.deceasedName ?? null,
+      hospitalName: c.hospitalDetails?.hospitalName ?? null,
+      clinicName: c.medicalDetails?.clinicName ?? c.eyeglassDetails?.clinicName ?? null,
+      doctorName: c.medicalDetails?.doctorName ?? c.eyeglassDetails?.doctorName ?? null,
+      natureOfAssistance: c.plainDetails?.natureOfAssistance ?? null,
+    },
+  }))
+}
+
 router.get('/rfid/:uid', asyncHandler(async (req, res) => {
   res.set('Cache-Control', 'no-store, max-age=0')
 
   const uid = normalizeRfidUid(paramId(req.params.uid))
   if (!uid) throw new HttpError(400, 'RFID UID is required')
 
-  const client = await prisma.client.findFirst({
+  let client = await prisma.client.findFirst({
     where: { rfidUid: uid, mergedIntoClientId: null },
-    include: {
-      cases: {
-        orderBy: { createdAt: 'desc' },
-        take: 5,
-        select: {
-          id: true,
-          caseNumber: true,
-          assistanceType: true,
-          status: true,
-          amount: true,
-          dateOfAssessment: true,
-          createdAt: true,
-          medicines: { select: { medicineName: true } },
-          burialDetails: { select: { funeralHome: true, typeOfBill: true, deceasedName: true } },
-          hospitalDetails: { select: { hospitalName: true, patientName: true } },
-          medicalDetails: { select: { clinicName: true, doctorName: true } },
-          eyeglassDetails: { select: { clinicName: true, doctorName: true } },
-          plainDetails: { select: { natureOfAssistance: true } },
-        },
-      },
-    },
+    include: rfidHistoryInclude,
   })
+
+  let matchedFamilyMember: {
+    memberIndex: number
+    name: string
+    relationship: string | null
+    relationshipOther: string | null
+    age: string | null
+    occupation: string | null
+  } | null = null
+
+  // Not the household's own card — check whether it was enrolled to one of the
+  // family members recorded on some client's family_composition instead.
+  if (!client) {
+    const familyMatch = await findFamilyMemberByRfid(prisma, uid)
+    if (familyMatch) {
+      client = await prisma.client.findFirst({
+        where: { id: familyMatch.sourceClientId, mergedIntoClientId: null },
+        include: rfidHistoryInclude,
+      })
+      if (client) {
+        matchedFamilyMember = {
+          memberIndex: familyMatch.memberIndex,
+          name: familyMatch.name,
+          relationship: familyMatch.relationship,
+          relationshipOther: familyMatch.relationshipOther,
+          age: familyMatch.age,
+          occupation: familyMatch.occupation,
+        }
+      }
+    }
+  }
 
   if (!client) throw new HttpError(404, 'No client is enrolled with this RFID card')
 
   res.json({
     ...serializeClient(client),
-    history: client.cases.map((c) => ({
-      id: c.id,
-      caseNumber: (c as any).caseNumber ?? null,
-      assistanceType: c.assistanceType,
-      status: c.status,
-      amount: Number(c.amount ?? 0),
-      dateOfAssessment: c.dateOfAssessment?.toISOString().slice(0, 10) ?? null,
-      createdAt: c.createdAt,
-      detail: {
-        medicines: (c as any).medicines?.map((m: any) => m.medicineName) ?? [],
-        funeralHome: (c as any).burialDetails?.funeralHome ?? null,
-        typeOfBill: (c as any).burialDetails?.typeOfBill ?? null,
-        deceasedName: (c as any).burialDetails?.deceasedName ?? null,
-        hospitalName: (c as any).hospitalDetails?.hospitalName ?? null,
-        clinicName: (c as any).medicalDetails?.clinicName ?? (c as any).eyeglassDetails?.clinicName ?? null,
-        doctorName: (c as any).medicalDetails?.doctorName ?? (c as any).eyeglassDetails?.doctorName ?? null,
-        natureOfAssistance: (c as any).plainDetails?.natureOfAssistance ?? null,
-      },
-    })),
+    history: serializeCaseHistory(client.cases),
+    matchedFamilyMember,
   })
 }))
 
-// RFID Enroll / Remove
+// RFID Enroll / Remove — main client (household head)
 
 const rfidUpdateSchema = z.object({
   rfidUid: z.string().trim().min(4).max(96).nullable(),
@@ -357,11 +395,72 @@ router.patch('/:id/rfid', asyncHandler(async (req, res) => {
         `This RFID card is already enrolled to ${conflict.lastName}, ${conflict.firstName} (${conflict.caseNumber}). Remove it there first.`
       )
     }
+    const familyConflict = await findFamilyRfidConflict(prisma, rfidUid, clientId, -1)
+    if (familyConflict) {
+      throw new HttpError(
+        409,
+        `This RFID card is already enrolled to ${familyConflict.name} (${familyConflict.sourceClientName}, ${familyConflict.sourceCaseNumber}). Remove it there first.`
+      )
+    }
   }
 
   const updated = await (prisma.client as any).update({
     where: { id: clientId },
     data: { rfidUid },
+  })
+
+  res.json(serializeClient(updated))
+}))
+
+// RFID Enroll / Remove — an individual family composition member
+
+router.patch('/:id/family/:index/rfid', asyncHandler(async (req, res) => {
+  const clientId = paramId(req.params.id)
+  const index = Number(paramId(req.params.index))
+  const parsed = rfidUpdateSchema.parse(req.body)
+  const rfidUid = normalizeRfidUid(parsed.rfidUid)
+
+  if (!Number.isInteger(index) || index < 0) throw new HttpError(400, 'Invalid family member index')
+
+  const client = await prisma.client.findUnique({ where: { id: clientId } })
+  if (!client) throw new HttpError(404, 'Client not found')
+
+  const familyComposition = Array.isArray((client as any).familyComposition)
+    ? [...(client as any).familyComposition]
+    : []
+  if (index >= familyComposition.length) throw new HttpError(404, 'Family member not found')
+
+  if (rfidUid !== null) {
+    if (client.rfidUid === rfidUid) {
+      throw new HttpError(
+        409,
+        `This RFID card is already enrolled to ${client.lastName}, ${client.firstName} (${client.caseNumber}). Remove it there first.`
+      )
+    }
+    const clientConflict = await prisma.client.findFirst({
+      where: { rfidUid, id: { not: clientId } },
+      select: { id: true, firstName: true, lastName: true, caseNumber: true },
+    })
+    if (clientConflict) {
+      throw new HttpError(
+        409,
+        `This RFID card is already enrolled to ${clientConflict.lastName}, ${clientConflict.firstName} (${clientConflict.caseNumber}). Remove it there first.`
+      )
+    }
+    const familyConflict = await findFamilyRfidConflict(prisma, rfidUid, clientId, index)
+    if (familyConflict) {
+      throw new HttpError(
+        409,
+        `This RFID card is already enrolled to ${familyConflict.name} (${familyConflict.sourceClientName}, ${familyConflict.sourceCaseNumber}). Remove it there first.`
+      )
+    }
+  }
+
+  familyComposition[index] = { ...familyComposition[index], rfidUid }
+
+  const updated = await prisma.client.update({
+    where: { id: clientId },
+    data: { familyComposition },
   })
 
   res.json(serializeClient(updated))

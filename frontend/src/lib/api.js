@@ -5,17 +5,11 @@ const api = axios.create({
   timeout: 30000,
 })
 
-// Response interceptor — handle 401 globally (skip the login route itself)
+// Sessions persist until the user explicitly signs out — a 401 no longer
+// force-clears the stored session or redirects; it's left to the caller.
 api.interceptors.response.use(
   (res) => res,
-  (err) => {
-    const isLoginRequest = err.config?.url?.includes('/auth/login')
-    if (err.response?.status === 401 && !isLoginRequest) {
-      localStorage.removeItem('aics-auth')
-      window.location.href = '/login'
-    }
-    return Promise.reject(err)
-  }
+  (err) => Promise.reject(err)
 )
 
 export default api

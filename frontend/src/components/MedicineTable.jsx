@@ -1,9 +1,47 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback, useLayoutEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { PlusIcon, TrashIcon } from './ui/Icons'
 import api from '../lib/api'
 
 function rowAvailability(row) {
   return row?.isAvailable ?? row?.medicine?.isAvailable ?? true
+}
+
+// Rendered via a portal to <body>, positioned to track the search input, so the suggestion
+// list isn't clipped by the medicine table's own scroll container (its overflow-x-auto
+// forces overflow-y:auto too, per the CSS spec's "one visible, one not -> both auto" rule,
+// which was cutting the dropdown off after the first row or two — case makers couldn't see
+// or scroll to most of the search results).
+function SuggestionDropdown({ anchorRef, children }) {
+  const [rect, setRect] = useState(null)
+
+  useLayoutEffect(() => {
+    const updateRect = () => {
+      const el = anchorRef.current
+      if (!el) return
+      const bounds = el.getBoundingClientRect()
+      setRect({ top: bounds.bottom, left: bounds.left, width: bounds.width })
+    }
+    updateRect()
+    window.addEventListener('scroll', updateRect, true)
+    window.addEventListener('resize', updateRect)
+    return () => {
+      window.removeEventListener('scroll', updateRect, true)
+      window.removeEventListener('resize', updateRect)
+    }
+  }, [anchorRef])
+
+  if (!rect) return null
+
+  return createPortal(
+    <ul
+      style={{ position: 'fixed', top: rect.top + 4, left: rect.left, width: rect.width }}
+      className="z-50 rounded-lg border border-slate-200 bg-white shadow-xl max-h-60 overflow-y-auto"
+    >
+      {children}
+    </ul>,
+    document.body,
+  )
 }
 
 function SearchCell({ row, rowIndex, onSearch, onSelect, onManualEdit, suggestions, activeSuggestions, searching }) {
@@ -39,7 +77,7 @@ function SearchCell({ row, rowIndex, onSearch, onSelect, onManualEdit, suggestio
       </div>
 
       {showDrop && (
-        <ul className="absolute z-50 mt-1 w-full rounded-lg border border-slate-200 bg-white shadow-xl max-h-60 overflow-y-auto">
+        <SuggestionDropdown anchorRef={inputRef}>
           {searching && suggestions.length === 0 ? (
             <li className="px-4 py-3 text-xs text-slate-400 text-center font-medium">Searching medicine database...</li>
           ) : suggestions.length === 0 && row.medicineName?.trim() ? (
@@ -77,7 +115,7 @@ function SearchCell({ row, rowIndex, onSearch, onSelect, onManualEdit, suggestio
               )
             })
           )}
-        </ul>
+        </SuggestionDropdown>
       )}
     </div>
   )
@@ -87,6 +125,8 @@ export default function MedicineTable({ items = [], onChange, readOnly = false }
   const [suggestions, setSuggestions] = useState([])
   const [activeRow, setActiveRow] = useState(null)
   const [searching, setSearching] = useState(false)
+  const [bulkOpen, setBulkOpen] = useState(false)
+  const [bulkText, setBulkText] = useState('')
   const debounceRef = useRef(null)
 
   const doSearch = useCallback(async (query) => {
@@ -134,6 +174,22 @@ export default function MedicineTable({ items = [], onChange, readOnly = false }
 
   const addRow = () => {
     onChange([...items, { medicineId: '', medicineName: '', quantity: 1, unit: '', isAvailable: false, _fromDb: false }])
+  }
+
+  // One line per medicine — quick way to seed a long prescription list, then each row
+  // still needs the usual search-and-select to confirm availability against the CHO list.
+  const addBulkRows = () => {
+    const names = bulkText
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean)
+    if (!names.length) return
+    onChange([
+      ...items,
+      ...names.map((medicineName) => ({ medicineId: '', medicineName, quantity: 1, unit: '', isAvailable: false, _fromDb: false })),
+    ])
+    setBulkText('')
+    setBulkOpen(false)
   }
 
   const removeRow = (i) => onChange(items.filter((_, idx) => idx !== i))
@@ -250,10 +306,36 @@ export default function MedicineTable({ items = [], onChange, readOnly = false }
       </div>
 
       {!readOnly && (
-        <button type="button" onClick={addRow} className="mt-3 portal-button-secondary text-sm">
-          <PlusIcon className="h-4 w-4" />
-          Add Medicine Row
-        </button>
+        <div className="mt-3 flex flex-wrap items-start gap-2">
+          <button type="button" onClick={addRow} className="portal-button-secondary text-sm">
+            <PlusIcon className="h-4 w-4" />
+            Add Medicine Row
+          </button>
+          <button type="button" onClick={() => setBulkOpen((open) => !open)} className="portal-button-secondary text-sm">
+            <PlusIcon className="h-4 w-4" />
+            Add Multiple
+          </button>
+        </div>
+      )}
+
+      {!readOnly && bulkOpen && (
+        <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
+          <label className="portal-label">Paste one medicine per line</label>
+          <textarea
+            value={bulkText}
+            onChange={(e) => setBulkText(e.target.value)}
+            rows={5}
+            className="portal-input"
+            placeholder={'Paracetamol 500mg\nAmoxicillin 500mg\nCetirizine 10mg'}
+          />
+          <p className="mt-1 text-xs text-slate-500">
+            Each line becomes its own row. Confirm availability for each one afterward using its search field.
+          </p>
+          <div className="mt-2 flex gap-2">
+            <button type="button" onClick={addBulkRows} className="portal-button-primary text-xs">Add Rows</button>
+            <button type="button" onClick={() => { setBulkOpen(false); setBulkText('') }} className="portal-button-secondary text-xs">Cancel</button>
+          </div>
+        </div>
       )}
     </div>
   )

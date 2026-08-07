@@ -65,6 +65,25 @@ const medicineSchema = z.object({
   isAvailable: z.boolean().optional().default(true),
 })
 
+// Same identity the catalog is actually keyed on in practice: generic name + strength/conc.
+// + dosage form (brand name is informational, not part of what makes two entries "the same
+// medicine" here — the Add/Edit form doesn't even collect it for new entries).
+async function findDuplicateMedicine(
+  genericName: string,
+  unit: string | null,
+  strength: string | null,
+  excludeId?: string,
+) {
+  return prisma.medicineItem.findFirst({
+    where: {
+      id: excludeId ? { not: excludeId } : undefined,
+      genericName: { equals: genericName, mode: 'insensitive' },
+      unit: unit ? { equals: unit, mode: 'insensitive' } : null,
+      strength: strength ? { equals: strength, mode: 'insensitive' } : null,
+    },
+  })
+}
+
 function buildAvailabilityTimestamps(isAvailable: boolean, occurredAt = new Date()) {
   return isAvailable
     ? {
@@ -240,13 +259,20 @@ router.get('/', asyncHandler(async (req, res) => {
 
 router.post('/', canManageMedicine, asyncHandler(async (req, res) => {
   const body = medicineSchema.parse(req.body)
+  const unit = cleanOptionalText(body.unit, 50)
+  const strength = cleanOptionalText(body.strength, 50)
+
+  const duplicate = await findDuplicateMedicine(body.genericName, unit, strength)
+  if (duplicate) {
+    throw new HttpError(409, `"${duplicate.genericName}"${unit ? ` (${unit})` : ''}${strength ? ` — ${strength}` : ''} already exists in the database.`)
+  }
 
   const created = await prisma.medicineItem.create({
     data: {
       genericName: body.genericName,
       brandName: cleanOptionalText(body.brandName, 200),
-      unit: cleanOptionalText(body.unit, 50),
-      strength: cleanOptionalText(body.strength, 50),
+      unit,
+      strength,
       category: cleanOptionalText(body.category, 100),
       unitPrice: Number(body.unitPrice ?? 0),
       isAvailable: body.isAvailable ?? true,
@@ -278,13 +304,20 @@ router.put('/:id', canManageMedicine, asyncHandler(async (req, res) => {
   const nextIsAvailable = body.isAvailable ?? (existing as any).isAvailable ?? true
   const didAvailabilityChange = nextIsAvailable !== ((existing as any).isAvailable ?? true)
 
+  const unit = cleanOptionalText(body.unit, 50)
+  const strength = cleanOptionalText(body.strength, 50)
+  const duplicate = await findDuplicateMedicine(body.genericName, unit, strength, medicineId)
+  if (duplicate) {
+    throw new HttpError(409, `"${duplicate.genericName}"${unit ? ` (${unit})` : ''}${strength ? ` — ${strength}` : ''} already exists in the database.`)
+  }
+
   const updated = await prisma.medicineItem.update({
     where: { id: medicineId },
     data: {
       genericName: body.genericName,
       brandName: cleanOptionalText(body.brandName, 200),
-      unit: cleanOptionalText(body.unit, 50),
-      strength: cleanOptionalText(body.strength, 50),
+      unit,
+      strength,
       category: cleanOptionalText(body.category, 100),
       unitPrice: Number(body.unitPrice ?? existing.unitPrice),
       isAvailable: nextIsAvailable,

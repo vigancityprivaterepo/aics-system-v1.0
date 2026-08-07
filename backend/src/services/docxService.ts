@@ -3,6 +3,7 @@ import path from 'node:path'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import PizZip from 'pizzip'
+import PDFDocument from 'pdfkit'
 import Docxtemplater from 'docxtemplater'
 import { DOMParser, XMLSerializer } from '@xmldom/xmldom'
 import { richTextToPlainText } from '../utils/richText.js'
@@ -192,6 +193,11 @@ function formatOrdinalDay(value: number): string {
     default: return `${normalized}th`
   }
 }
+
+const MONTH_NAMES = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+]
 
 function calcAge(dob: string | null | undefined): string {
   if (!dob) return '-'
@@ -888,7 +894,13 @@ function renderDocWithDelimiters(
     getImage: (tagValue: unknown) => readSignatureImage(tagValue),
     getSize: (_img: unknown, _tagValue: unknown, tagName?: string) => {
       if (tagName === 'documentQrCode') return [80, 80]
-      return [160, 58]
+      // Deliberately smaller than a "real" signature scan would be: at the original
+      // 160x58 size the picture was taller than 3 lines of this text, which is what made
+      // precise vertical placement over the name so fragile (see the centering/lift logic
+      // below) and prone to spilling into neighboring lines in some renderers. Shrinking it
+      // keeps it fully intact and legibly attached to its name with much less positioning
+      // precision required.
+      return [130, 45]
     },
   })
 
@@ -1089,6 +1101,45 @@ function normalizeBeneficiaryInfoParagraphs(doc: Document): boolean {
   return changed
 }
 
+// The template carries at least one purely decorative floating textbox (originally meant
+// to frame the CHO "unavailable medicines" certification block) whose content is just an
+// empty paragraph — it has no text and no picture. When that certification section is
+// blank (the normal case: no unavailable medicines on the case), this empty shape is left
+// behind anyway, with a large template-authored footprint that has nothing to do with any
+// signature. In Word it's an invisible-but-selectable box that can span several sections
+// (confirmed by a user screenshot showing its selection handles stretching from the
+// preparer's line down past the recommender's). Since a real signature/QR textbox always
+// contains an actual picture by the time this runs (docxtemplater has already substituted
+// it in), any textbox with neither text nor a picture is dead weight — remove its whole
+// hosting run.
+function removeEmptyDecorativeTextBoxes(doc: Document): boolean {
+  let changed = false
+
+  for (const txbxContent of Array.from(doc.getElementsByTagName('w:txbxContent'))) {
+    const hasText = Array.from(txbxContent.getElementsByTagName('w:t'))
+      .some((t) => (t.textContent ?? '').trim().length > 0)
+    const hasPicture = txbxContent.getElementsByTagName('w:drawing').length > 0
+      || txbxContent.getElementsByTagName('pic:pic').length > 0
+    if (hasText || hasPicture) continue
+
+    let node: Node | null = txbxContent
+    let hostRun: Element | null = null
+    while (node) {
+      if (node.nodeName === 'w:r') {
+        hostRun = node as Element
+        break
+      }
+      node = node.parentNode
+    }
+    if (hostRun?.parentNode) {
+      hostRun.parentNode.removeChild(hostRun)
+      changed = true
+    }
+  }
+
+  return changed
+}
+
 function trimTrailingEmptyParagraphs(doc: Document): boolean {
   const bodies = doc.getElementsByTagName('w:body')
   const body = bodies[0]
@@ -1239,7 +1290,329 @@ function ensureParagraphSpacingBefore(doc: Document, paragraph: Element, beforeT
   return true
 }
 
-function separatePreparedSignatureParagraph(doc: Document): boolean {
+const EMU_PER_POINT = 12700
+// The runtime signature picture is always sized [130, 45] px by the image module's
+// getSize() callback below (see `imageModule`), i.e. 1238250 x 428625 EMU = 97.5 x 33.75pt.
+const SIGNATURE_IMAGE_WIDTH_EMU = 1238250
+const SIGNATURE_IMAGE_HEIGHT_EMU = 428625
+const SIGNATURE_IMAGE_WIDTH_POINTS = SIGNATURE_IMAGE_WIDTH_EMU / EMU_PER_POINT
+const SIGNATURE_IMAGE_HEIGHT_POINTS = SIGNATURE_IMAGE_HEIGHT_EMU / EMU_PER_POINT
+// Each anchor point is the TOP of the name's own line. At the picture's original 43.5pt
+// height (roughly 3 lines of this text) that mismatch needed a real lift to keep the ink
+// off the line(s) below — scaled down proportionally now that the picture itself (33.75pt)
+// is shrunk to close to one line, since most of the earlier overflow problem no longer
+// applies. The two mechanisms still need different amounts in real Word: the preparer's
+// DrawingML anchor (embedded in the same paragraph as its name) vs. the other three's VML
+// shapes (hosted in their own dedicated paragraph immediately before the name), confirmed
+// against real Word screenshots, not just LibreOffice.
+const SIGNATURE_VERTICAL_LIFT_DRAWINGML_POINTS = 4
+const SIGNATURE_VERTICAL_LIFT_VML_POINTS = 1
+
+// docx/OOXML has no text-metrics API of its own, so centering needs a real font's glyph
+// metrics measured some other way. pdfkit (already a direct dependency, used elsewhere for
+// the PDFKit-fallback reports) can load an arbitrary TTF and report real advance widths via
+// widthOfString — but only if we hand it a font that actually exists wherever this runs.
+// These name paragraphs are Georgia Bold (reviewer/recommender/approver) or Arial Bold
+// (preparer) in the template, but Georgia/Arial themselves aren't installed in the backend's
+// own Docker image — LibreOffice there substitutes Noto Serif / Liberation Sans (confirmed
+// via `fc-match` inside the container), and that substitution, not the nominal template font,
+// is what actually determines rendered glyph widths in the PDF this centering has to match.
+// Falls back to the old rough per-character estimate (calibrated against real Word
+// screenshots) if none of the candidates exist — e.g. a dev machine without these exact
+// font files — so this never throws or produces a worse result than before.
+const NAME_FONT_CANDIDATES = {
+  'georgia-bold': [
+    'C:\\Windows\\Fonts\\georgiab.ttf',
+    '/usr/share/fonts/truetype/noto/NotoSerif-Bold.ttf',
+    '/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf',
+  ],
+  'arial-bold': [
+    'C:\\Windows\\Fonts\\arialbd.ttf',
+    '/usr/share/fonts/truetype/liberation2/LiberationSans-Bold.ttf',
+    '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',
+  ],
+} as const
+type NameFontFamily = keyof typeof NAME_FONT_CANDIDATES
+const nameFontMeasurerCache = new Map<NameFontFamily, ((text: string, fontSizePt: number) => number) | null>()
+
+function getNameFontMeasurer(fontFamily: NameFontFamily): ((text: string, fontSizePt: number) => number) | null {
+  if (nameFontMeasurerCache.has(fontFamily)) return nameFontMeasurerCache.get(fontFamily) ?? null
+
+  let measurer: ((text: string, fontSizePt: number) => number) | null = null
+  const fontPath = NAME_FONT_CANDIDATES[fontFamily].find((candidate) => fs.existsSync(candidate))
+  if (fontPath) {
+    try {
+      const measuringDoc = new PDFDocument({ autoFirstPage: false })
+      measuringDoc.registerFont('measure', fontPath)
+      measuringDoc.font('measure')
+      measurer = (text, fontSizePt) => measuringDoc.fontSize(fontSizePt).widthOfString(text)
+    } catch {
+      measurer = null
+    }
+  }
+  nameFontMeasurerCache.set(fontFamily, measurer)
+  return measurer
+}
+
+function estimateTextWidthPoints(text: string, fontSizePt: number, fontFamily: NameFontFamily = 'georgia-bold'): number {
+  const trimmed = text.trim()
+  const measurer = getNameFontMeasurer(fontFamily)
+  if (measurer) {
+    try {
+      return measurer(trimmed, fontSizePt)
+    } catch {
+      // fall through to the heuristic below
+    }
+  }
+  const AVERAGE_CHAR_WIDTH_FACTOR = 0.85
+  return Math.max(0, trimmed.length) * fontSizePt * AVERAGE_CHAR_WIDTH_FACTOR
+}
+
+// Recenters a floating/VML signature shape over a specific printed name by rewriting its
+// own horizontal offset from that name's estimated width — the name paragraph itself is
+// left untouched (still left-aligned), only the shape's offset is name-length-aware.
+function centerSignatureOverName(
+  doc: Document,
+  shapeHost: Element,
+  nameText: string,
+  fontSizePt: number,
+  fontFamily: NameFontFamily = 'georgia-bold',
+): void {
+  const nameWidthPoints = estimateTextWidthPoints(nameText, fontSizePt, fontFamily)
+
+  for (const anchor of Array.from(shapeHost.getElementsByTagName('wp:anchor'))) {
+    const extent = anchor.getElementsByTagName('wp:extent')[0]
+    const anchorWidthEmu = Number(extent?.getAttribute('cx') ?? 0)
+    if (!anchorWidthEmu) continue
+    const offsetEmu = Math.max(0, Math.round((nameWidthPoints * EMU_PER_POINT - anchorWidthEmu) / 2))
+    const positionH = anchor.getElementsByTagName('wp:positionH')[0]
+    if (!positionH) continue
+    while (positionH.firstChild) positionH.removeChild(positionH.firstChild)
+    positionH.setAttribute('relativeFrom', 'column')
+    const posOffsetEl = doc.createElement('wp:posOffset')
+    posOffsetEl.textContent = String(offsetEmu)
+    positionH.appendChild(posOffsetEl)
+
+    const positionV = anchor.getElementsByTagName('wp:positionV')[0]
+    const vOffsetEl = positionV?.getElementsByTagName('wp:posOffset')[0]
+    if (vOffsetEl) {
+      const currentVEmu = Number(vOffsetEl.textContent ?? 0)
+      vOffsetEl.textContent = String(Math.round(currentVEmu - SIGNATURE_VERTICAL_LIFT_DRAWINGML_POINTS * EMU_PER_POINT))
+    }
+    // The template floats these behind the text ("Send Behind Text") specifically so its
+    // own opaque white shape fill (below) doesn't blot out the printed name — some
+    // renderers (confirmed in LibreOffice) instead paint each paragraph's own opaque
+    // background over behind-text shapes, hiding whichever part of the signature falls
+    // within a paragraph's box and only showing the sliver in the blank space between
+    // paragraphs. Bringing the shape in front only works once its fill is transparent too
+    // (next), otherwise it just paints over the name instead of alongside it.
+    if (anchor.getAttribute('behindDoc') === '1') {
+      anchor.setAttribute('behindDoc', '0')
+    }
+  }
+
+  for (const shapeProperties of Array.from(shapeHost.getElementsByTagName('wps:spPr'))) {
+    for (const fill of Array.from(shapeProperties.getElementsByTagName('a:solidFill'))) {
+      if (fill.parentNode !== shapeProperties) continue
+      const noFill = doc.createElement('a:noFill')
+      fill.parentNode.replaceChild(noFill, fill)
+    }
+  }
+
+  for (const shape of Array.from(shapeHost.getElementsByTagName('v:shape'))) {
+    const style = shape.getAttribute('style') ?? ''
+    const widthMatch = style.match(/(?:^|;)width:([\d.]+)pt(?:;|$)/)
+    const shapeWidthPoints = Number(widthMatch?.[1])
+    if (!Number.isFinite(shapeWidthPoints) || shapeWidthPoints <= 0) continue
+    const offsetPoints = Math.max(0, (nameWidthPoints - shapeWidthPoints) / 2)
+    const offsetStr = offsetPoints.toFixed(2).replace(/\.?0+$/, '') || '0'
+    let nextStyle = /(?:^|;)margin-left:[^;]*/.test(style)
+      ? style.replace(/margin-left:[^;]*/, `margin-left:${offsetStr}pt`)
+      : `${style}${style.endsWith(';') || style.length === 0 ? '' : ';'}margin-left:${offsetStr}pt;`
+    const topMatch = nextStyle.match(/(?:^|;)margin-top:(-?[\d.]+)pt/)
+    if (topMatch) {
+      const currentTopPoints = Number(topMatch[1])
+      const nextTopPoints = currentTopPoints - SIGNATURE_VERTICAL_LIFT_VML_POINTS
+      const nextTopStr = nextTopPoints.toFixed(2).replace(/\.?0+$/, '') || '0'
+      nextStyle = nextStyle.replace(/margin-top:-?[\d.]+pt/, `margin-top:${nextTopStr}pt`)
+    }
+    // `mso-position-horizontal` (a keyword like "left"/"center") takes precedence over the
+    // raw margin-left value in real Word — left over from the template, it silently
+    // discarded the offset just set above. Strip it (and its -relative partner) so Word
+    // actually uses margin-left.
+    nextStyle = nextStyle
+      .replace(/(?:^|;)mso-position-horizontal:[^;]*;?/, ';')
+      .replace(/(?:^|;)mso-position-horizontal-relative:[^;]*;?/, ';')
+      .replace(/;;+/g, ';')
+    // A negative z-index is VML's "send behind text" — same occlusion problem as
+    // behindDoc above. Flip it positive so the shape draws in front of the text instead.
+    nextStyle = nextStyle.replace(/(?:^|;)z-index:-(\d+)/, (match, digits) => match.replace(`-${digits}`, digits))
+    shape.setAttribute('style', nextStyle)
+    // VML shapes fill solid white by default (`filled` defaults to true) — same as the
+    // DrawingML noFill fix above, needed now that the shape is in front of the text.
+    shape.setAttribute('filled', 'f')
+  }
+
+  // A sibling <w10:wrap anchorx="margin"/> left referencing the page margin (while the
+  // shape itself no longer declares any margin-relative positioning, per above) is enough
+  // of a mismatch that some renderers silently drop the shape instead of drawing it.
+  for (const wrap of Array.from(shapeHost.getElementsByTagName('w10:wrap'))) {
+    if (wrap.getAttribute('anchorx') === 'margin') {
+      wrap.setAttribute('anchorx', 'text')
+    }
+  }
+
+  // The recommender's textbox carries `mso-next-textbox:#_x0000_sNNNN` pointing at its OWN
+  // shape id — a "continue overflow text into this other box" link left over from the
+  // template that, being self-referential, is dead/broken. Word appears to render a phantom
+  // linked box for it, showing up as a stray opaque white bar over the text below the
+  // signature. It serves no purpose even when valid (there's no overflow text to carry), so
+  // just drop it.
+  for (const textbox of Array.from(shapeHost.getElementsByTagName('v:textbox'))) {
+    const style = textbox.getAttribute('style') ?? ''
+    const nextStyle = style
+      .replace(/(?:^|;)mso-next-textbox:[^;]*;?/, ';')
+      .replace(/;;+/g, ';')
+      .replace(/^;/, '')
+    if (nextStyle !== style) textbox.setAttribute('style', nextStyle)
+  }
+}
+
+// The template's outer wrapping shape/textbox around each signature placeholder was sized
+// for whatever placeholder graphic the template originally shipped with, not for the much
+// smaller picture the image module actually inserts at runtime — and shrinking the picture
+// itself (see getSize() above) doesn't touch this separate outer box at all. Left alone,
+// that oversized, still-technically-transparent-but-bordered box is what a user actually
+// selects in Word (its handles span several lines/sections, well past the small visible
+// signature), and its white border stroke (fixed further down, alongside the fill) is what
+// shows up as stray white lines cutting across the text it happens to cross. This shrinks
+// the OUTER box down to the real picture's exact size — the inner picture's own extent
+// (already correct) is left untouched via the size guards below.
+function shrinkSignatureShapeToFit(doc: Document, shapeHost: Element): void {
+  const targetWidthEmu = SIGNATURE_IMAGE_WIDTH_EMU
+  const targetHeightEmu = SIGNATURE_IMAGE_HEIGHT_EMU
+  const targetWidthPoints = SIGNATURE_IMAGE_WIDTH_POINTS
+  const targetHeightPoints = SIGNATURE_IMAGE_HEIGHT_POINTS
+
+  for (const tag of ['wp:extent', 'a:ext']) {
+    for (const el of Array.from(shapeHost.getElementsByTagName(tag))) {
+      const cx = Number(el.getAttribute('cx') ?? 0)
+      const cy = Number(el.getAttribute('cy') ?? 0)
+      if (cx > 0 && cx !== targetWidthEmu) {
+        el.setAttribute('cx', String(targetWidthEmu))
+      }
+      if (cy > 0 && cy !== targetHeightEmu) {
+        el.setAttribute('cy', String(targetHeightEmu))
+      }
+    }
+  }
+
+  // Both autofit mechanisms recompute the shape's rendered size from its content on the
+  // fly in real Word, silently overriding the explicit size set just above — so the
+  // fixed-size edit above had no visible effect until these were also disabled.
+  for (const autofit of Array.from(shapeHost.getElementsByTagName('a:spAutoFit'))) {
+    const noAutofit = doc.createElement('a:noAutofit')
+    autofit.parentNode?.replaceChild(noAutofit, autofit)
+  }
+
+  for (const shape of Array.from(shapeHost.getElementsByTagName('v:shape'))) {
+    let style = shape.getAttribute('style') ?? ''
+    style = /(?:^|;)width:[^;]*/.test(style)
+      ? style.replace(/width:[^;]*/, `width:${targetWidthPoints}pt`)
+      : `${style}${style.endsWith(';') || style.length === 0 ? '' : ';'}width:${targetWidthPoints}pt;`
+    style = /(?:^|;)height:[^;]*/.test(style)
+      ? style.replace(/height:[^;]*/, `height:${targetHeightPoints}pt`)
+      : `${style}${style.endsWith(';') || style.length === 0 ? '' : ';'}height:${targetHeightPoints}pt;`
+    // The template's original oversized placeholder also set `mso-width-percent`/
+    // `mso-height-percent` (e.g. 200) with `mso-*-relative:margin` — VML's relative-sizing
+    // escape hatch, meant to override the plain `width:`/`height:` above with a percentage
+    // of the page margin instead. Word ignores it once an explicit size is set (why the
+    // shape looked right there), but LibreOffice's headless PDF conversion honors it,
+    // reinflating the shape (here, tall enough to spill across the name and title lines
+    // below) regardless of the exact-fit `height:33.75pt` just written. 0 is VML's documented
+    // "disabled" value, same as this template already uses for `mso-width-percent` on some
+    // of these shapes.
+    style = style.replace(/mso-width-percent:[^;]*/g, 'mso-width-percent:0')
+    style = style.replace(/mso-height-percent:[^;]*/g, 'mso-height-percent:0')
+    shape.setAttribute('style', style)
+    // VML shapes stroke solid white by default too (`stroked` defaults to true) — the
+    // border was tracing the shape's full (formerly oversized) rectangle, showing up as a
+    // stray white line wherever that rectangle happened to cross printed text.
+    shape.setAttribute('stroked', 'f')
+  }
+
+  // Same fix as the fill above, but for the shape's own border/outline instead of its
+  // interior — <a:ln> (DrawingML's line/stroke properties) had the identical opaque white
+  // solidFill, tracing the (formerly oversized) rectangle's edge across the text.
+  for (const shapeProperties of Array.from(shapeHost.getElementsByTagName('wps:spPr'))) {
+    for (const line of Array.from(shapeProperties.getElementsByTagName('a:ln'))) {
+      if (line.parentNode !== shapeProperties) continue
+      for (const fill of Array.from(line.getElementsByTagName('a:solidFill'))) {
+        if (fill.parentNode !== line) continue
+        const noFill = doc.createElement('a:noFill')
+        fill.parentNode.replaceChild(noFill, fill)
+      }
+    }
+  }
+
+  // Note: VML's own `mso-fit-shape-to-text` (on <v:textbox>) is deliberately left alone —
+  // unlike DrawingML's <a:spAutoFit>, it doesn't override the explicit height set above in
+  // practice, and stripping it once exposed a template artifact (a self-referential
+  // mso-next-textbox link with nothing else in the style) that made at least one renderer
+  // drop the shape's content entirely.
+
+  // <v:textbox> reserves its own internal padding around whatever it hosts — 0.1in/0.05in
+  // (7.2pt/3.6pt) left-right/top-bottom by default when no `inset` is declared, some
+  // templates declare a smaller explicit one instead. Either way, that padding is carved
+  // out of the shape's now-exact-fit width/height set above, leaving less room inside than
+  // the picture actually needs — so the picture's own right/bottom edge (sized to the full
+  // shape, not the shrunk inner area) runs past the textbox's content box and gets clipped
+  // there. The shape has no visible fill/border of its own (see above), so there's nothing
+  // lost by letting the picture use the whole box edge-to-edge.
+  for (const textbox of Array.from(shapeHost.getElementsByTagName('v:textbox'))) {
+    textbox.setAttribute('inset', '0in,0in,0in,0in')
+  }
+
+  // The preparer's signature host is a modern DrawingML text box (<wps:txbx>, inside an
+  // <mc:Choice Requires="wps">, which real Word renders in preference to the legacy
+  // <mc:Fallback> shape handled by the loop above) rather than the plain VML shape the
+  // other three signatures use — its own padding lives on <wps:bodyPr>'s lIns/tIns/rIns/bIns
+  // (EMU, not the VML inset string), same 7.2pt/3.6pt default, same clipping effect once the
+  // shape is shrunk to the picture's exact size above.
+  for (const bodyPr of Array.from(shapeHost.getElementsByTagName('wps:bodyPr'))) {
+    for (const attr of ['lIns', 'tIns', 'rIns', 'bIns']) {
+      bodyPr.setAttribute(attr, '0')
+    }
+  }
+}
+
+function ensureParagraphLeftIndent(doc: Document, paragraph: Element, twips: number): void {
+  let pPr = Array.from(paragraph.childNodes).find((node) => node.nodeName === 'w:pPr') as Element | undefined
+  if (!pPr) {
+    pPr = doc.createElement('w:pPr')
+    paragraph.insertBefore(pPr, paragraph.firstChild)
+  }
+  let ind = Array.from(pPr.childNodes).find((node) => node.nodeName === 'w:ind') as Element | undefined
+  if (!ind) {
+    ind = doc.createElement('w:ind')
+    const propertiesAfterInd = new Set([
+      'w:contextualSpacing', 'w:mirrorIndents', 'w:suppressOverlap', 'w:jc',
+      'w:textDirection', 'w:textAlignment', 'w:textboxTightWrap', 'w:outlineLvl',
+      'w:divId', 'w:cnfStyle', 'w:rPr', 'w:sectPr', 'w:pPrChange',
+    ])
+    const insertionPoint = Array.from(pPr.childNodes).find((node) => propertiesAfterInd.has(node.nodeName)) ?? null
+    pPr.insertBefore(ind, insertionPoint)
+  }
+  ind.setAttribute('w:left', String(Math.max(0, Math.round(twips))))
+}
+
+// The preparer's signature and printed name share one paragraph in the template (the
+// classic "sign over your printed name" look this org's documents use, confirmed against
+// a real reference render) — so this repositions the signature shape in place rather than
+// moving it to its own line; it should still visually overlap the name, just centered on
+// it instead of stuck at a fixed left offset, and full-size rather than the template's
+// oversized legacy placeholder box.
+function repositionPreparedSignature(doc: Document): boolean {
   const body = doc.getElementsByTagName('w:body')[0]
   if (!body) return false
 
@@ -1251,21 +1624,31 @@ function separatePreparedSignatureParagraph(doc: Document): boolean {
   }) as Element | undefined
   if (!preparedParagraph) return false
 
-  const signatureRuns = Array.from(preparedParagraph.childNodes).filter((node) => {
-    if (node.nodeName === 'w:pPr') return false
-    return Array.from((node as Element).getElementsByTagName?.('wp:extent') ?? []).some(
-      (extent) => extent.getAttribute('cx') === '1525270' && extent.getAttribute('cy') === '1404620',
-    )
-  })
-  if (signatureRuns.length === 0) return false
-
-  const signatureParagraph = doc.createElement('w:p')
-  ensureParagraphMinimumLine(doc, signatureParagraph, '360')
-  for (const run of signatureRuns) {
-    signatureParagraph.appendChild(run)
-  }
-  body.insertBefore(signatureParagraph, preparedParagraph)
+  const nameText = paragraphTextContent(preparedParagraph).trim()
+  // Shrink first — centering reads the shape's own declared width to compute its offset,
+  // which is wrong (the template's original oversized value) until this resizes it.
+  shrinkSignatureShapeToFit(doc, preparedParagraph)
+  centerSignatureOverName(doc, preparedParagraph, nameText, 11, 'arial-bold')
   return true
+}
+
+// Some signature paragraphs (APPROVED:, in this template) also carry an unrelated floating
+// element in a separate run — the "Verification Code" block, own-page-margin-relative
+// positioning. Passing the whole paragraph to shrinkSignatureShapeToFit/centerSignatureOverName
+// would let them touch that too (both iterate every matching tag they find, with no way to
+// tell "the signature" from "some other floating shape that happens to share this paragraph").
+// This narrows the host down to the specific <w:r> hosting the actual, plain <w:pict>/<v:shape>
+// signature — identifiable by having no mc:AlternateContent ancestor, unlike the verification
+// block's modern wps:wsp/wp:anchor and its own inert mc:Fallback v:shape copy. Falls back to
+// the whole paragraph if no such shape is found, matching prior (pre-APPROVED:) behavior.
+function findOwnSignatureShapeHost(paragraph: Element): Element {
+  const ownShape = Array.from(paragraph.getElementsByTagName('v:shape'))
+    .find((shape) => !hasAncestorTag(shape, 'mc:AlternateContent'))
+  if (!ownShape) return paragraph
+
+  let host: Node | null = ownShape
+  while (host && host.parentNode !== paragraph) host = host.parentNode
+  return (host as Element) ?? paragraph
 }
 
 function normalizeCaseStudySignaturePlaceholders(doc: Document): boolean {
@@ -1282,13 +1665,37 @@ function normalizeCaseStudySignaturePlaceholders(doc: Document): boolean {
     changed = ensureParagraphSpacingBefore(doc, labelParagraph, '240') || changed
   }
 
-  for (const label of ['Reviewed by:', 'Recommending Approval:']) {
+  // The signature image and name are the two paragraphs directly after each label (no
+  // conditional content sits between them here, unlike the preparer's block). Names stay
+  // left-aligned; only the signature shape's own offset is recentered over that specific
+  // name's estimated width. APPROVED: follows the exact same label/signature/name layout as
+  // the other two in this template — but its signature paragraph also happens to carry an
+  // unrelated "Verification Code" run (a separate wps:wsp/wp:anchor, own-page-margin-relative
+  // positioning, meant to stay pinned to the right edge). flattenCaseStudyVerificationTextBox
+  // was meant to pull that out first via a different, QR-code-specific structure that this
+  // template's actual "Verification Code" block doesn't match, so it silently never fires for
+  // APPROVED:, leaving its v:shape at the template's original, un-shrunk, un-centered size —
+  // scoping shrink/center to just the mayor's own <w:pict>/<v:shape> run (not the whole
+  // paragraph) keeps them from also touching that unrelated wp:anchor, which centerSignature
+  // OverName would otherwise happily "recenter" right on top of the printed name.
+  for (const label of ['Reviewed by:', 'Recommending Approval:', 'APPROVED:']) {
     const labelIndex = children.findIndex((node) =>
       node.nodeName === 'w:p' && paragraphTextContent(node as Element).trim() === label,
     )
-    const signatureParagraph = labelIndex >= 0 ? children[labelIndex + 1] : null
-    if (signatureParagraph?.nodeName !== 'w:p') continue
-    changed = ensureParagraphMinimumLine(doc, signatureParagraph as Element, '360') || changed
+    if (labelIndex < 0) continue
+
+    const signatureParagraph = children[labelIndex + 1]
+    const nameParagraph = children[labelIndex + 2]
+    if (signatureParagraph?.nodeName === 'w:p') {
+      changed = ensureParagraphMinimumLine(doc, signatureParagraph as Element, '360') || changed
+      const nameText = nameParagraph?.nodeName === 'w:p' ? paragraphTextContent(nameParagraph as Element).trim() : ''
+      if (nameText) {
+        const signatureHost = findOwnSignatureShapeHost(signatureParagraph as Element)
+        shrinkSignatureShapeToFit(doc, signatureHost)
+        centerSignatureOverName(doc, signatureHost, nameText, 10)
+        changed = true
+      }
+    }
   }
 
   return changed
@@ -1349,6 +1756,26 @@ function flattenCaseStudyVerificationTextBox(doc: Document): boolean {
     }
 
     if (approverNameParagraph && approverTitleParagraph) {
+      // The approver's signature turns out to use the same floating-shape wrapper as the
+      // reviewer/recommender (not a bare inline image as originally assumed), so it gets
+      // the same shape-offset centering + autofit/keyword fixes. The indent is kept as a
+      // harmless fallback for a genuinely bare inline image, if that case ever occurs.
+      // approvedSignatureParagraph is cloned from anchorParagraph excluding only nodes that
+      // contain a <wps:txbx> — the "Verification Code: ..." text lives in one and is
+      // correctly dropped, but the QR *image* itself turns out to be a separate floating
+      // picture in the same paragraph, not wrapped in that txbx, so it rides along into the
+      // clone. Passing the whole paragraph here let centerSignatureOverName "recenter" the
+      // QR's own anchor using the signature's centering math, dragging it off the page's
+      // right margin and into the printed name — same failure mode as the reviewer/
+      // recommender fix above, same targeted fix: scope to just the actual signature shape.
+      const approverNameText = paragraphTextContent(approverNameParagraph).trim()
+      const approvedSignatureHost = findOwnSignatureShapeHost(approvedSignatureParagraph)
+      shrinkSignatureShapeToFit(doc, approvedSignatureHost)
+      centerSignatureOverName(doc, approvedSignatureHost, approverNameText, 10.5)
+      const nameWidthPoints = estimateTextWidthPoints(approverNameText, 10.5)
+      const indentPoints = Math.max(0, (nameWidthPoints - SIGNATURE_IMAGE_WIDTH_POINTS) / 2)
+      ensureParagraphLeftIndent(doc, approvedSignatureParagraph, Math.round(indentPoints * 20))
+
       const table = doc.createElement('w:tbl')
       const tableProperties = doc.createElement('w:tblPr')
       const tableWidth = doc.createElement('w:tblW')
@@ -1493,11 +1920,13 @@ function normalizeCaseStudyLayoutXml(xml: string): string {
   const parser = new DOMParser()
   const doc = parser.parseFromString(xml, 'application/xml')
   const beneficiaryNormalized = normalizeBeneficiaryInfoParagraphs(doc)
+  const deadTextBoxesRemoved = removeEmptyDecorativeTextBoxes(doc)
+  const preparedSignatureRepositioned = repositionPreparedSignature(doc)
   const signatureSectionCompacted = compactCaseStudySignatureSection(doc)
   const signaturePlaceholdersNormalized = normalizeCaseStudySignaturePlaceholders(doc)
   const verificationQrAligned = alignCaseStudyVerificationQr(doc)
   const trailingParagraphsTrimmed = trimTrailingEmptyParagraphs(doc)
-  const changed = beneficiaryNormalized || signatureSectionCompacted
+  const changed = beneficiaryNormalized || deadTextBoxesRemoved || preparedSignatureRepositioned || signatureSectionCompacted
     || signaturePlaceholdersNormalized
     || verificationQrAligned || trailingParagraphsTrimmed
   if (!changed) return xml
@@ -1530,6 +1959,82 @@ function sanitizeGeneratedDocxBuffer(buffer: Buffer): Buffer {
   }
 
   if (!changed) return buffer
+  return zip.generate({ type: 'nodebuffer', compression: 'DEFLATE' }) as Buffer
+}
+
+function hasAncestorTag(node: Element, tagName: string): boolean {
+  let current: Node | null = node.parentNode
+  while (current) {
+    if (current.nodeName === tagName) return true
+    current = current.parentNode
+  }
+  return false
+}
+
+// The reviewer/recommender/approver signature shapes are plain VML (<v:shape>, no explicit
+// mso-position-horizontal-relative) — unlike the preparer's DrawingML anchor, which
+// explicitly declares relativeFrom="column" and centers correctly in both renderers. Word
+// resolves the same unlabeled VML shape's margin-left against the paragraph's own left edge
+// (matching the centering math in centerSignatureOverName exactly — confirmed: DOCX output
+// has never needed adjustment here), but LibreOffice's headless PDF conversion resolves it
+// against some other, further-right reference, consistently offset by ~19.5pt regardless of
+// name length or which of the three blocks it is (measured directly against the live
+// container: implied name width from the written margin-left matched the real rendered name
+// width almost exactly, but the shape still landed ~19.5pt right of that correct position).
+// Rather than bake a Word-vs-LibreOffice fudge factor into the shared centering math (which
+// would shift the DOCX left of correct to "fix" a gap that's LibreOffice-only), this nudges
+// margin-left back by that fixed amount solely on the buffer fed to LibreOffice.
+const PDF_SIGNATURE_HORIZONTAL_CALIBRATION_POINTS = 19.5
+// Same story vertically: once the horizontal drift was fixed, the remaining ask was to nudge
+// the signature up slightly further over the name (it was sitting a bit low, closer to the
+// title line than the name). SIGNATURE_VERTICAL_LIFT_VML_POINTS (1pt) is the shared Word/
+// LibreOffice baseline lift; this adds an extra LibreOffice-only lift on top of it.
+const PDF_SIGNATURE_VERTICAL_CALIBRATION_POINTS = 8
+
+export function adjustSignaturePositionForPdfConversion(buffer: Buffer): Buffer {
+  const zip = new PizZip(buffer)
+  const entry = zip.file('word/document.xml')
+  if (!entry) return buffer
+
+  const original = entry.asText()
+  const parser = new DOMParser()
+  const doc = parser.parseFromString(original, 'application/xml')
+  let changed = false
+
+  for (const shape of Array.from(doc.getElementsByTagName('v:shape'))) {
+    const style = shape.getAttribute('style') ?? ''
+    if (
+      !style.includes(`width:${SIGNATURE_IMAGE_WIDTH_POINTS}pt`) ||
+      !style.includes(`height:${SIGNATURE_IMAGE_HEIGHT_POINTS}pt`) ||
+      hasAncestorTag(shape, 'mc:AlternateContent')
+    ) continue
+
+    let nextStyle = style
+    const marginLeftMatch = style.match(/(?:^|;)margin-left:(-?[\d.]+)pt/)
+    if (marginLeftMatch) {
+      const nextLeft = Math.max(0, Number(marginLeftMatch[1]) - PDF_SIGNATURE_HORIZONTAL_CALIBRATION_POINTS)
+      nextStyle = nextStyle.replace(/margin-left:-?[\d.]+pt/, `margin-left:${nextLeft}pt`)
+    }
+    const marginTopMatch = style.match(/(?:^|;)margin-top:(-?[\d.]+)pt/)
+    if (marginTopMatch) {
+      const nextTop = Number(marginTopMatch[1]) - PDF_SIGNATURE_VERTICAL_CALIBRATION_POINTS
+      nextStyle = nextStyle.replace(/margin-top:-?[\d.]+pt/, `margin-top:${nextTop}pt`)
+    }
+    if (nextStyle === style) continue
+
+    shape.setAttribute('style', nextStyle)
+    changed = true
+  }
+
+  if (!changed) return buffer
+
+  const serialized = new XMLSerializer().serializeToString(doc)
+  const xmlDeclMatch = original.match(/^\s*<\?xml[\s\S]*?\?>/)
+  const cleaned = xmlDeclMatch
+    ? `${xmlDeclMatch[0]}${serialized.replace(/^\s*<\?xml[\s\S]*?\?>\s*/, '')}`
+    : serialized
+
+  zip.file('word/document.xml', cleaned)
   return zip.generate({ type: 'nodebuffer', compression: 'DEFLATE' }) as Buffer
 }
 
@@ -2168,11 +2673,21 @@ function buildChoCertData(caseData: any): {
     return { name: m.medicineName ?? '-', date, time }
   })
 
+  // Staff can set the date the medicine will actually be given (encoded on the case ahead of
+  // pickup, which is often days after the certification is printed); fall back to today when
+  // no date has been set yet. The override is a plain YYYY-MM-DD date with no time/timezone
+  // component, so its parts are read directly rather than round-tripped through Date/getDate()
+  // (which would follow the server's local timezone and could shift the calendar day).
+  const rawGivenOverride = String((caseData as any).choCertGivenDate ?? '')
+  const overrideMatch = /^(\d{4})-(\d{2})-(\d{2})/.exec(rawGivenOverride)
+
   const now = new Date()
-  const givenDay = String(now.getDate())
-  const givenDayOrdinal = formatOrdinalDay(now.getDate())
-  const givenMonth = now.toLocaleString('en-PH', { month: 'long', timeZone: 'Asia/Manila' })
-  const givenYear = String(now.getFullYear())
+  const givenDay = overrideMatch ? String(Number(overrideMatch[3])) : String(now.getDate())
+  const givenDayOrdinal = overrideMatch ? formatOrdinalDay(Number(overrideMatch[3])) : formatOrdinalDay(now.getDate())
+  const givenMonth = overrideMatch
+    ? MONTH_NAMES[Number(overrideMatch[2]) - 1]
+    : now.toLocaleString('en-PH', { month: 'long', timeZone: 'Asia/Manila' })
+  const givenYear = overrideMatch ? overrideMatch[1] : String(now.getFullYear())
 
   // CHO officer info – prefer explicit CHO signer fields or the active CHO user profile
   // resolved during report serialization, then fall back to case approval data.

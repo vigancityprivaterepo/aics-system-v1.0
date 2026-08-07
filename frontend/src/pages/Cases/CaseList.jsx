@@ -17,6 +17,7 @@ const QUEUE_LABEL = {
   waiting_for_recommender: 'Waiting for Recommender',
   waiting_for_approver: 'Waiting for Approver',
   ready_for_release: 'Ready for Release',
+  released: 'Released',
   blocked_incomplete: 'Blocked / Incomplete',
 }
 

@@ -6,9 +6,13 @@ import { FileTextIcon, PlusIcon, TrashIcon } from '../../../components/ui/Icons'
 import NarrativePresetField from '../../../components/NarrativePresetField'
 import PresetSelectField from '../../../components/PresetSelectField'
 import SearchablePresetInput from '../../../components/SearchablePresetInput'
+import HouseholdMemberQuickFill from '../../../components/HouseholdMemberQuickFill'
+import FieldError from '../../../components/ui/FieldError'
+import DraftRecoveryBanner from '../../../components/ui/DraftRecoveryBanner'
 import { OCCUPATION_OPTIONS, RELATIONSHIP_OPTIONS } from '../../../constants/caseFormOptions'
 import { scrollToField, scrollToFirstError } from '../../../lib/formNavigation'
 import { formatCurrency } from '../../../lib/utils'
+import { useAutosaveDraft, readLocalDraft, clearLocalDraft } from '../../../lib/localDraft'
 
 const defaultMember = { name: '', age: '', relationship: '', civilStatus: '', occupation: '', monthlyIncome: '' }
 const CIVIL_STATUS_OPTIONS = ['Single', 'Married', 'Widowed', 'Separated', 'Annulled']
@@ -24,8 +28,11 @@ export default function StepPlainDetails({ caseData, onUpdate, readOnly = false,
   const [assistanceKinds, setAssistanceKinds] = useState(caseData.plainDetails?.assistanceKinds || [])
   const [narrativeOptions, setNarrativeOptions] = useState([])
   const submitModeRef = useRef('save')
+  const draftKey = `case-draft:${caseData.id}:plain`
+  const [draft, setDraft] = useState(() => (readOnly ? null : readLocalDraft(draftKey)))
 
-  const { control, register, handleSubmit, watch, setValue } = useForm({
+  const { control, register, handleSubmit, watch, setValue, reset, formState: { errors } } = useForm({
+    mode: 'onBlur',
     defaultValues: {
       dateOfAssessment: caseData.dateOfAssessment || new Date().toISOString().slice(0, 10),
       conformeName: caseData.plainDetails?.conformeName || '',
@@ -44,6 +51,23 @@ export default function StepPlainDetails({ caseData, onUpdate, readOnly = false,
       .catch(() => {})
     return () => { active = false }
   }, [caseData.assistanceType])
+
+  const formValues = watch()
+  useAutosaveDraft(draftKey, { formValues, family, assistanceKinds }, { enabled: !readOnly })
+
+  const restoreDraft = () => {
+    if (!draft) return
+    reset(draft.data.formValues)
+    if (Array.isArray(draft.data.family)) setFamily(draft.data.family)
+    if (Array.isArray(draft.data.assistanceKinds)) setAssistanceKinds(draft.data.assistanceKinds)
+    setDraft(null)
+  }
+
+  const discardDraft = () => {
+    clearLocalDraft(draftKey)
+    setDraft(null)
+  }
+
   const amount = watch('amount')
   const conformeRelationship = watch('conformeRelationship')
   const parsedAmount = Number(amount)
@@ -99,6 +123,7 @@ export default function StepPlainDetails({ caseData, onUpdate, readOnly = false,
         amount: plainRes.data?.amount ?? data.amount,
         status: plainRes.data?.status ?? caseData.status,
       })
+      clearLocalDraft(draftKey)
       toast.success(plainRes.data?.approvalsReset ? 'Plain AICS details saved. Case returned to encoding for re-review.' : 'Plain AICS details saved')
       if (submitModeRef.current === 'next') {
         onNext?.()
@@ -142,6 +167,10 @@ export default function StepPlainDetails({ caseData, onUpdate, readOnly = false,
         </div>
       )}
 
+      {draft && (
+        <DraftRecoveryBanner savedAt={draft.savedAt} onRestore={restoreDraft} onDiscard={discardDraft} />
+      )}
+
       <form onSubmit={handleSubmit(onSave, handleInvalid)}>
       <fieldset disabled={readOnly} className="space-y-4">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -158,6 +187,7 @@ export default function StepPlainDetails({ caseData, onUpdate, readOnly = false,
               {...register('dateOfAssessment', { required: 'Date of assessment is required' })}
               className="portal-input"
             />
+            <FieldError message={errors.dateOfAssessment?.message} />
           </div>
         </div>
 
@@ -255,6 +285,13 @@ export default function StepPlainDetails({ caseData, onUpdate, readOnly = false,
               className="portal-input"
               placeholder="Enter requesting party if not the beneficiary"
             />
+            <HouseholdMemberQuickFill
+              members={family}
+              onSelect={(member) => {
+                setValue('conformeName', member.name || '', { shouldDirty: true, shouldTouch: true })
+                if (member.relationship) setValue('conformeRelationship', member.relationship, { shouldDirty: true, shouldTouch: true })
+              }}
+            />
           </div>
           <div>
             <label className="portal-label">Relationship to Beneficiary</label>
@@ -272,11 +309,13 @@ export default function StepPlainDetails({ caseData, onUpdate, readOnly = false,
             <Controller name="presentingProblem" control={control} rules={{ validate: (value) => String(value ?? '').replace(/<[^>]*>/g, '').trim().length > 0 || 'Presenting problem is required' }} render={({ field }) => (
               <NarrativePresetField label="Presenting Problem *" value={field.value} onChange={field.onChange} options={narrativeOptions.filter((item) => item.field === 'presenting_problem')} readOnly={readOnly} minHeightClass="min-h-[7rem]" placeholder="State the client's concern or reason for seeking Plain AICS assistance." fieldName={field.name} />
             )} />
+            <FieldError message={errors.presentingProblem?.message} />
           </div>
           <div className="sm:col-span-2">
             <Controller name="findings" control={control} rules={{ validate: (value) => String(value ?? '').replace(/<[^>]*>/g, '').trim().length > 0 || 'Findings are required' }} render={({ field }) => (
               <NarrativePresetField label="Findings *" value={field.value} onChange={field.onChange} options={narrativeOptions.filter((item) => item.field === 'findings')} readOnly={readOnly} minHeightClass="min-h-[10rem]" placeholder="Enter the findings that should be bridged directly to the template." fieldName={field.name} />
             )} />
+            <FieldError message={errors.findings?.message} />
           </div>
 
           {/* Sub-section: Financial Assistance */}
@@ -295,6 +334,7 @@ export default function StepPlainDetails({ caseData, onUpdate, readOnly = false,
               className="portal-input"
               placeholder="0.00"
             />
+            <FieldError message={errors.amount?.message} />
             {isOverCap && (
               <p className="mt-1 text-xs text-amber-600">
                 Amount exceeds {formatCurrency(35000)}. Ensure proper authorization.

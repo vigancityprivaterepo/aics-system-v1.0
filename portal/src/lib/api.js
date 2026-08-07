@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { dispatchSessionExpired, PORTAL_AUTH_STORAGE_KEY } from './session'
+import { PORTAL_AUTH_STORAGE_KEY } from './session'
 
 const api = axios.create({ baseURL: import.meta.env.VITE_PORTAL_API_URL || '/api/portal' })
 
@@ -14,15 +14,11 @@ api.interceptors.request.use((config) => {
   return config
 })
 
+// Sessions persist until the user explicitly signs out — a 401 no longer
+// force-clears the stored session or triggers a logout.
 api.interceptors.response.use(
   (res) => res,
-  (err) => {
-    if (err.response?.status === 401) {
-      localStorage.removeItem(PORTAL_AUTH_STORAGE_KEY)
-      dispatchSessionExpired()
-    }
-    return Promise.reject(err)
-  }
+  (err) => Promise.reject(err)
 )
 
 export default api

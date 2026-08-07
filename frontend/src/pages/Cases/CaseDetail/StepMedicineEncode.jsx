@@ -3,6 +3,7 @@ import { PillIcon } from '../../../components/ui/Icons'
 import api from '../../../lib/api'
 import toast from 'react-hot-toast'
 import PresetSelectField from '../../../components/PresetSelectField'
+import HouseholdMemberQuickFill from '../../../components/HouseholdMemberQuickFill'
 import { RELATIONSHIP_OPTIONS } from '../../../constants/caseFormOptions'
 
 export default function StepMedicineEncode({ caseData, onUpdate, onNext }) {
@@ -71,6 +72,13 @@ export default function StepMedicineEncode({ caseData, onUpdate, onNext }) {
               onChange={(e) => setConformeName(e.target.value)}
               className="portal-input mt-1"
               placeholder="Full name of requesting party"
+            />
+            <HouseholdMemberQuickFill
+              members={caseData.familyComposition || []}
+              onSelect={(member) => {
+                setConformeName(member.name || '')
+                if (member.relationship) setConformeRelationship(member.relationship)
+              }}
             />
           </label>
           <label className="block">

@@ -173,6 +173,7 @@ model Case {
   beneficiaryOccupation            String? @map("beneficiary_occupation") @db.VarChar(200)
   beneficiaryRequestorName         String? @map("beneficiary_requestor_name") @db.VarChar(200)
   beneficiaryRequestorRelationship String? @map("beneficiary_requestor_relationship") @db.VarChar(100)
+  choCertGivenDate   DateTime?         @map("cho_cert_given_date") @db.Date
   auditFlags         Json?             @map("audit_flags")
   isArchived         Boolean           @default(false) @map("is_archived")
   archivedAt         DateTime?         @map("archived_at") @db.Timestamptz(6)

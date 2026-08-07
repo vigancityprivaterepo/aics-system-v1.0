@@ -131,6 +131,7 @@ export const updatePlainSchema = z.object({
 
 export const saveMedicinesSchema = z.object({
   amount: z.union([z.number(), z.string()]).optional().nullable(),
+  choCertGivenDate: z.string().optional().nullable(),
   medicines: z.array(z.object({
     medicineId: z.preprocess((val) => (val === '' ? null : val), z.string().uuid().optional().nullable()),
     medicineName: z.string().min(1),

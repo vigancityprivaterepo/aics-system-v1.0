@@ -197,6 +197,7 @@ export function serializeCase(caseRow: any, assigneesByStage?: ApprovalAssigneeB
     beneficiaryOccupation: caseRow.beneficiaryOccupation ?? null,
     beneficiaryRequestorName: caseRow.beneficiaryRequestorName ?? null,
     beneficiaryRequestorRelationship: caseRow.beneficiaryRequestorRelationship ?? null,
+    choCertGivenDate: caseRow.choCertGivenDate?.toISOString().slice(0, 10) ?? null,
     proxyName,
     proxyRelationship,
     ...workflow,
