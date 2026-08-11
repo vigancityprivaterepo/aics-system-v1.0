@@ -562,30 +562,47 @@ router.put('/:id', requireRole(['admin', 'employee']), asyncHandler(async (req, 
     throw duplicateConflict('This update would make the client look like an existing profile. Review the possible duplicate first.', duplicateResult)
   }
 
-  const updated = await prisma.client.update({
-    where: { id: clientId },
-    data: {
-      lastName: body.lastName,
-      firstName: body.firstName,
-      middleName: body.middleName,
-      dateOfBirth: body.dateOfBirth ? new Date(body.dateOfBirth) : body.dateOfBirth === null ? null : undefined,
-      sex: body.sex,
-      civilStatus: body.civilStatus,
-      barangay: body.barangay,
-      municipality: body.municipality,
-      province: body.province,
-      region: body.region,
-      contactNumber: body.contactNumber,
-      occupation: body.occupation,
-      religion: body.religion,
-      is4ps: body.is4ps,
-      isPwd: body.isPwd,
-      isSenior: body.isSenior,
-      clientCategory: body.clientCategory ? toClientCategory(body.clientCategory) : undefined,
-      referralSource: body.referralSource,
-      familyComposition: body.familyComposition === null ? Prisma.JsonNull : body.familyComposition,
-      photoUrl: body.photoUrl,
-    },
+  const updated = await prisma.$transaction(async (tx) => {
+    const client = await tx.client.update({
+      where: { id: clientId },
+      data: {
+        lastName: body.lastName,
+        firstName: body.firstName,
+        middleName: body.middleName,
+        dateOfBirth: body.dateOfBirth ? new Date(body.dateOfBirth) : body.dateOfBirth === null ? null : undefined,
+        sex: body.sex,
+        civilStatus: body.civilStatus,
+        barangay: body.barangay,
+        municipality: body.municipality,
+        province: body.province,
+        region: body.region,
+        contactNumber: body.contactNumber,
+        occupation: body.occupation,
+        religion: body.religion,
+        is4ps: body.is4ps,
+        isPwd: body.isPwd,
+        isSenior: body.isSenior,
+        clientCategory: body.clientCategory ? toClientCategory(body.clientCategory) : undefined,
+        referralSource: body.referralSource,
+        familyComposition: body.familyComposition === null ? Prisma.JsonNull : body.familyComposition,
+        photoUrl: body.photoUrl,
+      },
+    })
+
+    // The client's profile is the source of truth for family composition. Cases
+    // only keep their own copy so documents can be generated from it, so push any
+    // edit here into every one of the client's cases - including already
+    // submitted/released ones - so reports never drift from the true record.
+    if (body.familyComposition !== undefined) {
+      await tx.case.updateMany({
+        where: { clientId },
+        data: {
+          familyComposition: body.familyComposition === null ? Prisma.JsonNull : body.familyComposition,
+        },
+      })
+    }
+
+    return client
   })
 
   if (body.overrideDuplicateReason) {
