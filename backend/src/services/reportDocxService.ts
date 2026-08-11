@@ -89,7 +89,9 @@ export function generateExecutiveSummaryReportDocx(input: {
     totalEncoding: statusCount('encoding'),
     totalForReview: statusCount('for_review'),
     totalRP: statusCount('recommending_approval'),
+    totalForApproval: statusCount('for_approval'),
     totalApproved: statusCount('approved'),
+    totalReleased: statusCount('released'),
     totalRejected: statusCount('rejected'),
   })
 
