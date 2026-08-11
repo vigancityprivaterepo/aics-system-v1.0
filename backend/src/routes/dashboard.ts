@@ -165,26 +165,20 @@ router.get('/charts', asyncHandler(async (req, res) => {
 
   const monthly = trend
 
-  const top = await prisma.case.groupBy({
-    by: ['clientId'],
-    _count: { _all: true },
-    orderBy: { _count: { clientId: 'desc' } },
-    take: 5,
-  })
+  // Grouping by clientId (as before) and mapping each of the top 5 CLIENTS to a
+  // barangay is wrong: two different top clients from the same barangay produce
+  // two separate rows for it instead of one summed row. Aggregate by barangay
+  // directly, and return every barangay with at least one case (not just a top 5).
+  const topBarangays = await prisma.$queryRaw<Array<{ name: string; cases: bigint }>>`
+    SELECT COALESCE(NULLIF(TRIM(cl.barangay), ''), NULLIF(TRIM(cl.municipality), ''), 'Unknown') AS name,
+           COUNT(*) AS cases
+    FROM cases c
+    JOIN clients cl ON cl.id = c.client_id
+    GROUP BY name
+    ORDER BY cases DESC, name ASC
+  `
 
-  const clientIds = top.map((t) => t.clientId)
-  const clients = clientIds.length
-    ? await prisma.client.findMany({ where: { id: { in: clientIds } }, select: { id: true, barangay: true, municipality: true } })
-    : []
-  const clientMap = new Map(clients.map((c) => [c.id, c]))
-
-  const topBarangays = top.map((row) => {
-    const c = clientMap.get(row.clientId)
-    const name = c?.barangay || c?.municipality || 'Unknown'
-    return { name, cases: row._count._all }
-  })
-
-  res.json({ monthly, topBarangays })
+  res.json({ monthly, topBarangays: topBarangays.map((row) => ({ name: row.name, cases: Number(row.cases) })) })
 }))
 
 export default router

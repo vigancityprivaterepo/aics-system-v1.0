@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
-  Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend,
+  Tooltip, ResponsiveContainer,
 } from 'recharts'
 import api from '../lib/api'
 import { formatDate } from '../lib/utils'
@@ -415,85 +415,46 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Top Barangays — pie chart */}
+        {/* Barangays — ranked bar list, all barangays with at least one case */}
         <div className="card flex flex-col">
           <div className="mb-4">
-            <h3 className="font-display text-base font-bold text-slate-800">Top Barangays</h3>
-            <p className="text-xs text-slate-400 mt-0.5">Served this month</p>
+            <h3 className="font-display text-base font-bold text-slate-800">Barangays</h3>
+            <p className="text-xs text-slate-400 mt-0.5">All-time cases, every barangay served</p>
           </div>
 
           {(() => {
             const data = charts?.topBarangays || []
             const total = data.reduce((sum, d) => sum + (d.cases || 0), 0)
-            const PIE_COLORS = ['#10b981', '#3b82f6', '#8b5cf6', '#f59e0b', '#64748b']
+            const max = data.reduce((m, d) => Math.max(m, d.cases || 0), 0)
+            const BAR_COLOR = '#10b981'
 
             if (data.length === 0) {
               return <p className="text-center text-xs text-slate-400 py-10">No data available</p>
             }
 
-            const renderCustomLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
-              if (percent < 0.07) return null
-              const RADIAN = Math.PI / 180
-              const radius = innerRadius + (outerRadius - innerRadius) * 0.55
-              const x = cx + radius * Math.cos(-midAngle * RADIAN)
-              const y = cy + radius * Math.sin(-midAngle * RADIAN)
-              return (
-                <text x={x} y={y} fill="white" textAnchor="middle" dominantBaseline="central"
-                  fontSize={11} fontWeight={700}>
-                  {`${(percent * 100).toFixed(0)}%`}
-                </text>
-              )
-            }
-
             return (
-              <>
-                <ResponsiveContainer width="100%" height={200}>
-                  <PieChart>
-                    <Pie
-                      data={data}
-                      dataKey="cases"
-                      nameKey="name"
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={90}
-                      innerRadius={48}
-                      paddingAngle={2}
-                      labelLine={false}
-                      label={renderCustomLabel}
-                    >
-                      {data.map((_, i) => (
-                        <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      formatter={(value, name) => [`${value} case${value !== 1 ? 's' : ''}`, name]}
-                      contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e2e8f0' }}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-
-                {/* Custom legend */}
-                <div className="mt-3 space-y-1.5">
-                  {data.map((entry, i) => {
-                    const pct = total > 0 ? Math.round((entry.cases / total) * 100) : 0
-                    return (
-                      <div key={entry.name} className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span
-                            className="h-2.5 w-2.5 shrink-0 rounded-full"
-                            style={{ backgroundColor: PIE_COLORS[i % PIE_COLORS.length] }}
-                          />
-                          <span className="text-xs text-slate-600 truncate">{entry.name}</span>
-                        </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <span className="text-xs font-semibold text-slate-800">{entry.cases}</span>
-                          <span className="w-9 text-right text-[10px] text-slate-400">{pct}%</span>
-                        </div>
+              <div className="max-h-[320px] space-y-3 overflow-y-auto pr-1">
+                {data.map((entry) => {
+                  const pct = total > 0 ? Math.round((entry.cases / total) * 100) : 0
+                  const widthPct = max > 0 ? Math.max((entry.cases / max) * 100, 4) : 0
+                  return (
+                    <div key={entry.name}>
+                      <div className="mb-1 flex items-baseline justify-between gap-2">
+                        <span className="truncate text-xs text-slate-600">{entry.name}</span>
+                        <span className="shrink-0 text-xs text-slate-500">
+                          <span className="font-semibold text-slate-800">{entry.cases}</span> ({pct}%)
+                        </span>
                       </div>
-                    )
-                  })}
-                </div>
-              </>
+                      <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
+                        <div
+                          className="h-full rounded-full"
+                          style={{ width: `${widthPct}%`, backgroundColor: BAR_COLOR }}
+                        />
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
             )
           })()}
         </div>
