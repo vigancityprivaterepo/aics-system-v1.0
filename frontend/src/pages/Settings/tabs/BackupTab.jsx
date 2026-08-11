@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import api from '../../../lib/api'
 import { formatAuditTime, formatFileSize } from '../settingsConstants'
@@ -8,6 +8,9 @@ export default function BackupTab() {
   const [backupsLoading, setBackupsLoading] = useState(true)
   const [backupCreating, setBackupCreating] = useState(false)
   const [restoringBackupName, setRestoringBackupName] = useState('')
+  const [uploadFile, setUploadFile] = useState(null)
+  const [uploadRestoring, setUploadRestoring] = useState(false)
+  const fileInputRef = useRef(null)
 
   const loadBackups = async ({ silent = false } = {}) => {
     if (!silent) setBackupsLoading(true)
@@ -76,6 +79,34 @@ export default function BackupTab() {
     }
   }
 
+  const restoreFromUploadedFile = async () => {
+    if (!uploadFile) return
+    const confirmed = window.confirm(
+      `Restore from "${uploadFile.name}"?\n\nThis will replace the current database and uploaded files.`,
+    )
+    if (!confirmed) return
+
+    setUploadRestoring(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', uploadFile)
+      const { data } = await api.post('/settings/backups/upload-restore', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 5 * 60 * 1000,
+      })
+      setBackups((prev) => [data, ...prev.filter((item) => item.filename !== data.filename)])
+      toast.success('Backup restored from uploaded file.')
+      setUploadFile(null)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    } catch (err) {
+      toast.error(err.response?.data?.message ?? 'Failed to restore from the uploaded file.')
+    } finally {
+      setUploadRestoring(false)
+    }
+  }
+
+  const anyRestoreBusy = backupCreating || restoringBackupName !== '' || uploadRestoring
+
   return (
     <div className="space-y-4">
       <div className="card">
@@ -89,7 +120,7 @@ export default function BackupTab() {
           <button
             type="button"
             onClick={createSystemBackup}
-            disabled={backupCreating || restoringBackupName !== ''}
+            disabled={anyRestoreBusy}
             className="portal-button-primary"
           >
             {backupCreating ? 'Creating Backup...' : 'Create Backup Now'}
@@ -98,6 +129,32 @@ export default function BackupTab() {
 
         <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
           Restoring a backup replaces the current database and uploaded files. Download a fresh backup before restoring if you need a rollback point.
+        </div>
+
+        <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
+          <h3 className="text-sm font-semibold text-slate-900">Restore from a Backup File</h3>
+          <p className="mt-1 text-xs text-slate-500">
+            Upload a previously downloaded <code className="rounded bg-slate-200 px-1 py-0.5">.json.gz</code> backup file - useful for
+            restoring a backup that was downloaded to your computer and isn&apos;t in the saved list below.
+          </p>
+          <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".gz,application/gzip"
+              disabled={anyRestoreBusy}
+              onChange={(e) => setUploadFile(e.target.files?.[0] ?? null)}
+              className="block w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border file:border-slate-300 file:bg-white file:px-3 file:py-2 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-50"
+            />
+            <button
+              type="button"
+              onClick={restoreFromUploadedFile}
+              disabled={!uploadFile || anyRestoreBusy}
+              className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {uploadRestoring ? 'Restoring...' : 'Restore Uploaded File'}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -143,7 +200,7 @@ export default function BackupTab() {
                         <button
                           type="button"
                           onClick={() => restoreSystemBackup(backup.filename)}
-                          disabled={backupCreating || restoringBackupName !== ''}
+                          disabled={anyRestoreBusy}
                           className="rounded-lg bg-amber-600 px-3 py-2 text-sm font-medium text-white hover:bg-amber-700 disabled:opacity-60"
                         >
                           {isRestoring ? 'Restoring...' : 'Restore'}

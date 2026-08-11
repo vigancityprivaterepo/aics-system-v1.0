@@ -104,6 +104,16 @@ async function safeRemove(targetPath: string) {
   await fs.rm(targetPath, { recursive: true, force: true })
 }
 
+// uploadsRoot is a mounted volume in the containerized deployment (docker-compose
+// mounts aics_uploads there), so removing the directory itself fails with EBUSY -
+// only its contents can be removed. Clearing contents in place works whether the
+// directory is a plain folder or a mount point.
+async function clearDirectoryContents(dirPath: string) {
+  if (!(await fileExists(dirPath))) return
+  const entries = await fs.readdir(dirPath)
+  await Promise.all(entries.map((entry) => safeRemove(path.join(dirPath, entry))))
+}
+
 async function collectUploadFiles(directory: string, prefix = ''): Promise<BackupUploadFile[]> {
   const entries = await fs.readdir(directory, { withFileTypes: true })
   const files: BackupUploadFile[] = []
@@ -397,12 +407,12 @@ export async function restoreBackup(filename: string) {
     try {
       await importDatabase(payload)
 
-      await safeRemove(uploadsRoot)
+      await clearDirectoryContents(uploadsRoot)
       await fs.mkdir(uploadsRoot, { recursive: true })
       await writeUploadFiles(snapshot.uploads ?? [])
     } catch (error) {
       if (await fileExists(rollbackUploadsDir)) {
-        await safeRemove(uploadsRoot)
+        await clearDirectoryContents(uploadsRoot)
         await fs.cp(rollbackUploadsDir, uploadsRoot, { recursive: true })
       }
       throw error
@@ -414,4 +424,35 @@ export async function restoreBackup(filename: string) {
     await safeRemove(extractDir)
     await safeRemove(rollbackUploadsDir)
   }
+}
+
+export async function restoreBackupFromUpload(buffer: Buffer) {
+  await ensureBackupDirs()
+
+  let snapshot: BackupSnapshot
+  try {
+    snapshot = JSON.parse((await gunzipAsync(buffer)).toString('utf8')) as BackupSnapshot
+  } catch {
+    throw new HttpError(400, 'That file is not a valid AICS backup (.json.gz) archive.')
+  }
+  if (!snapshot?.metadata || snapshot.metadata.version !== 1 || !snapshot.database) {
+    throw new HttpError(400, 'That file is not a valid AICS backup (.json.gz) archive.')
+  }
+
+  // Save it into the managed backups folder under a generated name (never the
+  // client-supplied filename) so it goes through the same resolveManagedBackupPath
+  // guard as every other restore, and shows up in the saved-backups list afterward.
+  const filename = `${BACKUP_PREFIX}uploaded-${timestampLabel()}${BACKUP_EXTENSION}`
+  const archivePath = resolveFromBackups(filename)
+  await fs.writeFile(archivePath, buffer)
+
+  try {
+    await restoreBackup(filename)
+  } catch (error) {
+    await safeRemove(archivePath)
+    throw error
+  }
+
+  const stats = await fs.stat(archivePath)
+  return statToSummary(filename, stats)
 }

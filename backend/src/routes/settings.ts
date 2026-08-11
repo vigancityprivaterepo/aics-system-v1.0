@@ -1,10 +1,11 @@
 import { Router } from 'express'
 import { z } from 'zod'
+import multer from 'multer'
 import { prisma } from '../utils/prisma.js'
 import { asyncHandler } from '../utils/asyncHandler.js'
 import { requireRole } from '../middleware/auth.js'
 import { HttpError } from '../utils/httpError.js'
-import { createBackup, getBackupFile, listBackups, restoreBackup } from '../services/backupService.js'
+import { createBackup, getBackupFile, listBackups, restoreBackup, restoreBackupFromUpload } from '../services/backupService.js'
 import { logAdminAudit } from '../services/adminAuditService.js'
 import {
   buildModuleAccessConfig,
@@ -16,6 +17,7 @@ import {
 } from '../services/moduleAccessService.js'
 
 const router = Router()
+const backupUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 300 * 1024 * 1024 } })
 const APPROVAL_LEVEL_VALUES = ['reviewer', 'recommender', 'approver'] as const
 const adminOnly = requireRole(['admin'])
 const ASSISTANCE_TYPES = ['medicine', 'burial', 'hospital', 'medical', 'eyeglass', 'plain'] as const
@@ -363,10 +365,24 @@ router.get('/backups/:filename/download', adminOnly, asyncHandler(async (req, re
   res.download(filePath, filename)
 }))
 
+// A restore replaces the entire users table with whatever the snapshot contains -
+// the currently signed-in admin's own row may not exist in it (an older backup, or
+// one from a different environment/seed). Logging the action afterward with that
+// now-possibly-gone actorId can then fail its foreign key check. That must never
+// turn an otherwise-successful restore into a reported failure, so audit logging
+// here is best-effort: log a warning and move on rather than rethrowing.
+async function logRestoreAuditBestEffort(input: Parameters<typeof logAdminAudit>[1]) {
+  try {
+    await logAdminAudit(prisma, input)
+  } catch (error) {
+    console.warn('[settings] failed to write restore audit log (restore itself still succeeded):', error)
+  }
+}
+
 router.post('/backups/:filename/restore', adminOnly, asyncHandler(async (req, res) => {
   const filename = paramValue(req.params.filename)
   await restoreBackup(filename)
-  await logAdminAudit(prisma, {
+  await logRestoreAuditBestEffort({
     actorId: req.user?.id,
     action: 'backup.restore',
     targetType: 'backup',
@@ -375,6 +391,20 @@ router.post('/backups/:filename/restore', adminOnly, asyncHandler(async (req, re
     details: { filename },
   })
   res.json({ ok: true })
+}))
+
+router.post('/backups/upload-restore', adminOnly, backupUpload.single('file'), asyncHandler(async (req, res) => {
+  if (!req.file) throw new HttpError(400, 'A backup file is required.')
+  const backup = await restoreBackupFromUpload(req.file.buffer)
+  await logRestoreAuditBestEffort({
+    actorId: req.user?.id,
+    action: 'backup.restore_upload',
+    targetType: 'backup',
+    targetId: backup.filename,
+    summary: `Restored system backup from an uploaded file (${req.file.originalname})`,
+    details: { filename: backup.filename, originalName: req.file.originalname },
+  })
+  res.json(backup)
 }))
 
 export default router
