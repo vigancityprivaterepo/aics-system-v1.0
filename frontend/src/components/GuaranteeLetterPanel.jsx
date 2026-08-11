@@ -35,9 +35,9 @@ export default function GuaranteeLetterPanel({ caseData, onUploaded }) {
   if (!GL_TYPES.includes(caseData.assistanceType)) return null
 
   const { url: signedGlUrl, at: glUploadedAt } = getSignedGlInfo(caseData)
-  // Before release, only the assigned approver can upload (enforced server-side). Once
-  // released, the approver's window has closed and the assigned case maker (or an admin)
-  // takes over instead, for the final scanned/signed copy that comes back after release.
+  // Before release, the case maker or the assigned approver can upload (enforced
+  // server-side). Once released, the case maker (or an admin) is the only one who can
+  // still upload, for the final scanned/signed copy that comes back after release.
   const isReleased = caseData.status === 'released'
   const canUploadAfterRelease = isReleased && (caseData.permissions?.isOwner || currentUser?.role === 'admin')
   const canUpload = caseData.status !== 'rejected' && (!isReleased || canUploadAfterRelease)

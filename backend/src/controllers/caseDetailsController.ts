@@ -56,6 +56,9 @@ async function assertSignedGlUploadAllowed(
     return
   }
 
+  const isOwner = Boolean(user && caseData.socialWorkerId && caseData.socialWorkerId === user.id)
+  if (isOwner) return
+
   const settings = await getApprovalSettings()
   const assigneesByStage = await resolveApprovalAssignees(settings)
   const approverStage = {
@@ -64,7 +67,7 @@ async function assertSignedGlUploadAllowed(
   }
 
   if (!userCanUploadReportSignatureStage(user, approverStage, caseData)) {
-    throw new HttpError(403, 'Only the assigned approver can upload the mayor-signed guarantee letter.')
+    throw new HttpError(403, 'Only the assigned case maker or approver can upload the mayor-signed guarantee letter.')
   }
 
 }
