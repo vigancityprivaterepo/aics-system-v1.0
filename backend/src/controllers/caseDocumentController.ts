@@ -15,6 +15,7 @@ import {
   generateEyeglassCaseStudyDocx,
   generateEyeglassEndorsementDocx,
   generateEyeglassAcknowledgementDocx,
+  generateMedicineAcknowledgementDocx,
   generatePlainCaseStudyDocx,
   generateChoCertificationDocx,
 } from '../services/docxService.js'
@@ -375,8 +376,12 @@ export async function endorsementDocx(req: Request, res: Response) {
 
 export async function acknowledgementDocx(req: Request, res: Response) {
   const { caseData, serialized } = await loadSerializedCase(paramId(req.params.id), req.user, 'acknowledgement docx')
-  if (caseData.assistanceType !== 'eyeglass') throw new HttpError(400, 'Acknowledgement is only available for eyeglass cases')
-  const buffer = await generateEyeglassAcknowledgementDocx(serialized)
+  if (caseData.assistanceType !== 'eyeglass' && caseData.assistanceType !== 'medicine') {
+    throw new HttpError(400, 'Acknowledgement is only available for eyeglass and medicine cases')
+  }
+  const buffer = caseData.assistanceType === 'medicine'
+    ? await generateMedicineAcknowledgementDocx(serialized)
+    : await generateEyeglassAcknowledgementDocx(serialized)
   sendDocx(res, buffer, `${caseData.caseNumber ?? caseData.client.caseNumber}-acknowledgement.docx`)
 }
 

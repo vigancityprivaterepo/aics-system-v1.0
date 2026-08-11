@@ -86,6 +86,11 @@ const EYEGLASS_ACKNOWLEDGEMENT_CANDIDATES = [
   path.join('Eyeglass Case Study and GL', 'eyeglass-acknowledgement.fixed.docx'),
 ]
 
+const MEDICINE_ACKNOWLEDGEMENT_CANDIDATES = [
+  path.join('Medicine Case Study', 'medicine-acknowledgement.fixed.docx'),
+  'medicine-acknowledgement.fixed.docx',
+]
+
 const PLAIN_CASE_STUDY_CANDIDATES = [
   BASE_CASE_STUDY_TEMPLATE,
 ]
@@ -2625,6 +2630,11 @@ export async function generateEyeglassEndorsementDocx(caseData: any): Promise<Bu
 
 export async function generateEyeglassAcknowledgementDocx(caseData: any): Promise<Buffer> {
   const template = loadFirstAvailableTemplate(EYEGLASS_ACKNOWLEDGEMENT_CANDIDATES)
+  return renderDoc(template, buildRenderData(caseData))
+}
+
+export async function generateMedicineAcknowledgementDocx(caseData: any): Promise<Buffer> {
+  const template = loadFirstAvailableTemplate(MEDICINE_ACKNOWLEDGEMENT_CANDIDATES)
   return renderDoc(template, buildRenderData(caseData))
 }
 

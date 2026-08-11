@@ -282,7 +282,7 @@ export default function CaseDetailLayout() {
                 {QUEUE_LABELS[caseData.queue] || caseData.queue}
               </span>
               {caseData.overdue ? <span className="inline-flex items-center rounded border border-slate-700 px-2.5 py-0.5 text-xs font-medium text-slate-700">Overdue</span> : null}
-              {caseData.readyForReview ? <span className="inline-flex items-center rounded border border-slate-700 px-2.5 py-0.5 text-xs font-medium text-slate-700">Ready for Review</span> : null}
+              {caseData.readyForReview && caseData.queue !== 'ready_for_review' ? <span className="inline-flex items-center rounded border border-slate-700 px-2.5 py-0.5 text-xs font-medium text-slate-700">Ready for Review</span> : null}
             </div>
             <p className="mt-3 text-sm text-slate-900">{caseData.nextAction}</p>
             {caseData.dueAt ? (

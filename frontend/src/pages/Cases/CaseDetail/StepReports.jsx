@@ -4,6 +4,7 @@ import api from '../../../lib/api'
 import toast from 'react-hot-toast'
 import CaseStudyPdfPreview from './CaseStudyPdfPreview'
 import EyeglassCaseStudyPreview from './EyeglassCaseStudyPreview'
+import MedicineCaseStudyPreview from './MedicineCaseStudyPreview'
 import GuaranteeLetterPanel from '../../../components/GuaranteeLetterPanel'
 
 export default function StepReports({ caseData, onUpdate }) {
@@ -246,6 +247,20 @@ export default function StepReports({ caseData, onUpdate }) {
                       </div>
                     </button>
                   )}
+                  {isMedicine && (
+                    <button
+                      onClick={() => { handleDownload('acknowledgement-docx'); setOpen(false) }}
+                      className="w-full flex items-start gap-3 px-4 py-3 text-left text-sm hover:bg-slate-50 transition-colors border-t border-slate-100"
+                    >
+                      <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-blue-700">
+                        <DownloadIcon className="h-3.5 w-3.5" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-slate-800">Acknowledgement</p>
+                        <p className="text-xs text-slate-400">Signed acknowledgement letter (.docx)</p>
+                      </div>
+                    </button>
+                  )}
                   {isMedicine && (caseData.medicines || []).some((m) => m.medicine?.isAvailable === false) && (
                     <button
                       onClick={() => { handleDownload('cho-cert-docx'); setOpen(false) }}
@@ -300,8 +315,9 @@ export default function StepReports({ caseData, onUpdate }) {
       )}
 
       {isMedicine && (
-        <div className="mt-6">
+        <div className="mt-6 space-y-6">
           <CaseStudyPdfPreview caseData={caseData} title="Medicine Case Study PDF Preview" />
+          <MedicineCaseStudyPreview caseData={caseData} />
         </div>
       )}
 

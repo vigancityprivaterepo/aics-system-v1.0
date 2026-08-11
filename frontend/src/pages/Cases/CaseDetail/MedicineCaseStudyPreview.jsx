@@ -4,10 +4,10 @@ import api from '../../../lib/api'
 import { DownloadIcon, FileTextIcon } from '../../../components/ui/Icons'
 
 const DOC = {
-  key: 'case-study',
-  label: 'Medicine Case Study',
-  endpoint: (id) => `/cases/${id}/report/docx`,
-  downloadLabel: 'case-study',
+  key: 'acknowledgement',
+  label: 'Acknowledgement',
+  endpoint: (id) => `/cases/${id}/report/acknowledgement-docx`,
+  downloadLabel: 'acknowledgement',
 }
 
 const RENDER_OPTIONS = {
@@ -25,9 +25,8 @@ const RENDER_OPTIONS = {
 }
 
 export default function MedicineCaseStudyPreview({ caseData }) {
-  const [state, setState] = useState({ loading: true, error: false, message: '', html: '' })
+  const [state, setState] = useState({ loading: true, error: false, message: '' })
   const abCache = useRef(null)
-  const cacheKeyRef = useRef(null)
   const containerRef = useRef(null)
 
   const doRender = useCallback(async (arrayBuffer) => {
@@ -36,65 +35,27 @@ export default function MedicineCaseStudyPreview({ caseData }) {
     await renderAsync(arrayBuffer, containerRef.current, null, RENDER_OPTIONS)
   }, [])
 
-  const loadHtmlFallback = useCallback(async (caseId) => {
-    const res = await api.get(`/cases/${caseId}/report/html`, { responseType: 'text' })
-    setState({ loading: false, error: false, message: '', html: String(res.data ?? '') })
-  }, [])
-
-  const showPreview = useCallback(async (arrayBuffer, caseId, cancelledRef) => {
-    try {
-      await doRender(arrayBuffer)
-      if (cancelledRef.current) return
-      setState({ loading: false, error: false, message: '', html: '' })
-    } catch (error) {
-      if (cancelledRef.current) return
-      console.error('[MedicineCaseStudyPreview] DOCX render failed', error)
-
-      try {
-        await loadHtmlFallback(caseId)
-      } catch (htmlError) {
-        if (cancelledRef.current) return
-        console.error('[MedicineCaseStudyPreview] HTML fallback failed', htmlError)
-        setState({
-          loading: false,
-          error: true,
-          message: error instanceof Error ? error.message : String(error),
-          html: '',
-        })
-      }
-    }
-  }, [doRender, loadHtmlFallback])
-
   useEffect(() => {
-    const cacheKey = [
-      caseData.id,
-      caseData.medicineDetails?.templateType || '',
-      caseData.medicineDetails?.conformeName || '',
-      caseData.medicineDetails?.conformeRelationship || '',
-    ].join('|')
-
     let cancelled = false
-    const cancelledRef = {
-      get current() {
-        return cancelled
-      },
-    }
-
-    if (abCache.current && cacheKeyRef.current === cacheKey) {
-      setState({ loading: true, error: false, message: '', html: '' })
-      showPreview(abCache.current, caseData.id, cancelledRef)
-      return
-    }
-
-    abCache.current = null
-    cacheKeyRef.current = cacheKey
-    setState({ loading: true, error: false, message: '', html: '' })
+    setState({ loading: true, error: false, message: '' })
 
     api.get(DOC.endpoint(caseData.id), { responseType: 'arraybuffer' })
       .then(async (res) => {
         if (cancelled) return
         abCache.current = res.data
-        await showPreview(res.data, caseData.id, cancelledRef)
+        try {
+          await doRender(res.data)
+          if (cancelled) return
+          setState({ loading: false, error: false, message: '' })
+        } catch (renderError) {
+          if (cancelled) return
+          console.error('[MedicineCaseStudyPreview] DOCX render failed', renderError)
+          setState({
+            loading: false,
+            error: true,
+            message: renderError instanceof Error ? renderError.message : String(renderError),
+          })
+        }
       })
       .catch((error) => {
         if (cancelled) return
@@ -103,12 +64,11 @@ export default function MedicineCaseStudyPreview({ caseData }) {
           loading: false,
           error: true,
           message: error.response?.data?.message ?? error.message ?? 'Unable to load DOCX preview.',
-          html: '',
         })
       })
 
     return () => { cancelled = true }
-  }, [caseData.id, caseData.medicineDetails?.templateType, caseData.medicineDetails?.conformeName, caseData.medicineDetails?.conformeRelationship, showPreview])
+  }, [caseData.id, doRender])
 
   const handleDownload = async () => {
     const DOCX_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
@@ -157,15 +117,7 @@ export default function MedicineCaseStudyPreview({ caseData }) {
             {state.message && <p className="max-w-xl text-xs text-slate-500">{state.message}</p>}
           </div>
         )}
-        {state.html ? (
-          <iframe
-            title={`${DOC.label} preview`}
-            srcDoc={state.html}
-            className="block h-[70vh] w-full bg-white"
-          />
-        ) : (
-          <div ref={containerRef} />
-        )}
+        <div ref={containerRef} />
       </div>
     </div>
   )
