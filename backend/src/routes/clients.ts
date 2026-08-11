@@ -335,6 +335,7 @@ router.get('/rfid/:uid', asyncHandler(async (req, res) => {
     relationship: string | null
     relationshipOther: string | null
     age: string | null
+    sex: string | null
     occupation: string | null
   } | null = null
 
@@ -354,6 +355,7 @@ router.get('/rfid/:uid', asyncHandler(async (req, res) => {
           relationship: familyMatch.relationship,
           relationshipOther: familyMatch.relationshipOther,
           age: familyMatch.age,
+          sex: familyMatch.sex,
           occupation: familyMatch.occupation,
         }
       }

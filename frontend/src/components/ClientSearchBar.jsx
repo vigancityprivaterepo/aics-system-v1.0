@@ -68,6 +68,7 @@ export default function ClientSearchBar({ onSelect, onFamilyMatchSelect, placeho
         relationship: member.relationship,
         relationshipOther: member.relationshipOther,
         age: member.age,
+        sex: member.sex,
         occupation: member.occupation,
       })
       return

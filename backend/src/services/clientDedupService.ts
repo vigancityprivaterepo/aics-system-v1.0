@@ -257,6 +257,7 @@ export type FamilyCompositionMatch = {
   relationship: string | null
   relationshipOther: string | null
   age: string | null
+  sex: string | null
   occupation: string | null
 }
 
@@ -295,6 +296,7 @@ export async function findFamilyCompositionMatches(
     relationship: (row.member?.relationship as string) ?? null,
     relationshipOther: (row.member?.relationshipOther as string) ?? null,
     age: row.member?.age != null ? String(row.member.age) : null,
+    sex: (row.member?.sex as string) ?? null,
     occupation: (row.member?.occupation as string) ?? null,
   }))
 }
@@ -308,6 +310,7 @@ export type FamilyRfidMatch = {
   relationship: string | null
   relationshipOther: string | null
   age: string | null
+  sex: string | null
   occupation: string | null
 }
 
@@ -321,6 +324,7 @@ function toFamilyRfidMatch(row: FamilyMatchRow): FamilyRfidMatch {
     relationship: (row.member?.relationship as string) ?? null,
     relationshipOther: (row.member?.relationshipOther as string) ?? null,
     age: row.member?.age != null ? String(row.member.age) : null,
+    sex: (row.member?.sex as string) ?? null,
     occupation: (row.member?.occupation as string) ?? null,
   }
 }

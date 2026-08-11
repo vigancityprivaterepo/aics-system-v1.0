@@ -117,7 +117,8 @@ function buildCaseDescription(h) {
   }
 }
 
-const defaultFamilyMember = { name: '', dateOfBirth: '', age: '', relationship: '', relationshipOther: '', occupation: '' }
+const defaultFamilyMember = { name: '', dateOfBirth: '', age: '', relationship: '', relationshipOther: '', sex: '', occupation: '' }
+const FAMILY_SEX_OPTIONS = ['Male', 'Female']
 const RELIGION_OPTIONS = ['Roman Catholic', 'Iglesia ni Cristo', 'Islam', 'Born Again Christian', 'Evangelical', 'Protestant', 'Aglipayan', 'Seventh-day Adventist', "Jehovah's Witness", 'Other']
 const STANDARD_RELATIONSHIPS = ['Spouse', 'Son', 'Daughter', 'Father', 'Mother', 'Brother', 'Sister', 'Grandson', 'Granddaughter', 'Grandfather', 'Grandmother', 'Uncle', 'Aunt', 'Nephew', 'Niece', 'Son-in-Law', 'Daughter-in-Law', 'Father-in-Law', 'Mother-in-Law']
 const RELATIONSHIP_OPTIONS = [...STANDARD_RELATIONSHIPS, 'Other']
@@ -295,6 +296,7 @@ export default function ClientProfile() {
             dateOfBirth,
             age: dateOfBirth ? calculateAge(dateOfBirth) : (member.age === '' ? null : member.age),
             relationship: finalRel,
+            sex: member.sex || null,
             occupation: String(member.occupation || '').trim(),
             rfidUid: member.rfidUid ?? null,
           }
@@ -676,6 +678,7 @@ export default function ClientProfile() {
                   <th className="px-3 py-2 text-left">Name</th>
                   <th className="px-3 py-2 text-left">Age</th>
                   <th className="px-3 py-2 text-left">Relationship</th>
+                  <th className="px-3 py-2 text-left">Sex</th>
                   <th className="px-3 py-2 text-left">Occupation</th>
                   <th className="px-3 py-2 text-left">RFID</th>
                 </tr>
@@ -686,6 +689,7 @@ export default function ClientProfile() {
                     <td className="px-3 py-2 font-medium text-slate-800">{member.name || '-'}</td>
                     <td className="px-3 py-2 text-slate-600">{member.dateOfBirth ? (calculateAge(member.dateOfBirth) ?? '-') : (member.age ?? '-')}</td>
                     <td className="px-3 py-2 text-slate-600">{member.relationship || '-'}</td>
+                    <td className="px-3 py-2 text-slate-600">{member.sex || '-'}</td>
                     <td className="px-3 py-2 text-slate-600">{member.occupation || '-'}</td>
                     <td className="px-3 py-2">
                       {!client.mergedIntoClient && (
@@ -726,7 +730,7 @@ export default function ClientProfile() {
                   </tr>
                 )) : (
                   <tr>
-                    <td colSpan="5" className="px-3 py-4 text-center text-slate-400">No household members saved.</td>
+                    <td colSpan="6" className="px-3 py-4 text-center text-slate-400">No household members saved.</td>
                   </tr>
                 )}
               </tbody>
@@ -752,6 +756,7 @@ export default function ClientProfile() {
                   <th className="px-3 py-2 text-left">Name</th>
                   <th className="px-3 py-2 text-left">Date of Birth</th>
                   <th className="px-3 py-2 text-left">Relationship</th>
+                  <th className="px-3 py-2 text-left">Sex</th>
                   <th className="px-3 py-2 text-left">Occupation</th>
                   <th className="w-12 px-3 py-2" />
                 </tr>
@@ -817,6 +822,12 @@ export default function ClientProfile() {
                           </select>
                         )}
                       </td>
+                    <td className="px-3 py-2">
+                      <select value={member.sex || ''} onChange={(e) => updateFamilyMember(index, 'sex', e.target.value)} className="portal-input">
+                        <option value="">Select</option>
+                        {FAMILY_SEX_OPTIONS.map((sex) => <option key={sex} value={sex}>{sex}</option>)}
+                      </select>
+                    </td>
                     <td className="px-3 py-2"><input value={member.occupation || ''} onChange={(e) => updateFamilyMember(index, 'occupation', e.target.value)} className="portal-input" /></td>
                     <td className="px-3 py-2 text-center">
                       <button type="button" onClick={() => removeFamilyMember(index)} className="rounded border border-rose-200 p-2 text-rose-600 hover:bg-rose-50" title="Remove member">
@@ -827,7 +838,7 @@ export default function ClientProfile() {
                 )
               }) : (
                   <tr>
-                    <td colSpan="5" className="px-3 py-4 text-center text-slate-400">No household members added.</td>
+                    <td colSpan="6" className="px-3 py-4 text-center text-slate-400">No household members added.</td>
                   </tr>
                 )}
               </tbody>

@@ -15,8 +15,9 @@ import { scrollToFirstError } from '../../../lib/formNavigation'
 import { formatCurrency } from '../../../lib/utils'
 import { useAutosaveDraft, readLocalDraft, clearLocalDraft } from '../../../lib/localDraft'
 
-const defaultMember = { name: '', age: '', relationship: '', civilStatus: '', occupation: '', monthlyIncome: '' }
+const defaultMember = { name: '', age: '', relationship: '', sex: '', occupation: '', monthlyIncome: '' }
 const CIVIL_STATUS_OPTIONS = ['Single', 'Married', 'Widowed', 'Separated', 'Annulled']
+const SEX_OPTIONS = ['Male', 'Female']
 const GUARANTEE_LETTER_MAX = 10000
 const HOSPITAL_MEDICAL_GL_MAX = 30000
 const PLAIN_AICS_MAX = 35000
@@ -305,7 +306,7 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false, on
               <table className="w-full text-xs">
                 <thead>
                   <tr className="bg-slate-50">
-                    {['Name', 'Age', 'Relationship', 'Civil Status', 'Occupation', ''].map((header) => (
+                    {['Name', 'Age', 'Relationship', 'Sex', 'Occupation', ''].map((header) => (
                       <th key={header} className="px-3 py-2 text-left font-semibold uppercase tracking-wider text-slate-400">{header}</th>
                     ))}
                   </tr>
@@ -317,7 +318,7 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false, on
                       <td className="px-2 py-1.5"><input type="text" value={member.name || ''} onChange={(e) => updateFamilyMember(index, 'name', e.target.value)} className="portal-input py-1 text-xs" /></td>
                       <td className="px-2 py-1.5"><input type="number" value={member.age || ''} onChange={(e) => updateFamilyMember(index, 'age', e.target.value)} className="portal-input py-1 text-xs" /></td>
                       <td className="px-2 py-1.5"><select value={member.relationship || ''} onChange={(e) => updateFamilyMember(index, 'relationship', e.target.value)} className="portal-input py-1 text-xs"><option value="">Select</option>{RELATIONSHIP_OPTIONS.map((relationship) => <option key={relationship} value={relationship}>{relationship}</option>)}<option value="Other">Other</option></select></td>
-                      <td className="px-2 py-1.5"><select value={member.civilStatus || ''} onChange={(e) => updateFamilyMember(index, 'civilStatus', e.target.value)} className="portal-input py-1 text-xs"><option value="">Select status</option>{CIVIL_STATUS_OPTIONS.map((status) => <option key={status} value={status}>{status}</option>)}</select></td>
+                      <td className="px-2 py-1.5"><select value={member.sex || ''} onChange={(e) => updateFamilyMember(index, 'sex', e.target.value)} className="portal-input py-1 text-xs"><option value="">Select sex</option>{SEX_OPTIONS.map((sex) => <option key={sex} value={sex}>{sex}</option>)}</select></td>
                       <td className="px-2 py-1.5"><SearchablePresetInput value={member.occupation || ''} onChange={(value) => updateFamilyMember(index, 'occupation', value)} options={OCCUPATION_OPTIONS} placeholder="Search occupation" className="portal-input py-1 text-xs" listId={`family-occupation-${index}`} /></td>
                       <td className="px-2 py-1.5"><button type="button" onClick={() => removeFamilyMember(index)} className="text-red-400 hover:text-red-600"><TrashIcon className="h-3.5 w-3.5" /></button></td>
                     </tr>

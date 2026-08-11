@@ -65,6 +65,7 @@ export default function NewCase() {
       setBeneficiaryOverride({
         name: match.name,
         age: match.age || '',
+        sex: match.sex || '',
         occupation: match.occupation || '',
         relationshipOnRecord: match.relationship || '',
         familyComposition,
@@ -85,6 +86,7 @@ export default function NewCase() {
         ...(beneficiaryOverride ? {
           beneficiaryName: beneficiaryOverride.name,
           beneficiaryAge: beneficiaryOverride.age || null,
+          beneficiarySex: beneficiaryOverride.sex || null,
           beneficiaryOccupation: beneficiaryOverride.occupation || null,
           familyComposition: beneficiaryOverride.familyComposition,
         } : {}),

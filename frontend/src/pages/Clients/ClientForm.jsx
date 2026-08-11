@@ -8,7 +8,8 @@ import { VIGAN_BARANGAYS } from '../../lib/constants'
 import { calculateAge } from '../../lib/utils'
 import DuplicateReviewModal from '../../components/clients/DuplicateReviewModal'
 
-const defaultFamilyMember = { name: '', dateOfBirth: '', age: '', relationship: '', relationshipOther: '', occupation: '' }
+const defaultFamilyMember = { name: '', dateOfBirth: '', age: '', relationship: '', relationshipOther: '', sex: '', occupation: '' }
+const FAMILY_SEX_OPTIONS = ['Male', 'Female']
 const RELIGION_OPTIONS = ['Roman Catholic', 'Iglesia ni Cristo', 'Islam', 'Born Again Christian', 'Evangelical', 'Protestant', 'Aglipayan', 'Seventh-day Adventist', "Jehovah's Witness", 'Other']
 const STANDARD_RELATIONSHIPS = ['Spouse', 'Son', 'Daughter', 'Father', 'Mother', 'Brother', 'Sister', 'Grandson', 'Granddaughter', 'Grandfather', 'Grandmother', 'Uncle', 'Aunt', 'Nephew', 'Niece', 'Son-in-Law', 'Daughter-in-Law', 'Father-in-Law', 'Mother-in-Law']
 const RELATIONSHIP_OPTIONS = [...STANDARD_RELATIONSHIPS, 'Other']
@@ -53,6 +54,7 @@ export default function ClientForm() {
         dateOfBirth,
         age: dateOfBirth ? calculateAge(dateOfBirth) : (member.age === '' ? null : member.age),
         relationship: finalRel,
+        sex: member.sex || null,
         occupation: String(member.occupation || '').trim(),
       }
     })
@@ -274,6 +276,7 @@ export default function ClientForm() {
                   <th className="px-3 py-2 text-left">Name</th>
                   <th className="px-3 py-2 text-left">Date of Birth</th>
                   <th className="px-3 py-2 text-left">Relationship</th>
+                  <th className="px-3 py-2 text-left">Sex</th>
                   <th className="px-3 py-2 text-left">Occupation</th>
                   <th className="w-12 px-3 py-2" />
                 </tr>
@@ -281,7 +284,7 @@ export default function ClientForm() {
               <tbody className="divide-y divide-slate-100">
                 {family.length === 0 ? (
                   <tr>
-                    <td colSpan="5" className="px-3 py-4 text-center text-slate-400">No household members added.</td>
+                    <td colSpan="6" className="px-3 py-4 text-center text-slate-400">No household members added.</td>
                   </tr>
                 ) : family.map((member, index) => {
                   const isStandard = STANDARD_RELATIONSHIPS.includes(member.relationship)
@@ -342,6 +345,12 @@ export default function ClientForm() {
                             {RELATIONSHIP_OPTIONS.map((relationship) => <option key={relationship} value={relationship}>{relationship}</option>)}
                           </select>
                         )}
+                      </td>
+                      <td className="px-3 py-2">
+                        <select value={member.sex || ''} onChange={(event) => updateFamilyMember(index, 'sex', event.target.value)} className="portal-input">
+                          <option value="">Select</option>
+                          {FAMILY_SEX_OPTIONS.map((sex) => <option key={sex} value={sex}>{sex}</option>)}
+                        </select>
                       </td>
                       <td className="px-3 py-2"><input value={member.occupation} onChange={(event) => updateFamilyMember(index, 'occupation', event.target.value)} className="portal-input" placeholder="Occupation" /></td>
                       <td className="px-3 py-2 text-center">
