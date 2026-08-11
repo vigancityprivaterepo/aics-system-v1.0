@@ -73,8 +73,6 @@ export function generateExecutiveSummaryReportDocx(input: {
     total: formatCurrency(row.amount),
   }))
 
-  const firstAssistanceRow = assistanceRows[0] ?? { type: '-', totalcases: 0, total: formatCurrency(0) }
-
   doc.render({
     dateOfReport: formatDateOfReport(input.from, input.to),
     totalcases: input.totalCases,
@@ -82,8 +80,6 @@ export function generateExecutiveSummaryReportDocx(input: {
     totalDisbursed: formatCurrency(input.totalAmount),
     averagePercase: input.totalCases ? formatCurrency(input.totalAmount / input.totalCases) : formatCurrency(0),
 
-    type: firstAssistanceRow.type,
-    total: firstAssistanceRow.total,
     assistanceRows,
     typeList: assistanceRows.map((row) => row.type).join('\n'),
     typeCasesList: assistanceRows.map((row) => row.totalcases).join('\n'),
