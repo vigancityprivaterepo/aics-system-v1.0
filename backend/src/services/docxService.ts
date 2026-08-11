@@ -2635,7 +2635,22 @@ export async function generateEyeglassAcknowledgementDocx(caseData: any): Promis
 
 export async function generateMedicineAcknowledgementDocx(caseData: any): Promise<Buffer> {
   const template = loadFirstAvailableTemplate(MEDICINE_ACKNOWLEDGEMENT_CANDIDATES)
-  return renderDoc(template, buildRenderData(caseData))
+  const data = buildRenderData(caseData)
+
+  // conformeName is left blank when the case has a beneficiary override (i.e. the
+  // case was made for a household member, not the client) and no requesting party
+  // was explicitly recorded - that's the right call for the case study/GL, where
+  // defaulting to "the client" would misstate who is requesting on the
+  // beneficiary's behalf. For the acknowledgement letter though, someone has to be
+  // named as having received the item, and absent any other name on record the
+  // client is who actually walked in and picked it up - so fall back to them.
+  if (!data.conformeName || data.conformeName === '-') {
+    const client = caseData.client ?? {}
+    const clientFullName = [client.firstName, client.middleName, client.lastName].filter(Boolean).join(' ').trim()
+    if (clientFullName) data.conformeName = clientFullName
+  }
+
+  return renderDoc(template, data)
 }
 
 export async function generatePlainCaseStudyDocx(caseData: any): Promise<Buffer> {
