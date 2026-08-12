@@ -3,7 +3,7 @@ import { prisma } from '../utils/prisma.js'
 import { HttpError } from '../utils/httpError.js'
 import { env } from '../config/env.js'
 import { currencyFromDb, parseCurrencyAmount, toOptionalInt } from '../utils/currency.js'
-import { assertCaseReadable, assertEditableCase, paramId } from '../services/caseService.js'
+import { assertCaseReadable, assertEditableCase, paramId, userCanRelease } from '../services/caseService.js'
 import { signedGlPublicUrl } from '../services/storageService.js'
 import { updateBurialSchema, updateHospitalSchema, updateMedicalSchema, updateEyeglassSchema, updatePlainSchema } from '../schemas/caseSchemas.js'
 import { removeStoredUpload, validateStoredUpload } from '../services/uploadValidation.js'
@@ -50,8 +50,8 @@ async function assertSignedGlUploadAllowed(
   // the case had already moved to released).
   if (caseData.status === 'released') {
     const isOwner = Boolean(user && caseData.socialWorkerId && caseData.socialWorkerId === user.id)
-    if (!isOwner && user?.role !== 'admin') {
-      throw new HttpError(403, 'Only the assigned case maker or an admin can upload the signed guarantee letter once released.')
+    if (!isOwner && user?.role !== 'admin' && !userCanRelease(user)) {
+      throw new HttpError(403, 'Only the assigned case maker, an admin, or an administrative employee can upload the signed guarantee letter once released.')
     }
     return
   }

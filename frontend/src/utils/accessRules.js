@@ -19,6 +19,15 @@ export function canAccessCases(user) {
   return canAccessModule(user, 'cases')
 }
 
+// Mirrors backend userCanRelease() in caseService.ts: any administrative employee
+// (not just the case owner or someone with an approval level) can release/handle a
+// case post-release, as long as they're not City Health Office or CSWDO.
+export function userCanRelease(user) {
+  if (!user) return false
+  if (user.role === 'city_health_office') return false
+  return normalizeDepartment(user.department) !== 'cswdo'
+}
+
 export function allowedCaseTypesForUser(user, allCaseTypes) {
   if (canAccessAllCases(user)) return allCaseTypes
   if (canAccessCases(user) && normalizeDepartment(user?.department) === 'cswdo') {

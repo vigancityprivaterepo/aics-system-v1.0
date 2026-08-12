@@ -6,6 +6,7 @@ import { openProtectedFile } from '../lib/openProtectedFile'
 import { DownloadIcon, UploadIcon, CheckCircleIcon } from './ui/Icons'
 import GuaranteeLetterPdfPreview from './GuaranteeLetterPdfPreview'
 import { useAuthStore } from '../store/authStore'
+import { userCanRelease } from '../utils/accessRules'
 
 const GL_TYPES = ['burial', 'hospital', 'medical']
 
@@ -36,10 +37,11 @@ export default function GuaranteeLetterPanel({ caseData, onUploaded }) {
 
   const { url: signedGlUrl, at: glUploadedAt } = getSignedGlInfo(caseData)
   // Before release, the case maker or the assigned approver can upload (enforced
-  // server-side). Once released, the case maker (or an admin) is the only one who can
-  // still upload, for the final scanned/signed copy that comes back after release.
+  // server-side). Once released, the case maker, an admin, or an administrative
+  // employee can still upload, for the final scanned/signed copy that comes back
+  // after release.
   const isReleased = caseData.status === 'released'
-  const canUploadAfterRelease = isReleased && (caseData.permissions?.isOwner || currentUser?.role === 'admin')
+  const canUploadAfterRelease = isReleased && (caseData.permissions?.isOwner || currentUser?.role === 'admin' || userCanRelease(currentUser))
   const canUpload = caseData.status !== 'rejected' && (!isReleased || canUploadAfterRelease)
   const canUploadSignedGl = canUpload
   const typeLabel =
@@ -183,7 +185,7 @@ export default function GuaranteeLetterPanel({ caseData, onUploaded }) {
         {!canUpload && (
           <p className="text-xs italic text-slate-400">
             {isReleased
-              ? 'Only the assigned case maker or an admin can upload the signed GL once released.'
+              ? 'Only the assigned case maker, an admin, or an administrative employee can upload the signed GL once released.'
               : `GL upload is disabled for ${caseData.status} cases.`}
           </p>
         )}

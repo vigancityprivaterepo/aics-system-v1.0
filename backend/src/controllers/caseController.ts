@@ -1,4 +1,5 @@
 import type { Request, Response } from 'express'
+import dayjs from 'dayjs'
 import { AssistanceType, Prisma } from '@prisma/client'
 import { prisma } from '../utils/prisma.js'
 import { HttpError } from '../utils/httpError.js'
@@ -103,6 +104,8 @@ export async function listCases(req: Request, res: Response) {
   const owner = req.query.owner ? String(req.query.owner).trim() : undefined
   const blocked = req.query.blocked === 'true'
   const overdue = req.query.overdue === 'true'
+  const dateFrom = req.query.dateFrom ? String(req.query.dateFrom) : undefined
+  const dateTo = req.query.dateTo ? String(req.query.dateTo) : undefined
   const limit = Math.min(Number(req.query.limit ?? 15), 100)
   const page = Math.max(Number(req.query.page ?? 1), 1)
 
@@ -131,6 +134,14 @@ export async function listCases(req: Request, res: Response) {
             { client: { is: { lastName: { contains: search, mode: 'insensitive' } } } },
             { beneficiaryName: { contains: search, mode: 'insensitive' } },
           ],
+        }
+      : {}),
+    ...(dateFrom || dateTo
+      ? {
+          dateOfAssessment: {
+            ...(dateFrom ? { gte: dayjs(dateFrom).startOf('day').toDate() } : {}),
+            ...(dateTo ? { lte: dayjs(dateTo).endOf('day').toDate() } : {}),
+          },
         }
       : {}),
   }

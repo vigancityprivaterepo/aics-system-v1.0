@@ -51,6 +51,8 @@ export default function CaseList() {
   const blockedParam = searchParams.get('blocked') === 'true'
   const overdueParam = searchParams.get('overdue') === 'true'
   const ownerParam = searchParams.get('owner') ?? ''
+  const dateFromParam = searchParams.get('dateFrom') ?? ''
+  const dateToParam = searchParams.get('dateTo') ?? ''
   const navigate = useNavigate()
   const user = useAuthStore((state) => state.user)
   const allowedCaseTypes = allowedCaseTypesForUser(user, ALL_CASE_TYPES)
@@ -64,6 +66,8 @@ export default function CaseList() {
   const [filterBlocked, setFilterBlocked] = useState(blockedParam)
   const [filterOverdue, setFilterOverdue] = useState(overdueParam)
   const [filterOwner, setFilterOwner] = useState(ownerParam)
+  const [dateFrom, setDateFrom] = useState(dateFromParam)
+  const [dateTo, setDateTo] = useState(dateToParam)
   const [page, setPage] = useState(1)
   const [total, setTotal] = useState(0)
   const [deletingId, setDeletingId] = useState(null)
@@ -85,6 +89,8 @@ export default function CaseList() {
       const nextBlocked = overrides.filterBlocked ?? filterBlocked
       const nextOverdue = overrides.filterOverdue ?? filterOverdue
       const nextOwner = overrides.filterOwner ?? filterOwner
+      const nextDateFrom = overrides.dateFrom ?? dateFrom
+      const nextDateTo = overrides.dateTo ?? dateTo
       const params = new URLSearchParams({ page: String(targetPage), limit: String(LIMIT) })
       if (nextSearch) params.append('search', nextSearch)
       if (nextType) params.append('type', nextType)
@@ -92,6 +98,8 @@ export default function CaseList() {
       if (nextBlocked) params.append('blocked', 'true')
       if (nextOverdue) params.append('overdue', 'true')
       if (nextOwner) params.append('owner', nextOwner)
+      if (nextDateFrom) params.append('dateFrom', nextDateFrom)
+      if (nextDateTo) params.append('dateTo', nextDateTo)
       const res = await api.get(`/cases?${params}`)
       setCases(res.data.cases || [])
       setTotal(res.data.total || 0)
@@ -115,6 +123,8 @@ export default function CaseList() {
         if (filterBlocked) params.append('blocked', 'true')
         if (filterOverdue) params.append('overdue', 'true')
         if (filterOwner) params.append('owner', filterOwner)
+        if (dateFrom) params.append('dateFrom', dateFrom)
+        if (dateTo) params.append('dateTo', dateTo)
         const res = await api.get(`/cases?${params}`)
         if (!active) return
         setCases(res.data.cases || [])
@@ -129,7 +139,7 @@ export default function CaseList() {
       }
     })()
     return () => { active = false }
-  }, [page, filterType, filterQueue, filterBlocked, filterOverdue, filterOwner, debouncedSearch])
+  }, [page, filterType, filterQueue, filterBlocked, filterOverdue, filterOwner, dateFrom, dateTo, debouncedSearch])
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -227,6 +237,37 @@ export default function CaseList() {
               <option value="">All Owners</option>
               <option value="me">My Work</option>
             </select>
+            <label className="inline-flex items-center gap-2 text-sm text-slate-600" htmlFor="filter-date-from">
+              From
+              <input
+                type="date"
+                id="filter-date-from"
+                value={dateFrom}
+                max={dateTo || undefined}
+                onChange={(e) => { setLoading(true); setDateFrom(e.target.value); setPage(1) }}
+                className="portal-input w-40"
+              />
+            </label>
+            <label className="inline-flex items-center gap-2 text-sm text-slate-600" htmlFor="filter-date-to">
+              To
+              <input
+                type="date"
+                id="filter-date-to"
+                value={dateTo}
+                min={dateFrom || undefined}
+                onChange={(e) => { setLoading(true); setDateTo(e.target.value); setPage(1) }}
+                className="portal-input w-40"
+              />
+            </label>
+            {(dateFrom || dateTo) && (
+              <button
+                type="button"
+                onClick={() => { setLoading(true); setDateFrom(''); setDateTo(''); setPage(1) }}
+                className="text-xs font-medium text-slate-500 hover:text-slate-700 underline"
+              >
+                Clear dates
+              </button>
+            )}
           </div>
       </div>
 
