@@ -1057,6 +1057,18 @@ function ensureParagraphTabStops(doc: Document, paragraph: Element, positions: s
   pPr.insertBefore(tabs, insertionPoint)
 }
 
+// Section I's label paragraphs carry a template-authored 0.5in left indent (w:ind
+// w:left="720") that pushes every beneficiary-info line in from the margin for no reason
+// tied to the tab-stop layout rebuilt above — it just reads as over-indented body text.
+function clearParagraphIndent(paragraph: Element): boolean {
+  const pPr = Array.from(paragraph.childNodes).find((node) => node.nodeName === 'w:pPr') as Element | undefined
+  if (!pPr) return false
+  const ind = Array.from(pPr.childNodes).find((node) => node.nodeName === 'w:ind') as Element | undefined
+  if (!ind) return false
+  pPr.removeChild(ind)
+  return true
+}
+
 function normalizeBeneficiaryInfoParagraphs(doc: Document): boolean {
   const targets = [
     'Name of Beneficiary',
@@ -1094,6 +1106,7 @@ function normalizeBeneficiaryInfoParagraphs(doc: Document): boolean {
 
     // One CGV reference column prevents long labels from skipping to a second tab stop.
     ensureParagraphTabStops(doc, paragraph, ['4680'])
+    clearParagraphIndent(paragraph)
     paragraph.appendChild(cloneRunWithText(doc, labelRun, prefix))
     paragraph.appendChild(buildTabRun(doc, labelRun))
     paragraph.appendChild(cloneRunWithText(doc, colonRun, ': '))
@@ -1199,6 +1212,121 @@ function compactCaseStudySignatureSection(doc: Document): boolean {
     changed = true
   }
 
+  return changed
+}
+
+function tableTextContent(table: Element): string {
+  return Array.from(table.getElementsByTagName('w:t')).map((t) => t.textContent ?? '').join(' ')
+}
+
+// The Section III requirements checklist is the only table with MEDICINE/HOSPITAL/
+// EYEGLASS category headers, so matching on those is a reliable, template-edit-resistant
+// way to scope changes to just this table and never touch the Family Composition or
+// signature/QR tables elsewhere in the same document.
+function findRequirementsChecklistTable(doc: Document): Element | null {
+  for (const table of Array.from(doc.getElementsByTagName('w:tbl'))) {
+    const text = tableTextContent(table)
+    if (text.includes('MEDICINE') && text.includes('HOSPITAL') && text.includes('EYEGLASS')) {
+      return table
+    }
+  }
+  return null
+}
+
+// The Section III requirements checklist table is the single biggest driver of "extra
+// space" in the report: narrow columns force most requirement labels to wrap across 2-3
+// lines, and on top of that every cell paragraph carries a template-authored 8pt
+// space-before plus 1.2x line height (w:spacing w:before="160" w:line="288"
+// w:lineRule="auto") and 80-twip top/bottom cell padding — padding sized for single-line
+// cells being paid 2-3x over on cells that actually wrap. Trimming the padding/spacing and
+// nudging the 7pt cell text down to 6pt (still legible, still clearly a distinct "fine
+// print" table style from the 12pt body text) measurably cuts wrapped-line height without
+// touching layout/geometry, which is what would risk actually breaking the grid.
+function compactRequirementsChecklistTable(doc: Document): boolean {
+  const table = findRequirementsChecklistTable(doc)
+  if (!table) return false
+  let changed = false
+
+  for (const spacing of Array.from(table.getElementsByTagName('w:spacing'))) {
+    if (spacing.getAttribute('w:before') === '160') {
+      spacing.setAttribute('w:before', '40')
+      changed = true
+    }
+    if (spacing.getAttribute('w:line') === '288' && spacing.getAttribute('w:lineRule') === 'auto') {
+      spacing.setAttribute('w:line', '240')
+      changed = true
+    }
+  }
+
+  for (const tagName of ['w:sz', 'w:szCs']) {
+    for (const el of Array.from(table.getElementsByTagName(tagName))) {
+      if (el.getAttribute('w:val') === '14') {
+        el.setAttribute('w:val', '12')
+        changed = true
+      }
+    }
+  }
+
+  for (const tcMar of Array.from(table.getElementsByTagName('w:tcMar'))) {
+    for (const side of ['w:top', 'w:bottom']) {
+      const el = Array.from(tcMar.childNodes).find((node) => node.nodeName === side) as Element | undefined
+      if (el?.getAttribute('w:w') === '80') {
+        el.setAttribute('w:w', '40')
+        changed = true
+      }
+    }
+  }
+
+  return changed
+}
+
+// CT_PPrBase element order per the OOXML schema — w:keepNext must be inserted before any
+// of these if present, or LibreOffice/Word silently drop it instead of erroring.
+const PARAGRAPH_PROPERTIES_AFTER_KEEP_NEXT = new Set([
+  'w:keepLines', 'w:pageBreakBefore', 'w:framePr', 'w:widowControl', 'w:numPr',
+  'w:suppressLineNumbers', 'w:pBdr', 'w:shd', 'w:tabs', 'w:suppressAutoHyphens', 'w:kinsoku',
+  'w:wordWrap', 'w:overflowPunct', 'w:topLinePunct', 'w:autoSpaceDE', 'w:autoSpaceDN', 'w:bidi',
+  'w:adjustRightInd', 'w:snapToGrid', 'w:spacing', 'w:ind', 'w:contextualSpacing',
+  'w:mirrorIndents', 'w:suppressOverlap', 'w:jc', 'w:textDirection', 'w:textAlignment',
+  'w:textboxTightWrap', 'w:outlineLvl', 'w:divId', 'w:cnfStyle', 'w:rPr', 'w:sectPr', 'w:pPrChange',
+])
+
+function setParagraphKeepNext(doc: Document, paragraph: Element): boolean {
+  let pPr = Array.from(paragraph.childNodes).find((node) => node.nodeName === 'w:pPr') as Element | undefined
+  if (!pPr) {
+    pPr = doc.createElement('w:pPr')
+    paragraph.insertBefore(pPr, paragraph.firstChild)
+  }
+  if (Array.from(pPr.childNodes).some((node) => node.nodeName === 'w:keepNext')) return false
+
+  const keepNext = doc.createElement('w:keepNext')
+  const insertionPoint = Array.from(pPr.childNodes)
+    .find((node) => PARAGRAPH_PROPERTIES_AFTER_KEEP_NEXT.has(node.nodeName)) ?? null
+  pPr.insertBefore(keepNext, insertionPoint)
+  return true
+}
+
+// Nothing in the template stops a page break from landing in the middle of the
+// preparer/reviewer/recommender/approver signature chain — there's no keepNext/keepLines
+// anywhere in this file. In practice that means "APPROVED:" plus the mayor's signature,
+// name, and title can end up isolated alone on a trailing page while the rest of the
+// chain stays on the page before it. Chaining w:keepNext across every paragraph from
+// "Prepared and submitted by:" to the end of the body turns the whole signature section
+// into one atomic block: if it doesn't fit in the remaining space on a page, the renderer
+// pushes the entire block to the next page together instead of splitting it.
+function keepSignatureSectionTogether(doc: Document): boolean {
+  const body = doc.getElementsByTagName('w:body')[0]
+  if (!body) return false
+
+  const paragraphs = Array.from(body.childNodes).filter((node) => node.nodeName === 'w:p') as Element[]
+  const startIndex = paragraphs.findIndex((paragraph) => paragraphTextContent(paragraph).includes('Prepared and submitted by:'))
+  if (startIndex === -1) return false
+
+  let changed = false
+  // The last paragraph has nothing after it to keep with, so stop one short.
+  for (let i = startIndex; i < paragraphs.length - 1; i++) {
+    if (setParagraphKeepNext(doc, paragraphs[i])) changed = true
+  }
   return changed
 }
 
@@ -1931,9 +2059,14 @@ function normalizeCaseStudyLayoutXml(xml: string): string {
   const signaturePlaceholdersNormalized = normalizeCaseStudySignaturePlaceholders(doc)
   const verificationQrAligned = alignCaseStudyVerificationQr(doc)
   const trailingParagraphsTrimmed = trimTrailingEmptyParagraphs(doc)
+  const checklistSpacingCompacted = compactRequirementsChecklistTable(doc)
+  // Must run after compactCaseStudySignatureSection/trimTrailingEmptyParagraphs so the
+  // paragraphs it chains together are the final, already-cleaned-up set.
+  const signatureSectionKeptTogether = keepSignatureSectionTogether(doc)
   const changed = beneficiaryNormalized || deadTextBoxesRemoved || preparedSignatureRepositioned || signatureSectionCompacted
     || signaturePlaceholdersNormalized
     || verificationQrAligned || trailingParagraphsTrimmed
+    || checklistSpacingCompacted || signatureSectionKeptTogether
   if (!changed) return xml
 
   const serialized = new XMLSerializer().serializeToString(doc)

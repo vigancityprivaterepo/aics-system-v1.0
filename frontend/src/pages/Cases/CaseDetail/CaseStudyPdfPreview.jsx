@@ -15,7 +15,7 @@ const DEFAULT_ZOOM = 100
 const THUMBNAIL_WIDTH = 110
 const MAIN_PAGE_BASE_WIDTH = 860
 const MAX_PDF_PREVIEW_CACHE_ENTRIES = 8
-const CASE_STUDY_LAYOUT_VERSION = 17
+const CASE_STUDY_LAYOUT_VERSION = 18
 const pdfPreviewSessionCache = new Map()
 
 function latestSignedStage(reportSignature) {

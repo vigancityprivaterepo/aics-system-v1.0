@@ -100,7 +100,7 @@ function buildCaseStudyPdfCacheVersion(caseData: NonNullable<Awaited<ReturnType<
     actedAt: approval.actedAt?.toISOString?.() ?? String(approval.actedAt ?? ''),
   }))
   return JSON.stringify({
-    layoutVersion: 17,
+    layoutVersion: 18,
     id: caseData.id,
     status: caseData.status,
     assistanceType: caseData.assistanceType,
