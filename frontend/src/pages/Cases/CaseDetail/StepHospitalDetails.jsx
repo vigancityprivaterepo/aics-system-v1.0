@@ -14,7 +14,7 @@ import {
   RELATIONSHIP_OPTIONS,
 } from '../../../constants/caseFormOptions'
 import { scrollToFirstError } from '../../../lib/formNavigation'
-import { formatCurrency } from '../../../lib/utils'
+import { formatCurrency, formatClientName } from '../../../lib/utils'
 import { useAutosaveDraft, readLocalDraft, clearLocalDraft } from '../../../lib/localDraft'
 
 const GL_MAX = 30000
@@ -115,7 +115,7 @@ export default function StepHospitalDetails({ caseData, onUpdate, onNext }) {
       <form onSubmit={handleSubmit(onSave, handleInvalid)} className="space-y-4">
         <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm">
           <p className="font-semibold text-slate-800">
-            Client: {`${caseData.client?.firstName || ''} ${caseData.client?.lastName || ''}`.trim() || 'Not recorded'}
+            Client: {formatClientName(caseData.client) || 'Not recorded'}
           </p>
         </div>
 

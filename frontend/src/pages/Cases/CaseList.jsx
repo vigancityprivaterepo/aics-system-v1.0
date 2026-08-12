@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import api from '../../lib/api'
-import { formatDate } from '../../lib/utils'
+import { formatDate, formatClientName } from '../../lib/utils'
 import StatusBadge from '../../components/ui/StatusBadge'
 import { useAuthStore } from '../../store/authStore'
 import { allowedCaseTypesForUser } from '../../utils/accessRules'
@@ -330,10 +330,10 @@ export default function CaseList() {
                     </Link>
                   </td>
                   <td className="table-cell font-medium text-slate-800">
-                    {c.beneficiaryName || `${c.client?.lastName}, ${c.client?.firstName}`}
+                    {c.beneficiaryName || formatClientName(c.client)}
                     {c.beneficiaryName && (
                       <p className="mt-0.5 text-xs font-normal text-slate-400">
-                        Filed under {c.client?.lastName}, {c.client?.firstName}
+                        Filed under {formatClientName(c.client)}
                       </p>
                     )}
                   </td>

@@ -1,4 +1,4 @@
-import { formatDate } from '../../../lib/utils'
+import { formatDate, formatClientName } from '../../../lib/utils'
 import { IdCardIcon, PhoneIcon, MapPinIcon } from '../../../components/ui/Icons'
 
 export default function StepClientProfile({ client }) {
@@ -14,7 +14,7 @@ export default function StepClientProfile({ client }) {
         <div>
           <p className="portal-label">Full Name</p>
           <p className="font-semibold text-slate-800">
-            {client.lastName}, {client.firstName} {client.middleName || ''}
+            {formatClientName(client)}
           </p>
         </div>
         <div>

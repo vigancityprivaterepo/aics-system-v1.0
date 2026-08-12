@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { DownloadIcon, FileTextIcon, ChevronDownIcon } from '../../../components/ui/Icons'
 import api from '../../../lib/api'
+import { formatClientName } from '../../../lib/utils'
 import toast from 'react-hot-toast'
 import CaseStudyPdfPreview from './CaseStudyPdfPreview'
 import EyeglassCaseStudyPreview from './EyeglassCaseStudyPreview'
@@ -294,7 +295,7 @@ export default function StepReports({ caseData, onUpdate }) {
           </div>
           <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
             <p className="portal-label">Proxy / Requestor</p>
-            <p className="mt-1 font-semibold text-slate-800">{caseData.burialDetails?.conformeName || caseData.proxyName || `${caseData.client?.firstName || ''} ${caseData.client?.lastName || ''}`.trim() || 'Not recorded'}</p>
+            <p className="mt-1 font-semibold text-slate-800">{caseData.burialDetails?.conformeName || caseData.proxyName || formatClientName(caseData.client) || 'Not recorded'}</p>
             <p className="mt-1 text-xs text-slate-500">{caseData.burialDetails?.conformeRelationship || caseData.proxyRelationship || 'Relationship not recorded'}</p>
           </div>
         </div>

@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
 import api from '../../../lib/api'
+import { formatClientName } from '../../../lib/utils'
 import { GlassesIcon } from '../../../components/ui/Icons'
 import HouseholdMemberQuickFill from '../../../components/HouseholdMemberQuickFill'
 import FieldError from '../../../components/ui/FieldError'
@@ -81,7 +82,7 @@ export default function StepEyeglassDetails({ caseData, onUpdate, onNext }) {
       <form onSubmit={handleSubmit(onSave, handleInvalid)} className="space-y-4">
         <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm">
           <p className="font-semibold text-slate-800">
-            Client: {`${caseData.client?.firstName || ''} ${caseData.client?.lastName || ''}`.trim() || 'Not recorded'}
+            Client: {formatClientName(caseData.client) || 'Not recorded'}
           </p>
         </div>
 

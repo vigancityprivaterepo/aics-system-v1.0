@@ -13,7 +13,7 @@ import {
   RELATIONSHIP_OPTIONS,
 } from '../../../constants/caseFormOptions'
 import { scrollToFirstError } from '../../../lib/formNavigation'
-import { formatCurrency } from '../../../lib/utils'
+import { formatCurrency, formatClientName } from '../../../lib/utils'
 import { useAutosaveDraft, readLocalDraft, clearLocalDraft } from '../../../lib/localDraft'
 
 const GL_MAX = 10000
@@ -135,7 +135,7 @@ export default function StepBurialDetails({ caseData, onUpdate, onNext }) {
         <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm">
           <p className="font-semibold text-slate-800">Beneficiary: {caseData.beneficiaryName || caseData.burialDetails?.deceasedName || 'No deceased name recorded'}</p>
           <p className="mt-1 text-slate-500">
-            Proxy / Requestor: {caseData.burialDetails?.conformeName || caseData.proxyName || `${caseData.client?.firstName || ''} ${caseData.client?.lastName || ''}`.trim() || 'Not recorded'}
+            Proxy / Requestor: {caseData.burialDetails?.conformeName || caseData.proxyName || formatClientName(caseData.client) || 'Not recorded'}
             {(caseData.burialDetails?.conformeRelationship || caseData.proxyRelationship) ? ` (${caseData.burialDetails?.conformeRelationship || caseData.proxyRelationship})` : ''}
           </p>
         </div>

@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import api from '../../lib/api'
-import { formatDate, calculateAge } from '../../lib/utils'
+import { formatDate, calculateAge, formatClientName } from '../../lib/utils'
 import { VIGAN_BARANGAYS } from '../../lib/constants'
 import { useAuthStore } from '../../store/authStore'
 import { ChevronLeftIcon, IdCardIcon, EditIcon, TrashIcon, ClipboardIcon, ArrowRightIcon } from '../../components/ui/Icons'
@@ -444,7 +444,7 @@ export default function ClientProfile() {
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0 flex-1">
           <p className="portal-kicker">Client Record</p>
-          <h1 className="portal-page-title break-words">{client.lastName}, {client.firstName} {client.middleName || ''}</h1>
+          <h1 className="portal-page-title break-words">{formatClientName(client)}</h1>
           <p className="portal-page-subtitle font-mono">{client.caseNumber}</p>
         </div>
         {canEditClientProfile && !editMode && !client.mergedIntoClient && (

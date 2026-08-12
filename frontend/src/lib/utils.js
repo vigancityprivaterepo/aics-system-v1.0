@@ -58,6 +58,11 @@ export function numberToWords(num) {
   return result
 }
 
+export function formatClientName(client) {
+  if (!client) return ''
+  return [client.firstName, client.middleName, client.lastName].filter(Boolean).join(' ').trim()
+}
+
 export function generateCaseNumber(year, month, seq) {
   const y = year || new Date().getFullYear()
   const m = String(month || (new Date().getMonth() + 1)).padStart(2, '0')

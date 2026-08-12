@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import api from '../../lib/api'
+import { formatClientName } from '../../lib/utils'
 import ClientSearchBar from '../../components/ClientSearchBar'
 import { useAuthStore } from '../../store/authStore'
 import { allowedCaseTypesForUser } from '../../utils/accessRules'
@@ -58,7 +59,7 @@ export default function NewCase() {
       const { data: sourceClient } = await api.get(`/clients/${match.sourceClientId}`)
       const otherMembers = (sourceClient.familyComposition || []).filter((_, idx) => idx !== match.memberIndex)
       const familyComposition = [
-        { name: `${sourceClient.firstName} ${sourceClient.lastName}`.trim(), age: '', relationship: '', relationshipOther: '', occupation: sourceClient.occupation || '' },
+        { name: formatClientName(sourceClient), age: '', relationship: '', relationshipOther: '', occupation: sourceClient.occupation || '' },
         ...otherMembers,
       ]
       setSelectedClient(sourceClient)
@@ -205,7 +206,7 @@ export default function NewCase() {
                       {beneficiaryOverride.relationshipOnRecord ? ` (${beneficiaryOverride.relationshipOnRecord})` : ''}
                     </p>
                     <p className="text-xs text-amber-700 mt-0.5">
-                      Filed under {selectedClient.lastName}, {selectedClient.firstName}'s profile ({selectedClient.caseNumber}) — this new case will appear in their case history.
+                      Filed under {formatClientName(selectedClient)}'s profile ({selectedClient.caseNumber}) — this new case will appear in their case history.
                     </p>
                   </div>
                 </div>
@@ -217,7 +218,7 @@ export default function NewCase() {
                 <div className="flex items-start justify-between gap-6">
                   <div>
                     <p className="font-semibold text-brand-dark">
-                      {selectedClient.lastName}, {selectedClient.firstName} {selectedClient.middleName || ''}
+                      {formatClientName(selectedClient)}
                     </p>
                     <p className="text-xs text-slate-500 mt-0.5">
                       {selectedClient.caseNumber} - {selectedClient.barangay}, {selectedClient.municipality}

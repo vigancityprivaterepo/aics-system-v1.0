@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Outlet, useLocation, useNavigate, useParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import api from '../../../lib/api'
+import { formatClientName } from '../../../lib/utils'
 import CaseStepper from '../../../components/CaseStepper'
 import StatusBadge from '../../../components/ui/StatusBadge'
 import { ChevronLeftIcon } from '../../../components/ui/Icons'
@@ -226,7 +227,7 @@ export default function CaseDetailLayout() {
             <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm">
               <p className="font-semibold text-slate-800">Beneficiary: {caseData.beneficiaryName || 'No deceased name recorded'}</p>
               <p className="mt-1 text-slate-500">
-                Proxy / Requestor: {caseData.burialDetails?.conformeName || caseData.proxyName || `${caseData.client?.firstName || ''} ${caseData.client?.lastName || ''}`.trim() || 'Not recorded'}
+                Proxy / Requestor: {caseData.burialDetails?.conformeName || caseData.proxyName || formatClientName(caseData.client) || 'Not recorded'}
                 {(caseData.burialDetails?.conformeRelationship || caseData.proxyRelationship) ? ` (${caseData.burialDetails?.conformeRelationship || caseData.proxyRelationship})` : ''}
               </p>
             </div>
@@ -235,7 +236,7 @@ export default function CaseDetailLayout() {
             <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm">
               <p className="font-semibold text-amber-900">Beneficiary: {caseData.beneficiaryName}</p>
               <p className="mt-1 text-amber-700">
-                Filed under {`${caseData.client?.firstName || ''} ${caseData.client?.lastName || ''}`.trim()}'s profile
+                Filed under {formatClientName(caseData.client)}'s profile
                 {caseData.beneficiaryRequestorName ? ` by ${caseData.beneficiaryRequestorName}` : ''}
                 {caseData.beneficiaryRequestorRelationship ? ` (${caseData.beneficiaryRequestorRelationship})` : ''}
               </p>
