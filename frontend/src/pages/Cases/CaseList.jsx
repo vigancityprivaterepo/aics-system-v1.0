@@ -362,7 +362,7 @@ export default function CaseList() {
                       {approvalMessages.map((summary) => {
                         const verb =
                           summary.action === 'rejected'
-                            ? 'rejected'
+                            ? 'disapproved'
                             : summary.stage === 'for_review'
                               ? 'reviewed'
                               : summary.stage === 'recommending_approval'

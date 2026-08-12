@@ -90,7 +90,7 @@ export function getStatusLabel(status) {
     for_approval: 'For Approval',
     approved: 'Approved',
     released: 'Released',
-    rejected: 'Rejected',
+    rejected: 'Disapproved',
   }
   return map[status] || status
 }

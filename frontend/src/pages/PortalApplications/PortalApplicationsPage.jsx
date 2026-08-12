@@ -247,7 +247,7 @@ export default function PortalApplicationsPage() {
 
   const handleReject = async () => {
     await updateSelectedApplication('disapproved', {
-      successMessage: 'Application rejected',
+      successMessage: 'Application disapproved',
     })
   }
 

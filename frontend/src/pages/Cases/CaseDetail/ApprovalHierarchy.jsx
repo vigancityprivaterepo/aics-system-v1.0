@@ -22,8 +22,8 @@ export default function ApprovalHierarchy({ reviewFlow }) {
 
           const lineClass  = isDone ? 'bg-emerald-300' : 'bg-slate-200'
           const badgeClass = isDone ? 'badge-green' : isRejected ? 'badge-red' : isCurrent ? 'badge-amber' : 'badge-slate'
-          const badgeLabel = isDone ? 'Approved'    : isRejected ? 'Rejected'  : isCurrent ? 'Current'     : 'Pending'
-          const actionDateLabel = isRejected ? 'Rejected on' : 'Approved on'
+          const badgeLabel = isDone ? 'Approved'    : isRejected ? 'Disapproved' : isCurrent ? 'Current'     : 'Pending'
+          const actionDateLabel = isRejected ? 'Disapproved on' : 'Approved on'
 
           return (
             <div key={row.stage} className={`relative flex items-start gap-4 ${!isLast ? 'pb-7' : ''}`}>

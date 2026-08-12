@@ -128,10 +128,10 @@ export default function CaseDetailLayout() {
   }
 
   const handleReject = async () => {
-    const reason = window.prompt('Enter rejection reason:')
+    const reason = window.prompt('Enter disapproval reason:')
     if (reason == null) return
     if (!reason.trim()) {
-      toast.error('Rejection reason is required')
+      toast.error('Disapproval reason is required')
       return
     }
     await transitionStatus('rejected', reason.trim())

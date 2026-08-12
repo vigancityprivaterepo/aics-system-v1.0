@@ -1,5 +1,5 @@
 import { ArrowRightIcon, XIcon } from '../../../components/ui/Icons'
-import { formatDateTime } from '../../../lib/utils'
+import { formatDate, formatDateTime } from '../../../lib/utils'
 
 const APPROVAL_FLOW = ['for_review', 'recommending_approval', 'for_approval']
 const APPROVAL_BUTTON_LABEL = {
@@ -20,6 +20,7 @@ export default function CaseActionBar({
   const { status } = caseData
   const blockerCount = caseData.blockers?.length || 0
   const canRelease = !!caseData.permissions?.canRelease
+  const rejectionApproval = Object.values(caseData.approvals ?? {}).find((approval) => approval?.action === 'rejected')
 
   if (status === 'released') {
     if (!caseData.releasedAt) return null
@@ -35,16 +36,30 @@ export default function CaseActionBar({
 
   return (
     <div className="card mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      {canManageWorkflow && status === 'rejected' && (
+      {status === 'rejected' && (
         <>
-          <p className="text-sm text-slate-600">This case was rejected. Re-open it to return to encoding and correct any issues.</p>
-          <button
-            onClick={() => onTransition('encoding')}
-            disabled={actionLoading}
-            className="portal-button-secondary text-sm"
-          >
-            {actionLoading ? 'Reopening...' : 'Re-open Case'}
-          </button>
+          <div className="text-sm">
+            <p className="text-slate-600">This case was disapproved. Re-open it to return to encoding and correct any issues.</p>
+            {rejectionApproval && (
+              <div className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2">
+                <p className="font-semibold text-red-800">
+                  Disapproval findings
+                  {rejectionApproval.actedByName ? ` — ${rejectionApproval.actedByName}` : ''}
+                  {rejectionApproval.actedAt ? ` (${formatDate(rejectionApproval.actedAt)})` : ''}
+                </p>
+                <p className="mt-1 whitespace-pre-wrap text-red-700">{rejectionApproval.notes || 'No reason was provided.'}</p>
+              </div>
+            )}
+          </div>
+          {canManageWorkflow && (
+            <button
+              onClick={() => onTransition('encoding')}
+              disabled={actionLoading}
+              className="portal-button-secondary text-sm"
+            >
+              {actionLoading ? 'Reopening...' : 'Re-open Case'}
+            </button>
+          )}
         </>
       )}
       {canManageWorkflow && status === 'intake' && (
@@ -108,10 +123,10 @@ export default function CaseActionBar({
             <button
               onClick={onReject}
               disabled={actionLoading}
-              className="portal-button-secondary text-sm"
+              className="portal-button-red text-sm"
             >
               <XIcon className="h-4 w-4" />
-              Reject
+              Disapproved
             </button>
             <button
               onClick={onApprovalStage}

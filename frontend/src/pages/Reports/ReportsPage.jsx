@@ -23,7 +23,7 @@ const STATUS_LABEL = {
   for_approval: 'For Approval',
   approved: 'Approved',
   released: 'Released',
-  rejected: 'Rejected',
+  rejected: 'Disapproved',
 }
 
 const STATUS_COLOR = {

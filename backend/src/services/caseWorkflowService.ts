@@ -144,7 +144,7 @@ export function assessCaseWorkflow(caseRow: any, assigneesByStage?: ApprovalAssi
     nextAction = 'Case has been released.'
   } else if (status === 'rejected') {
     queue = 'blocked_incomplete'
-    nextAction = 'Re-open the case and correct the rejection findings.'
+    nextAction = 'Re-open the case and correct the disapproval findings.'
   }
 
   const dueHours = QUEUE_SLA_HOURS[isBlocked && queue === 'needs_encoding' ? 'blocked_incomplete' : queue]
