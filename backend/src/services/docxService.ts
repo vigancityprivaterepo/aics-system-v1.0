@@ -1440,6 +1440,12 @@ const SIGNATURE_IMAGE_HEIGHT_POINTS = SIGNATURE_IMAGE_HEIGHT_EMU / EMU_PER_POINT
 // against real Word screenshots, not just LibreOffice.
 const SIGNATURE_VERTICAL_LIFT_DRAWINGML_POINTS = 4
 const SIGNATURE_VERTICAL_LIFT_VML_POINTS = 1
+// estimateTextWidthPoints still under-measures these three names' rendered width versus how
+// LibreOffice actually draws them (confirmed against real rendered PDFs — worst for shorter
+// names, which point to an underestimate rather than a wrong base offset). This flat bonus,
+// calibrated against those renders, nudges the reviewer/recommender/approver signatures back
+// toward center without touching the preparer's signature, which measures correctly as-is.
+const SIGNATURE_NAME_WIDTH_CALIBRATION_BONUS_POINTS = 35
 
 // docx/OOXML has no text-metrics API of its own, so centering needs a real font's glyph
 // metrics measured some other way. pdfkit (already a direct dependency, used elsewhere for
@@ -1510,8 +1516,9 @@ function centerSignatureOverName(
   nameText: string,
   fontSizePt: number,
   fontFamily: NameFontFamily = 'georgia-bold',
+  extraWidthPoints = 0,
 ): void {
-  const nameWidthPoints = estimateTextWidthPoints(nameText, fontSizePt, fontFamily)
+  const nameWidthPoints = estimateTextWidthPoints(nameText, fontSizePt, fontFamily) + extraWidthPoints
 
   for (const anchor of Array.from(shapeHost.getElementsByTagName('wp:anchor'))) {
     const extent = anchor.getElementsByTagName('wp:extent')[0]
@@ -1825,7 +1832,7 @@ function normalizeCaseStudySignaturePlaceholders(doc: Document): boolean {
       if (nameText) {
         const signatureHost = findOwnSignatureShapeHost(signatureParagraph as Element)
         shrinkSignatureShapeToFit(doc, signatureHost)
-        centerSignatureOverName(doc, signatureHost, nameText, 10)
+        centerSignatureOverName(doc, signatureHost, nameText, 10, 'georgia-bold', SIGNATURE_NAME_WIDTH_CALIBRATION_BONUS_POINTS)
         changed = true
       }
     }
@@ -1904,7 +1911,7 @@ function flattenCaseStudyVerificationTextBox(doc: Document): boolean {
       const approverNameText = paragraphTextContent(approverNameParagraph).trim()
       const approvedSignatureHost = findOwnSignatureShapeHost(approvedSignatureParagraph)
       shrinkSignatureShapeToFit(doc, approvedSignatureHost)
-      centerSignatureOverName(doc, approvedSignatureHost, approverNameText, 10.5)
+      centerSignatureOverName(doc, approvedSignatureHost, approverNameText, 10.5, 'georgia-bold', SIGNATURE_NAME_WIDTH_CALIBRATION_BONUS_POINTS)
       const nameWidthPoints = estimateTextWidthPoints(approverNameText, 10.5)
       const indentPoints = Math.max(0, (nameWidthPoints - SIGNATURE_IMAGE_WIDTH_POINTS) / 2)
       ensureParagraphLeftIndent(doc, approvedSignatureParagraph, Math.round(indentPoints * 20))
