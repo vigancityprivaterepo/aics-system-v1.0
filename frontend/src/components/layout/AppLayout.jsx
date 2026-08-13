@@ -10,7 +10,7 @@ import {
   LogoutIcon, MenuIcon, DocumentIcon, FileTextIcon,
   CrossIcon, HospitalIcon, GlassesIcon, HeadstonIcon,
   ClipboardIcon, QrCodeIcon, DatabaseIcon, ChevronDownIcon,
-  BellIcon,
+  BellIcon, InboxIcon,
 } from '../ui/Icons'
 import MyProfileModal from '../shared/MyProfileModal'
 import { allowedCaseTypesForUser, canAccessAllCases } from '../../utils/accessRules'
@@ -406,6 +406,7 @@ function SidebarNav({ closeSidebar, user, isAdmin, isCityHealthOffice, pendingBy
       <SectionLabel>Main</SectionLabel>
       <div className="space-y-0.5">
         {canAccessDashboard ? <NavItem to="/dashboard" Icon={ChartIcon} label="Dashboard" onClick={closeSidebar} end /> : null}
+        {canAccessCasesModule ? <NavItem to="/my-queue" Icon={InboxIcon} label="My Queue" onClick={closeSidebar} /> : null}
         {canAccessPortalApplications ? (
           <NavItemWithBadge
             to="/portal-applications"

@@ -6,6 +6,7 @@ import ProtectedRoute from './components/shared/ProtectedRoute'
 import LoginPage from './pages/Auth/LoginPage'
 import Dashboard from './pages/Dashboard'
 import CaseList from './pages/Cases/CaseList'
+import MyQueue from './pages/Cases/MyQueue'
 import NewCase from './pages/Cases/NewCase'
 import CaseDetailLayout from './pages/Cases/CaseDetail/CaseDetailLayout'
 import TabClientProfile from './pages/Cases/CaseDetail/TabClientProfile'
@@ -77,6 +78,7 @@ function AppRoutes() {
           </Route>
 
           <Route element={<ProtectedRoute moduleKey="cases" redirectTo="/" />}>
+            <Route path="/my-queue" element={<MyQueue />} />
             <Route path="/cases" element={<CaseList />} />
             <Route path="/cases/new" element={<NewCase />} />
             <Route path="/cases/:id" element={<CaseDetailLayout />}>
