@@ -86,6 +86,10 @@ export function assertTransitionPermission(
     }
   }
 
+  if (nextStatus === 'encoding' && ACTIVE_APPROVAL_STATUSES.has(currentStatus)) {
+    if (!notes?.trim()) throw new HttpError(400, 'A reason is required when returning a case to encoding.')
+  }
+
   if (nextStatus === 'released' && !userCanRelease(user)) {
     throw new HttpError(403, 'Only administrative employees can release approved cases.')
   }
@@ -94,6 +98,20 @@ export function assertTransitionPermission(
 export function normalizeApprovalNotes(notes: string | undefined): string | null {
   const value = String(notes ?? '').trim()
   return value.length > 0 ? value : null
+}
+
+// When a case is resubmitted from encoding after a "minor fix" kickback that preserved
+// earlier-stage approvals, it should resume at the stage that sent it back rather than
+// restarting at for_review — this finds the first stage in order that hasn't been
+// approved yet. Returns 'for_review' unchanged when no prior approvals exist.
+export function resolveResubmitStage(approvals: Array<{ stage: ApprovalStage; action: string } | null | undefined>): CaseStatus {
+  const approvedStages = new Set(
+    approvals.filter((approval): approval is { stage: ApprovalStage; action: string } => approval?.action === 'approved').map((approval) => approval.stage)
+  )
+  for (const stage of APPROVAL_STAGE_ORDER) {
+    if (!approvedStages.has(stage)) return stage
+  }
+  return 'approved'
 }
 
 

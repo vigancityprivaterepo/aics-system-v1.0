@@ -15,27 +15,52 @@ import {
   parseApprovalLevels,
   assertTransitionPermission,
   normalizeApprovalNotes,
+  resolveResubmitStage,
 } from '../services/approvalService.js'
 import { sendPortalStatusNotifications } from '../services/portalStatusNotifications.js'
 import { auditLog } from '../utils/auditLog.js'
 import { assessCaseWorkflow } from '../services/caseWorkflowService.js'
 
+// APPROVAL_STAGE_META's `label` is phrased for "Approved by: {label}" display, not for
+// naming the stage itself, so audit-log wording about which stage a resumed case landed
+// on uses this instead.
+const RESUME_STAGE_DESCRIPTION: Record<string, string> = {
+  for_review: 'Reviewer',
+  recommending_approval: 'Recommender',
+  for_approval: 'Final Approver',
+}
+
 export async function updateStatus(req: Request, res: Response) {
   const caseId = paramId(req.params.id)
-  const { status: nextStatus, notes } = updateStatusSchema.parse(req.body)
+  const { status: requestedStatus, notes, preserveApprovals } = updateStatusSchema.parse(req.body)
   const normalizedNotes = normalizeApprovalNotes(notes)
 
   const caseData = await findCaseWithDetails(caseId)
   if (!caseData) throw new HttpError(404, 'Case not found')
   assertCaseReadable(caseData, req.user, 'Case status')
 
-  if (caseData.status === nextStatus) {
+  if (caseData.status === requestedStatus) {
     return res.json({ id: caseData.id, status: caseData.status })
   }
 
   const currentStatus = normalizeWorkflowStatus(caseData.status)
+
+  // The client always requests 'for_review' when resubmitting from encoding, but if an
+  // earlier "minor fix" kickback preserved prior-stage approvals (see preserveApprovals
+  // below), the case should resume at the stage that sent it back rather than restarting
+  // the whole review -> recommend -> approve chain from scratch.
+  let nextStatus: CaseStatus = requestedStatus as CaseStatus
+  let isResumeWithPreservedApprovals = false
+  if (currentStatus === 'encoding' && requestedStatus === 'for_review') {
+    const resumeStage = resolveResubmitStage(caseData.approvals ?? [])
+    if (resumeStage !== 'for_review') {
+      nextStatus = resumeStage
+      isResumeWithPreservedApprovals = true
+    }
+  }
+
   const currentStep = caseStatusToStep(currentStatus)
-  const nextStep = caseStatusToStep(nextStatus as CaseStatus)
+  const nextStep = caseStatusToStep(nextStatus)
   const isReject = nextStatus === 'rejected'
   const isForward = nextStep === currentStep + 1
   const isAllowedBackward =
@@ -43,11 +68,11 @@ export async function updateStatus(req: Request, res: Response) {
     (['for_review', 'recommending_approval', 'for_approval'].includes(currentStatus) && nextStatus === 'encoding') ||
     (currentStatus === 'rejected' && nextStatus === 'encoding')
 
-  if (!isReject && !(isForward || isAllowedBackward)) {
+  if (!isReject && !isResumeWithPreservedApprovals && !(isForward || isAllowedBackward)) {
     throw new HttpError(400, 'Invalid status transition')
   }
 
-  if (currentStatus === 'encoding' && nextStatus === 'for_review') {
+  if (currentStatus === 'encoding' && requestedStatus === 'for_review') {
     assertEditableCase(caseData, req.user, 'Case status')
     const settings = await getApprovalSettings()
     const assigneesByStage = await resolveApprovalAssignees(settings)
@@ -66,7 +91,7 @@ export async function updateStatus(req: Request, res: Response) {
     assertEditableCase(caseData, req.user, 'Case status')
   }
 
-  assertTransitionPermission(currentStatus, nextStatus as CaseStatus, req.user, normalizedNotes ?? undefined)
+  assertTransitionPermission(currentStatus, nextStatus, req.user, normalizedNotes ?? undefined)
 
   const currentStage = statusToApprovalStage(caseData.status)
   const shouldCaptureStageAction = !!currentStage && (isApprovalProgressTransition(caseData.status, nextStatus as CaseStatus) || isReject)
@@ -114,9 +139,18 @@ export async function updateStatus(req: Request, res: Response) {
   }
 
   const updated = await prisma.$transaction(async (tx) => {
-    const next = await tx.case.update({ where: { id: caseData.id }, data: { status: nextStatus as CaseStatus } })
+    const next = await tx.case.update({ where: { id: caseData.id }, data: { status: nextStatus } })
 
-    if (((ACTIVE_APPROVAL_STATUSES.has(currentStatus) && nextStatus === 'encoding') || (currentStatus === 'rejected' && nextStatus === 'encoding'))) {
+    const isBackwardToEncoding =
+      (ACTIVE_APPROVAL_STATUSES.has(currentStatus) && nextStatus === 'encoding') ||
+      (currentStatus === 'rejected' && nextStatus === 'encoding')
+    // A disapproval reopen (rejected -> encoding) always fully resets the trail — it's an
+    // explicit "start over" signal with its own required reason. A soft "Return to
+    // Encoding" kickback only preserves earlier-stage approvals when the person who sent
+    // it back said this was a minor fix (preserveApprovals); otherwise it behaves exactly
+    // as before.
+    const shouldWipeApprovals = isBackwardToEncoding && !(preserveApprovals && currentStatus !== 'rejected')
+    if (shouldWipeApprovals) {
       await tx.caseApproval.deleteMany({ where: { caseId: caseData.id } })
     }
 
@@ -148,12 +182,20 @@ export async function updateStatus(req: Request, res: Response) {
       })
     }
 
+    const auditNotes = isResumeWithPreservedApprovals
+      ? [normalizedNotes, `Resumed at the ${RESUME_STAGE_DESCRIPTION[nextStatus as keyof typeof RESUME_STAGE_DESCRIPTION] ?? nextStatus} stage — earlier-stage approvals were preserved from a prior "minor fix" kickback.`]
+          .filter(Boolean)
+          .join(' ')
+      : isBackwardToEncoding && preserveApprovals && currentStatus !== 'rejected'
+        ? [normalizedNotes, 'Returned as a minor fix — earlier-stage approvals preserved.'].filter(Boolean).join(' ')
+        : normalizedNotes
+
     await auditLog(tx, {
       caseId: caseData.id,
       changedById: req.user?.id,
       fromStatus: caseData.status,
-      toStatus: nextStatus as CaseStatus,
-      notes: normalizedNotes,
+      toStatus: nextStatus,
+      notes: auditNotes,
     })
 
     const portalApplicationStatus =

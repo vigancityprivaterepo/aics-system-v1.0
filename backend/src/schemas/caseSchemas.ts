@@ -56,6 +56,10 @@ export const updateCaseSchema = z.object({
 export const updateStatusSchema = z.object({
   status: z.enum(['intake', 'encoding', 'for_review', 'recommending_approval', 'for_approval', 'approved', 'released', 'rejected']),
   notes: z.string().optional(),
+  // Only meaningful when returning an active-approval-stage case to encoding: keep
+  // already-completed earlier-stage approvals instead of wiping the whole trail, so
+  // resubmitting resumes at the stage that sent it back instead of starting over.
+  preserveApprovals: z.boolean().optional(),
 })
 
 export const updateRequirementsSchema = z.object({

@@ -16,6 +16,7 @@ export default function CaseActionBar({
   onReject,
   onSubmitForReview,
   onApprovalStage,
+  onReturnToEncoding,
 }) {
   const { status } = caseData
   const blockerCount = caseData.blockers?.length || 0
@@ -114,7 +115,7 @@ export default function CaseActionBar({
           </p>
           <div className="flex gap-2">
             <button
-              onClick={() => onTransition('encoding')}
+              onClick={onReturnToEncoding}
               disabled={actionLoading}
               className="portal-button-secondary text-sm"
             >

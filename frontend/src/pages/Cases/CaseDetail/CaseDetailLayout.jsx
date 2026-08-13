@@ -7,6 +7,7 @@ import CaseStepper from '../../../components/CaseStepper'
 import StatusBadge from '../../../components/ui/StatusBadge'
 import { ChevronLeftIcon } from '../../../components/ui/Icons'
 import CaseActionBar from './CaseActionBar'
+import ReturnToEncodingModal from './ReturnToEncodingModal'
 
 const APPROVAL_NEXT = {
   for_review: 'recommending_approval',
@@ -62,6 +63,7 @@ export default function CaseDetailLayout() {
   const [caseData, setCaseData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState(false)
+  const [returnToEncodingOpen, setReturnToEncodingOpen] = useState(false)
   const permissions = caseData?.permissions ?? {}
   const canEdit = !!permissions.canEdit
   const canManageWorkflow = !!permissions.canManageWorkflow
@@ -113,11 +115,11 @@ export default function CaseDetailLayout() {
 
   const workingSteps = ['intake', 'encoding']
 
-  const transitionStatus = async (nextStatus, notes) => {
+  const transitionStatus = async (nextStatus, notes, preserveApprovals) => {
     if (!caseData) return
     setActionLoading(true)
     try {
-      await api.patch(`/cases/${id}/status`, { status: nextStatus, notes })
+      await api.patch(`/cases/${id}/status`, { status: nextStatus, notes, preserveApprovals })
       const refreshed = await api.get(`/cases/${id}`)
       setCaseData(refreshed.data)
       toast.success(`Case moved to ${statusLabel(nextStatus)}`)
@@ -126,6 +128,11 @@ export default function CaseDetailLayout() {
     } finally {
       setActionLoading(false)
     }
+  }
+
+  const handleReturnToEncoding = async (reason, preserveApprovals) => {
+    await transitionStatus('encoding', reason, preserveApprovals)
+    setReturnToEncodingOpen(false)
   }
 
   const handleReject = async () => {
@@ -327,8 +334,17 @@ export default function CaseDetailLayout() {
           onReject={handleReject}
           onSubmitForReview={handleSubmitForReview}
           onApprovalStage={handleApprovalStage}
+          onReturnToEncoding={() => setReturnToEncodingOpen(true)}
         />
       ) : null}
+
+      <ReturnToEncodingModal
+        isOpen={returnToEncodingOpen}
+        caseData={caseData ?? {}}
+        loading={actionLoading}
+        onCancel={() => setReturnToEncodingOpen(false)}
+        onConfirm={handleReturnToEncoding}
+      />
 
       <div className="mb-4 overflow-x-auto">
         <div className="flex min-w-max gap-1 rounded-xl border border-slate-200 bg-slate-100 p-1">
