@@ -7,6 +7,7 @@ import { generateClientCaseNumber } from '../utils/caseNumber.js'
 import { HttpError } from '../utils/httpError.js'
 import { requireRole } from '../middleware/auth.js'
 import { buildPersonMatchInput, duplicateConflict, findClientDuplicateMatches, findFamilyCompositionMatches, findFamilyMemberByRfid, findFamilyRfidConflict, mergeClientRecords, recordClientDedupEvent } from '../services/clientDedupService.js'
+import { normalizeName, normalizeNameOrNullish, normalizeFamilyCompositionNames } from '../utils/normalizeName.js'
 
 const router = Router()
 
@@ -16,9 +17,9 @@ function paramId(value: string | string[] | undefined): string {
 }
 
 const createClientSchema = z.object({
-  lastName: z.string().min(1),
-  firstName: z.string().min(1),
-  middleName: z.string().optional().nullable(),
+  lastName: z.string().min(1).transform(normalizeName),
+  firstName: z.string().min(1).transform(normalizeName),
+  middleName: z.string().optional().nullable().transform(normalizeNameOrNullish),
   dateOfBirth: z.string().optional().nullable(),
   sex: z.string().optional().nullable(),
   civilStatus: z.string().optional().nullable(),
@@ -34,7 +35,7 @@ const createClientSchema = z.object({
   isSenior: z.boolean().optional(),
   clientCategory: z.enum(['walk-in', 'referred', 'rescued']).optional(),
   referralSource: z.string().optional().nullable(),
-  familyComposition: z.array(z.record(z.any())).optional().nullable(),
+  familyComposition: z.array(z.record(z.any())).optional().nullable().transform((members) => (members ? normalizeFamilyCompositionNames(members) : members)),
   photoUrl: z.string().optional().nullable(),
   reuseClientId: z.string().uuid().optional().nullable(),
   overrideDuplicateReason: z.string().trim().min(3).max(500).optional().nullable(),

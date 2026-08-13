@@ -15,6 +15,7 @@ import {
 import { scrollToFirstError } from '../../../lib/formNavigation'
 import { formatCurrency, formatClientName } from '../../../lib/utils'
 import { useAutosaveDraft, readLocalDraft, clearLocalDraft } from '../../../lib/localDraft'
+import { registerUppercase } from '../../../lib/formHelpers'
 
 const GL_MAX = 10000
 const INTERMENT_PRESETS = [
@@ -148,7 +149,7 @@ export default function StepBurialDetails({ caseData, onUpdate, onNext }) {
 
           <div className="sm:col-span-2">
             <label className="portal-label">Name of Deceased *</label>
-            <input type="text" {...register('deceasedName', { required: 'Name of deceased is required' })} className="portal-input" placeholder="Full name of the deceased" />
+            <input type="text" {...registerUppercase(register, 'deceasedName', { required: 'Name of deceased is required' })} className="portal-input" placeholder="Full name of the deceased" />
             <FieldError message={errors.deceasedName?.message} />
           </div>
           <div>
@@ -236,11 +237,11 @@ export default function StepBurialDetails({ caseData, onUpdate, onNext }) {
           </div>
           <div>
             <label className="portal-label">Conforme Name</label>
-            <input type="text" {...register('conformeName')} className="portal-input" placeholder="Full name of representative/next of kin" />
+            <input type="text" {...registerUppercase(register, 'conformeName')} className="portal-input" placeholder="Full name of representative/next of kin" />
             <HouseholdMemberQuickFill
               members={caseData.familyComposition || []}
               onSelect={(member) => {
-                setValue('conformeName', member.name || '', { shouldDirty: true, shouldTouch: true })
+                setValue('conformeName', (member.name || '').toUpperCase(), { shouldDirty: true, shouldTouch: true })
                 if (member.relationship) setValue('conformeRelationship', member.relationship, { shouldDirty: true, shouldTouch: true })
               }}
             />

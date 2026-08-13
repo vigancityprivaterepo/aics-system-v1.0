@@ -9,6 +9,7 @@ import FieldError from '../../../components/ui/FieldError'
 import DraftRecoveryBanner from '../../../components/ui/DraftRecoveryBanner'
 import { scrollToFirstError } from '../../../lib/formNavigation'
 import { useAutosaveDraft, readLocalDraft, clearLocalDraft } from '../../../lib/localDraft'
+import { registerUppercase } from '../../../lib/formHelpers'
 
 export default function StepEyeglassDetails({ caseData, onUpdate, onNext }) {
   const [saving, setSaving] = useState(false)
@@ -115,11 +116,11 @@ export default function StepEyeglassDetails({ caseData, onUpdate, onNext }) {
 
           <div>
             <label className="portal-label">Conforme Name</label>
-            <input type="text" {...register('conformeName')} className="portal-input" placeholder="Full name of representative / next of kin" />
+            <input type="text" {...registerUppercase(register, 'conformeName')} className="portal-input" placeholder="Full name of representative / next of kin" />
             <HouseholdMemberQuickFill
               members={caseData.familyComposition || []}
               onSelect={(member) => {
-                setValue('conformeName', member.name || '', { shouldDirty: true, shouldTouch: true })
+                setValue('conformeName', (member.name || '').toUpperCase(), { shouldDirty: true, shouldTouch: true })
                 if (member.relationship) setValue('conformeRelationship', member.relationship, { shouldDirty: true, shouldTouch: true })
               }}
             />

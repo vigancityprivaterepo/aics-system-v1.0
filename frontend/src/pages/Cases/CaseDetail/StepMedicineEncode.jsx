@@ -69,7 +69,7 @@ export default function StepMedicineEncode({ caseData, onUpdate, onNext }) {
             <input
               type="text"
               value={conformeName}
-              onChange={(e) => setConformeName(e.target.value)}
+              onChange={(e) => setConformeName(e.target.value.toUpperCase())}
               className="portal-input mt-1"
               placeholder="Full name of requesting party"
             />

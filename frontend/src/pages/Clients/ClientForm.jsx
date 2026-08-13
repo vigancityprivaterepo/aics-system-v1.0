@@ -6,6 +6,7 @@ import api from '../../lib/api'
 import { ChevronLeftIcon, PlusIcon, TrashIcon } from '../../components/ui/Icons'
 import { VIGAN_BARANGAYS } from '../../lib/constants'
 import { calculateAge } from '../../lib/utils'
+import { registerUppercase } from '../../lib/formHelpers'
 import DuplicateReviewModal from '../../components/clients/DuplicateReviewModal'
 
 const defaultFamilyMember = { name: '', dateOfBirth: '', age: '', relationship: '', relationshipOther: '', sex: '', occupation: '' }
@@ -153,15 +154,15 @@ export default function ClientForm() {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div>
               <label className="portal-label">Last Name *</label>
-              <input {...register('lastName', { required: true })} className="portal-input" placeholder="Dela Cruz" />
+              <input {...registerUppercase(register, 'lastName', { required: true })} className="portal-input" placeholder="DELA CRUZ" />
             </div>
             <div>
               <label className="portal-label">First Name *</label>
-              <input {...register('firstName', { required: true })} className="portal-input" placeholder="Juan" />
+              <input {...registerUppercase(register, 'firstName', { required: true })} className="portal-input" placeholder="JUAN" />
             </div>
             <div>
               <label className="portal-label">Middle Name</label>
-              <input {...register('middleName')} className="portal-input" placeholder="Santos" />
+              <input {...registerUppercase(register, 'middleName')} className="portal-input" placeholder="SANTOS" />
             </div>
             <div>
               <label className="portal-label">Date of Birth *</label>
@@ -293,7 +294,7 @@ export default function ClientForm() {
 
                   return (
                     <tr key={index}>
-                      <td className="px-3 py-2"><input value={member.name} onChange={(event) => updateFamilyMember(index, 'name', event.target.value)} className="portal-input" placeholder="Full name" /></td>
+                      <td className="px-3 py-2"><input value={member.name} onChange={(event) => updateFamilyMember(index, 'name', event.target.value.toUpperCase())} className="portal-input" placeholder="Full name" /></td>
                       <td className="px-3 py-2">
                         <input
                           type="date"

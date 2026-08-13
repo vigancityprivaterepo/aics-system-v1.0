@@ -18,6 +18,7 @@ import {
 import { scrollToFirstError } from '../../../lib/formNavigation'
 import { formatCurrency, formatClientName } from '../../../lib/utils'
 import { useAutosaveDraft, readLocalDraft, clearLocalDraft } from '../../../lib/localDraft'
+import { registerUppercase } from '../../../lib/formHelpers'
 
 const GL_MAX = 30000
 
@@ -218,11 +219,11 @@ export default function StepMedicalDetails({ caseData, onUpdate, onNext }) {
 
           <div>
             <label className="portal-label">Conforme Name</label>
-            <input type="text" {...register('conformeName')} className="portal-input" placeholder="Full name of representative / next of kin" />
+            <input type="text" {...registerUppercase(register, 'conformeName')} className="portal-input" placeholder="Full name of representative / next of kin" />
             <HouseholdMemberQuickFill
               members={caseData.familyComposition || []}
               onSelect={(member) => {
-                setValue('conformeName', member.name || '', { shouldDirty: true, shouldTouch: true })
+                setValue('conformeName', (member.name || '').toUpperCase(), { shouldDirty: true, shouldTouch: true })
                 if (member.relationship) setValue('conformeRelationship', member.relationship, { shouldDirty: true, shouldTouch: true })
               }}
             />

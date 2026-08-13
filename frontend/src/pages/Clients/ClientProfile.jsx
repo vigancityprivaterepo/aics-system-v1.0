@@ -519,7 +519,7 @@ export default function ClientProfile() {
                 <input
                   className="portal-input"
                   value={form.lastName}
-                  onChange={(e) => setForm((prev) => ({ ...prev, lastName: e.target.value }))}
+                  onChange={(e) => setForm((prev) => ({ ...prev, lastName: e.target.value.toUpperCase() }))}
                 />
               </div>
               <div>
@@ -527,7 +527,7 @@ export default function ClientProfile() {
                 <input
                   className="portal-input"
                   value={form.firstName}
-                  onChange={(e) => setForm((prev) => ({ ...prev, firstName: e.target.value }))}
+                  onChange={(e) => setForm((prev) => ({ ...prev, firstName: e.target.value.toUpperCase() }))}
                 />
               </div>
               <div>
@@ -535,7 +535,7 @@ export default function ClientProfile() {
                 <input
                   className="portal-input"
                   value={form.middleName}
-                  onChange={(e) => setForm((prev) => ({ ...prev, middleName: e.target.value }))}
+                  onChange={(e) => setForm((prev) => ({ ...prev, middleName: e.target.value.toUpperCase() }))}
                 />
               </div>
               <div>
@@ -769,7 +769,7 @@ export default function ClientProfile() {
 
                   return (
                     <tr key={index}>
-                      <td className="px-3 py-2"><input value={member.name || ''} onChange={(e) => updateFamilyMember(index, 'name', e.target.value)} className="portal-input" /></td>
+                      <td className="px-3 py-2"><input value={member.name || ''} onChange={(e) => updateFamilyMember(index, 'name', e.target.value.toUpperCase())} className="portal-input" /></td>
                       <td className="px-3 py-2">
                         <input
                           type="date"

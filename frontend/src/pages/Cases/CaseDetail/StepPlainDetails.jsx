@@ -13,6 +13,7 @@ import { OCCUPATION_OPTIONS, RELATIONSHIP_OPTIONS } from '../../../constants/cas
 import { scrollToField, scrollToFirstError } from '../../../lib/formNavigation'
 import { formatCurrency } from '../../../lib/utils'
 import { useAutosaveDraft, readLocalDraft, clearLocalDraft } from '../../../lib/localDraft'
+import { registerUppercase } from '../../../lib/formHelpers'
 
 const defaultMember = { name: '', age: '', relationship: '', civilStatus: '', occupation: '', monthlyIncome: '' }
 const CIVIL_STATUS_OPTIONS = ['Single', 'Married', 'Widowed', 'Separated', 'Annulled']
@@ -281,14 +282,14 @@ export default function StepPlainDetails({ caseData, onUpdate, readOnly = false,
             <label className="portal-label">Conforme Name</label>
               <input
                 type="text"
-                {...register('conformeName')}
+                {...registerUppercase(register, 'conformeName')}
               className="portal-input"
               placeholder="Enter requesting party if not the beneficiary"
             />
             <HouseholdMemberQuickFill
               members={family}
               onSelect={(member) => {
-                setValue('conformeName', member.name || '', { shouldDirty: true, shouldTouch: true })
+                setValue('conformeName', (member.name || '').toUpperCase(), { shouldDirty: true, shouldTouch: true })
                 if (member.relationship) setValue('conformeRelationship', member.relationship, { shouldDirty: true, shouldTouch: true })
               }}
             />

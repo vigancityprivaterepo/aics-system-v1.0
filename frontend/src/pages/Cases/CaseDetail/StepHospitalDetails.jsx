@@ -16,6 +16,7 @@ import {
 import { scrollToFirstError } from '../../../lib/formNavigation'
 import { formatCurrency, formatClientName } from '../../../lib/utils'
 import { useAutosaveDraft, readLocalDraft, clearLocalDraft } from '../../../lib/localDraft'
+import { registerUppercase } from '../../../lib/formHelpers'
 
 const GL_MAX = 30000
 
@@ -139,7 +140,7 @@ export default function StepHospitalDetails({ caseData, onUpdate, onNext }) {
           {templateType === 'proxy' ? (
             <div className="sm:col-span-2">
               <label className="portal-label">Patient Name *</label>
-              <input type="text" {...register('patientName', { validate: (value) => templateType !== 'proxy' || String(value ?? '').trim().length > 0 || 'Patient name is required for proxy template' })} className="portal-input" placeholder="Full name of the patient" />
+              <input type="text" {...registerUppercase(register, 'patientName', { validate: (value) => templateType !== 'proxy' || String(value ?? '').trim().length > 0 || 'Patient name is required for proxy template' })} className="portal-input" placeholder="Full name of the patient" />
               <FieldError message={errors.patientName?.message} />
             </div>
           ) : (
@@ -210,11 +211,11 @@ export default function StepHospitalDetails({ caseData, onUpdate, onNext }) {
 
           <div>
             <label className="portal-label">Conforme Name</label>
-            <input type="text" {...register('conformeName')} className="portal-input" placeholder="Full name of representative / next of kin" />
+            <input type="text" {...registerUppercase(register, 'conformeName')} className="portal-input" placeholder="Full name of representative / next of kin" />
             <HouseholdMemberQuickFill
               members={caseData.familyComposition || []}
               onSelect={(member) => {
-                setValue('conformeName', member.name || '', { shouldDirty: true, shouldTouch: true })
+                setValue('conformeName', (member.name || '').toUpperCase(), { shouldDirty: true, shouldTouch: true })
                 if (member.relationship) setValue('conformeRelationship', member.relationship, { shouldDirty: true, shouldTouch: true })
               }}
             />
