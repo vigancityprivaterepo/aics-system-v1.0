@@ -12,8 +12,9 @@ import DraftRecoveryBanner from '../../../components/ui/DraftRecoveryBanner'
 import { useAuthStore } from '../../../store/authStore'
 import { OCCUPATION_OPTIONS, RELATIONSHIP_OPTIONS } from '../../../constants/caseFormOptions'
 import { scrollToFirstError } from '../../../lib/formNavigation'
-import { formatCurrency } from '../../../lib/utils'
+import { formatCurrency, calculateAge } from '../../../lib/utils'
 import { useAutosaveDraft, readLocalDraft, clearLocalDraft } from '../../../lib/localDraft'
+import { registerUppercase } from '../../../lib/formHelpers'
 
 const defaultMember = { name: '', age: '', relationship: '', sex: '', occupation: '', monthlyIncome: '' }
 const CIVIL_STATUS_OPTIONS = ['Single', 'Married', 'Widowed', 'Separated', 'Annulled']
@@ -75,6 +76,17 @@ function EncodingSectionHeader({ number, title, description }) {
 export default function StepCaseStudy({ caseData, onUpdate, readOnly = false, onNext }) {
   const isMedicine = caseData.assistanceType === 'medicine'
   const isBurial = caseData.assistanceType === 'burial'
+  // Beneficiary defaults to the client themself unless the case maker names someone
+  // else; comparing against this on submit lets a still-defaulted name collapse back
+  // to null so reports use the client's own "Last, First" formatting.
+  const clientFullName = [caseData.client?.firstName, caseData.client?.middleName, caseData.client?.lastName]
+    .filter(Boolean)
+    .join(' ')
+    .trim()
+  const clientAge = caseData.client?.dateOfBirth ? calculateAge(caseData.client.dateOfBirth) : null
+  const clientSex = caseData.client?.sex || ''
+  const clientCivilStatus = caseData.client?.civilStatus || ''
+  const clientOccupation = caseData.client?.occupation || ''
   const currentUser = useAuthStore((state) => state.user)
   const [family, setFamily] = useState(caseData.familyComposition || [])
   const [medicines, setMedicines] = useState(normalizeMedicineRows(caseData.medicines || []))
@@ -97,11 +109,11 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false, on
       deceasedAge: caseData.burialDetails?.deceasedAge ?? '',
       deceasedOccupation: caseData.burialDetails?.deceasedOccupation || '',
       deceasedCivilStatus: caseData.burialDetails?.deceasedCivilStatus || '',
-      beneficiaryName: caseData.beneficiaryName || '',
-      beneficiaryAge: caseData.beneficiaryAge || '',
-      beneficiarySex: caseData.beneficiarySex || '',
-      beneficiaryCivilStatus: caseData.beneficiaryCivilStatus || '',
-      beneficiaryOccupation: caseData.beneficiaryOccupation || '',
+      beneficiaryName: caseData.beneficiaryName || clientFullName || '',
+      beneficiaryAge: caseData.beneficiaryAge || (clientAge != null ? String(clientAge) : ''),
+      beneficiarySex: caseData.beneficiarySex || clientSex,
+      beneficiaryCivilStatus: caseData.beneficiaryCivilStatus || clientCivilStatus,
+      beneficiaryOccupation: caseData.beneficiaryOccupation || clientOccupation,
       beneficiaryRequestorName: caseData.beneficiaryRequestorName || '',
       beneficiaryRequestorRelationship: caseData.beneficiaryRequestorRelationship || '',
       choCertGivenDate: caseData.choCertGivenDate || '',
@@ -164,6 +176,9 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false, on
   const onSave = async (data) => {
     setSaving(true)
 
+    const trimmedBeneficiaryName = String(data.beneficiaryName || '').trim()
+    const beneficiaryIsStillClient = trimmedBeneficiaryName.toUpperCase() === clientFullName.toUpperCase()
+
     const casePayload = {
       dateOfAssessment: data.dateOfAssessment || null,
       socialWorkerName: data.socialWorkerName,
@@ -172,11 +187,14 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false, on
       assessment: normalizeNarrativeText(data.findings),
       familyComposition: family,
       amount: isMedicine ? undefined : data.amount,
-      beneficiaryName: data.beneficiaryName || null,
-      beneficiaryAge: data.beneficiaryAge || null,
-      beneficiarySex: data.beneficiarySex || null,
-      beneficiaryCivilStatus: data.beneficiaryCivilStatus || null,
-      beneficiaryOccupation: data.beneficiaryOccupation || null,
+      // When the beneficiary is still the client (name untouched from its default),
+      // clear every override field so the report derives them live from the
+      // client's own record (age from date of birth) instead of a stale typed value.
+      beneficiaryName: beneficiaryIsStillClient ? null : (data.beneficiaryName || null),
+      beneficiaryAge: beneficiaryIsStillClient ? null : (data.beneficiaryAge || null),
+      beneficiarySex: beneficiaryIsStillClient ? null : (data.beneficiarySex || null),
+      beneficiaryCivilStatus: beneficiaryIsStillClient ? null : (data.beneficiaryCivilStatus || null),
+      beneficiaryOccupation: beneficiaryIsStillClient ? null : (data.beneficiaryOccupation || null),
       beneficiaryRequestorName: data.beneficiaryRequestorName || null,
       beneficiaryRequestorRelationship: data.beneficiaryRequestorRelationship || null,
     }
@@ -315,7 +333,7 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false, on
                   {family.length === 0 && <tr><td colSpan={6} className="px-3 py-4 text-center text-slate-400">No family members added</td></tr>}
                   {family.map((member, index) => (
                     <tr key={index} className="border-t border-slate-100">
-                      <td className="px-2 py-1.5"><input type="text" value={member.name || ''} onChange={(e) => updateFamilyMember(index, 'name', e.target.value)} className="portal-input py-1 text-xs" /></td>
+                      <td className="px-2 py-1.5"><input type="text" value={member.name || ''} onChange={(e) => updateFamilyMember(index, 'name', e.target.value.toUpperCase())} className="portal-input py-1 text-xs" /></td>
                       <td className="px-2 py-1.5"><input type="number" value={member.age || ''} onChange={(e) => updateFamilyMember(index, 'age', e.target.value)} className="portal-input py-1 text-xs" /></td>
                       <td className="px-2 py-1.5"><select value={member.relationship || ''} onChange={(e) => updateFamilyMember(index, 'relationship', e.target.value)} className="portal-input py-1 text-xs"><option value="">Select</option>{RELATIONSHIP_OPTIONS.map((relationship) => <option key={relationship} value={relationship}>{relationship}</option>)}<option value="Other">Other</option></select></td>
                       <td className="px-2 py-1.5"><select value={member.sex || ''} onChange={(e) => updateFamilyMember(index, 'sex', e.target.value)} className="portal-input py-1 text-xs"><option value="">Select sex</option>{SEX_OPTIONS.map((sex) => <option key={sex} value={sex}>{sex}</option>)}</select></td>
@@ -336,7 +354,7 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false, on
                 <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
                   <EncodingSectionHeader number="3A" title="Deceased Information" description="Complete this only for burial assistance." />
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <div className="sm:col-span-2"><label className="portal-label">Name of the Deceased</label><input type="text" {...register('deceasedName')} className="portal-input" placeholder="Full name of the deceased" /></div>
+                    <div className="sm:col-span-2"><label className="portal-label">Name of the Deceased</label><input type="text" {...registerUppercase(register, 'deceasedName')} className="portal-input" placeholder="Full name of the deceased" /></div>
                     <div className="sm:col-span-2"><label className="portal-label">Address</label><input type="text" {...register('deceasedAddress')} className="portal-input" placeholder="Home address of the deceased" /></div>
                     <div><label className="portal-label">Age</label><input type="number" min="0" {...register('deceasedAge')} className="portal-input" placeholder="0" /></div>
                     <div><label className="portal-label">Civil Status</label><select {...register('deceasedCivilStatus')} className="portal-input"><option value="">Select status</option>{CIVIL_STATUS_OPTIONS.map((status) => <option key={status} value={status}>{status}</option>)}</select></div>
@@ -346,20 +364,33 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false, on
               )}
               {!isBurial && (
                 <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-                  <EncodingSectionHeader number="3A" title="Beneficiary" description="Only fill this in if the assistance is for someone other than the client (e.g. a household member) - otherwise leave blank." />
+                  <EncodingSectionHeader number="3A" title="Beneficiary" description="Defaults to the client. Change the name only if the assistance is actually for someone else (e.g. a household member)." />
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <div className="sm:col-span-2"><label className="portal-label">Beneficiary Name</label><input type="text" {...register('beneficiaryName')} className="portal-input" placeholder="Leave blank if the beneficiary is the client" /></div>
+                    <div className="sm:col-span-2">
+                      <label className="portal-label">Beneficiary Name</label>
+                      <input type="text" {...registerUppercase(register, 'beneficiaryName')} className="portal-input" placeholder="Full name of the beneficiary" />
+                      <HouseholdMemberQuickFill
+                        members={family}
+                        onSelect={(member) => {
+                          setValue('beneficiaryName', (member.name || '').toUpperCase(), { shouldDirty: true, shouldTouch: true })
+                          const computedAge = member.dateOfBirth ? calculateAge(member.dateOfBirth) : null
+                          setValue('beneficiaryAge', computedAge ?? (member.age ?? ''), { shouldDirty: true, shouldTouch: true })
+                          if (member.sex) setValue('beneficiarySex', member.sex, { shouldDirty: true, shouldTouch: true })
+                          if (member.occupation) setValue('beneficiaryOccupation', member.occupation, { shouldDirty: true, shouldTouch: true })
+                        }}
+                      />
+                    </div>
                     <div><label className="portal-label">Age</label><input type="number" min="0" {...register('beneficiaryAge')} className="portal-input" placeholder="0" /></div>
                     <div><label className="portal-label">Sex</label><select {...register('beneficiarySex')} className="portal-input"><option value="">Select sex</option><option value="Male">Male</option><option value="Female">Female</option></select></div>
                     <div><label className="portal-label">Civil Status</label><select {...register('beneficiaryCivilStatus')} className="portal-input"><option value="">Select status</option>{CIVIL_STATUS_OPTIONS.map((status) => <option key={status} value={status}>{status}</option>)}</select></div>
                     <div><label className="portal-label">Occupation</label><SearchablePresetInput value={watch('beneficiaryOccupation') || ''} onChange={(value) => setValue('beneficiaryOccupation', value, { shouldDirty: true, shouldTouch: true })} options={OCCUPATION_OPTIONS} placeholder="Search occupation" /></div>
                     <div>
                       <label className="portal-label">Requesting Party</label>
-                      <input type="text" {...register('beneficiaryRequestorName')} className="portal-input" placeholder="Who is filing this on the beneficiary's behalf" />
+                      <input type="text" {...registerUppercase(register, 'beneficiaryRequestorName')} className="portal-input" placeholder="Who is filing this on the beneficiary's behalf" />
                       <HouseholdMemberQuickFill
                         members={family}
                         onSelect={(member) => {
-                          setValue('beneficiaryRequestorName', member.name || '', { shouldDirty: true, shouldTouch: true })
+                          setValue('beneficiaryRequestorName', (member.name || '').toUpperCase(), { shouldDirty: true, shouldTouch: true })
                           if (member.relationship) setValue('beneficiaryRequestorRelationship', member.relationship, { shouldDirty: true, shouldTouch: true })
                         }}
                       />

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import api from '../../lib/api'
-import { formatClientName } from '../../lib/utils'
+import { formatClientName, calculateAge } from '../../lib/utils'
 import ClientSearchBar from '../../components/ClientSearchBar'
 import { useAuthStore } from '../../store/authStore'
 import { allowedCaseTypesForUser } from '../../utils/accessRules'
@@ -63,9 +63,10 @@ export default function NewCase() {
         ...otherMembers,
       ]
       setSelectedClient(sourceClient)
+      const computedAge = match.dateOfBirth ? calculateAge(match.dateOfBirth) : null
       setBeneficiaryOverride({
         name: match.name,
-        age: match.age || '',
+        age: computedAge ?? match.age ?? '',
         sex: match.sex || '',
         occupation: match.occupation || '',
         relationshipOnRecord: match.relationship || '',
