@@ -1,5 +1,5 @@
 import type { CaseStatus } from '@prisma/client'
-import { REQUIREMENT_DEFINITIONS } from '../utils/requirements.js'
+import { REQUIREMENT_DEFINITIONS, normalizePlainAssistanceKinds } from '../utils/requirements.js'
 import type { ApprovalAssigneeByStage } from '../types/caseTypes.js'
 import { normalizeWorkflowStatus } from '../services/caseService.js'
 import { richTextHasVisibleText } from '../utils/richText.js'
@@ -110,6 +110,14 @@ export function assessCaseWorkflow(caseRow: any, assigneesByStage?: ApprovalAssi
   if (caseRow.assistanceType === 'eyeglass') {
     addBlocker(blockers, !textPresent(caseRow.eyeglassDetails?.doctorName), 'Optometrist or doctor name is missing')
     addBlocker(blockers, !textPresent(caseRow.eyeglassDetails?.clinicName), 'Clinic or optical shop is missing')
+  }
+  if (caseRow.assistanceType === 'plain') {
+    const auditFlags =
+      caseRow.auditFlags && typeof caseRow.auditFlags === 'object' && !Array.isArray(caseRow.auditFlags)
+        ? caseRow.auditFlags
+        : null
+    const plainAssistanceKinds = normalizePlainAssistanceKinds(auditFlags?.plain_assistance_kinds)
+    addBlocker(blockers, plainAssistanceKinds.length === 0, 'Requested assistance type has not been selected')
   }
   const readyForReview = blockers.length === 0
   const isRejected = status === 'rejected'

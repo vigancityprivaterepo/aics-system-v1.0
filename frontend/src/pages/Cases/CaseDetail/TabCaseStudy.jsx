@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useOutletContext } from 'react-router-dom'
 import StepCaseStudy from './StepCaseStudy'
 import StepRequirements from './StepRequirements'
@@ -8,6 +9,10 @@ const LOCKED_STATUSES = ['intake']
 export default function TabCaseStudy() {
   const { caseData, onUpdate, goToTab } = useOutletContext()
   const { status } = caseData
+  // Owned here (not inside StepRequirements) purely so it survives that component
+  // re-rendering; the actual selection UI and its auto-save live in StepRequirements,
+  // right next to the checklist it drives.
+  const [assistanceKinds, setAssistanceKinds] = useState(caseData.plainDetails?.assistanceKinds || [])
 
   if (LOCKED_STATUSES.includes(status)) {
     return (
@@ -24,7 +29,9 @@ export default function TabCaseStudy() {
       <StepRequirements
         caseData={caseData}
         onUpdate={onUpdate}
-        locked={['approved', 'released', 'rejected'].includes(status)}
+        locked={readOnly}
+        plainAssistanceKinds={assistanceKinds}
+        onPlainAssistanceKindsChange={setAssistanceKinds}
       />
       <StepCaseStudy caseData={caseData} onUpdate={onUpdate} readOnly={readOnly} onNext={() => goToTab('case-edit')} />
     </div>
