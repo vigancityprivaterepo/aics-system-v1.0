@@ -151,6 +151,13 @@ function fmt(value: unknown): string {
   return normalized.length > 0 ? normalized : '-'
 }
 
+// Collapses accidental repeats like "Barangay Barangay VII" (stored data) into
+// "Barangay VII" so reports never print the word twice.
+function dedupeBarangayWord(value: string | null | undefined): string | null | undefined {
+  if (!value) return value
+  return value.replace(/\bbarangay\b(?:\s+barangay\b)+/gi, (m) => m.match(/barangay/i)![0])
+}
+
 function normalizeForCompare(value: unknown): string {
   return richTextToPlainText(value)
     .toLowerCase()
@@ -322,7 +329,7 @@ function buildRenderData(caseData: any): Record<string, any> {
   const clientName = `${c.lastName}, ${[c.firstName, c.middleName].filter(Boolean).join(' ')}`
   const fullName   = [c.firstName, c.middleName, c.lastName].filter(Boolean).join(' ')
   const resolvedPatientName = fmt(textOrNull(hospital.patientName) ?? textOrNull(fullName))
-  const address    = [c.barangay, c.municipality, c.province].filter(Boolean).join(', ') || '-'
+  const address    = [dedupeBarangayWord(c.barangay), c.municipality, c.province].filter(Boolean).join(', ') || '-'
   // When a case is created for a household member found in the client's family
   // composition (rather than the client themself), these overrides carry that
   // person's identity so the report doesn't print the client's own details instead.
@@ -333,7 +340,7 @@ function buildRenderData(caseData: any): Record<string, any> {
   const beneficiaryOverrideOccupation = textOrNull((caseData as any).beneficiaryOccupation)
   const beneficiaryOverrideRequestorName = textOrNull((caseData as any).beneficiaryRequestorName)
   const beneficiaryOverrideRequestorRelationship = textOrNull((caseData as any).beneficiaryRequestorRelationship)
-  const resolvedDeceasedAddress = fmt(textOrNull((burial as any).deceasedAddress) ?? textOrNull(address))
+  const resolvedDeceasedAddress = fmt(dedupeBarangayWord(textOrNull((burial as any).deceasedAddress)) ?? textOrNull(address))
   const resolvedAddress = caseData.assistanceType === 'burial' ? resolvedDeceasedAddress : address
   const resolvedDeceasedName = fmt(textOrNull((burial as any).deceasedName) ?? textOrNull(fullName))
   const resolvedDeceasedAge = fmt(textOrNull((burial as any).deceasedAge) ?? calcAge(c.dateOfBirth))

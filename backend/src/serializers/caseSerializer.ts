@@ -28,6 +28,13 @@ function normalizeWorkflowStatus(status: string): string {
   return status === 'requirements' ? 'encoding' : status
 }
 
+// Collapses accidental repeats like "Barangay Barangay VII" (stored data) into
+// "Barangay VII" so reports never print the word twice.
+function dedupeBarangayWord(value: string | null | undefined): string | null | undefined {
+  if (!value) return value
+  return value.replace(/\bbarangay\b(?:\s+barangay\b)+/gi, (m) => m.match(/barangay/i)![0])
+}
+
 function normalizePlainAssistanceKinds(value: unknown): string[] {
   const allowed = new Set(['medical', 'hospital', 'burial'])
   if (!Array.isArray(value)) return []
@@ -126,7 +133,7 @@ export function serializeCase(caseRow: any, assigneesByStage?: ApprovalAssigneeB
     .filter(Boolean)
     .join(' ')
   const clientAddress = [
-    caseRow.client.barangay,
+    dedupeBarangayWord(caseRow.client.barangay),
     caseRow.client.municipality,
     caseRow.client.province,
   ]
@@ -142,7 +149,7 @@ export function serializeCase(caseRow: any, assigneesByStage?: ApprovalAssigneeB
 
   const beneficiaryAddress =
     caseRow.assistanceType === 'burial'
-      ? String(caseRow.burialDetails?.deceasedAddress ?? '').trim() || clientAddress
+      ? dedupeBarangayWord(String(caseRow.burialDetails?.deceasedAddress ?? '').trim()) || clientAddress
       : clientAddress
 
   const proxyName =
