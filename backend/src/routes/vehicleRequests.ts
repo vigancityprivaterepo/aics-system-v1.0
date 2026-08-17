@@ -66,6 +66,13 @@ router.get('/options', asyncHandler(async (req, res) => {
   res.json({ offices: unique('office'), addresses: unique('address'), purposes: unique('purpose'), destinations: unique('destination') })
 }))
 
+router.get('/pending-count', asyncHandler(async (req, res) => {
+  const count = await prisma.vehicleRequest.count({
+    where: { status: 'pending_admin', ...(isCho(req) ? { createdById: req.user?.id } : {}) },
+  })
+  res.json({ count })
+}))
+
 router.get('/', asyncHandler(async (req, res) => {
   const search = typeof req.query.search === 'string' ? req.query.search.trim() : ''
   const status = typeof req.query.status === 'string' && STATUS.includes(req.query.status as any) ? req.query.status : undefined

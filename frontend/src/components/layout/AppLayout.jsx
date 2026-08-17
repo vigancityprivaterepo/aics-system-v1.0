@@ -364,7 +364,7 @@ function DatabaseGroup({ onNavigate, isCHO = false }) {
 }
 
 // ── Sidebar content ───────────────────────────────────────────────────────────
-function SidebarNav({ closeSidebar, user, isAdmin, isCityHealthOffice, pendingByType, portalSubmittedCount }) {
+function SidebarNav({ closeSidebar, user, isAdmin, isCityHealthOffice, pendingByType, portalSubmittedCount, vehicleRequestsPendingCount }) {
   const visibleCaseTypes = allowedCaseTypesForUser(user, CASE_CHILDREN.map((child) => child.type))
   const allowedCaseTypes = canAccessAllCases(user) ? null : visibleCaseTypes
   const canAccessDashboard = canAccessModule(user, 'dashboard')
@@ -417,7 +417,15 @@ function SidebarNav({ closeSidebar, user, isAdmin, isCityHealthOffice, pendingBy
           />
         ) : null}
         {canAccessDocumentVerifier ? <NavItem to="/documents/verify" Icon={QrCodeIcon} label="QR Verifier" onClick={closeSidebar} /> : null}
-        {canAccessVehicleRequests ? <NavItem to="/vehicle-requests" Icon={Ambulance} label="Vehicle Requests" onClick={closeSidebar} /> : null}
+        {canAccessVehicleRequests ? (
+          <NavItemWithBadge
+            to="/vehicle-requests"
+            Icon={Ambulance}
+            label="Vehicle Requests"
+            onClick={closeSidebar}
+            badge={vehicleRequestsPendingCount}
+          />
+        ) : null}
         {canAccessCasesModule ? <CasesGroup onNavigate={closeSidebar} pendingByType={pendingByType} allowedTypes={allowedCaseTypes} /> : null}
       </div>
 
@@ -447,9 +455,11 @@ export default function AppLayout() {
   const [pendingRecentCases, setPendingRecentCases] = useState([])
   const [pendingStatuses, setPendingStatuses] = useState([])
   const [portalSubmittedCount, setPortalSubmittedCount] = useState(0)
+  const [vehicleRequestsPendingCount, setVehicleRequestsPendingCount] = useState(0)
   const isCityHealthOffice = user?.role === 'city_health_office'
   const canAccessCasesModule = canAccessModule(user, 'cases')
   const canAccessPortalApplications = canAccessModule(user, 'portal_applications')
+  const canAccessVehicleRequests = canAccessModule(user, 'vehicle_requests')
 
   useEffect(() => {
     if (!canAccessCasesModule || isCityHealthOffice || !user?.approvalLevel?.length) {
@@ -488,6 +498,18 @@ export default function AppLayout() {
       .then((res) => setPortalSubmittedCount(res.data.total || 0))
       .catch(() => {})
   }, [canAccessPortalApplications, isCityHealthOffice, location.pathname])
+
+  useEffect(() => {
+    // Only administrative employees approve incoming ambulance requests, so the
+    // badge is only meaningful (and only fetched) for that non-CHO branch.
+    if (!canAccessVehicleRequests || isCityHealthOffice) {
+      setVehicleRequestsPendingCount(0)
+      return
+    }
+    api.get('/vehicle-requests/pending-count')
+      .then((res) => setVehicleRequestsPendingCount(res.data.count || 0))
+      .catch(() => {})
+  }, [canAccessVehicleRequests, isCityHealthOffice, location.pathname])
 
   const canViewNotifications = canAccessCasesModule && !isCityHealthOffice && !!user?.approvalLevel?.length
   // A user can hold more than one approval role at once (reviewer + recommender, say);
@@ -560,6 +582,7 @@ export default function AppLayout() {
           isCityHealthOffice={isCityHealthOffice}
           pendingByType={pendingByType}
           portalSubmittedCount={portalSubmittedCount}
+          vehicleRequestsPendingCount={vehicleRequestsPendingCount}
         />
 
         {/* User + Logout */}
