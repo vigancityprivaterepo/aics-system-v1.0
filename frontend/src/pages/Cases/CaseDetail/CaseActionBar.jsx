@@ -7,6 +7,11 @@ const APPROVAL_BUTTON_LABEL = {
   recommending_approval: 'Recommend Approval',
   for_approval: 'Final Approve',
 }
+const STAGE_DESCRIPTION = {
+  for_review: 'the Reviewer',
+  recommending_approval: 'the Recommending Approver',
+  for_approval: 'the Final Approver',
+}
 
 export default function CaseActionBar({
   caseData,
@@ -79,11 +84,24 @@ export default function CaseActionBar({
 
       {canManageWorkflow && status === 'encoding' && (
         <>
-          <p className="text-sm text-slate-600">
-            {caseData.readyForReview
-              ? 'Case is ready for review. Submit it when you are done checking the encoded details.'
-              : `${blockerCount} blocker${blockerCount === 1 ? '' : 's'} must be resolved before review, unless you submit with an override reason.`}
-          </p>
+          <div className="text-sm">
+            <p className="text-slate-600">
+              {caseData.readyForReview
+                ? 'Case is ready for review. Submit it when you are done checking the encoded details.'
+                : `${blockerCount} blocker${blockerCount === 1 ? '' : 's'} must be resolved before review, unless you submit with an override reason.`}
+            </p>
+            {caseData.returnedToEncodingNote && (
+              <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
+                <p className="font-semibold text-amber-800">
+                  Returned to encoding
+                  {caseData.returnedToEncodingByName ? ` — ${caseData.returnedToEncodingByName}` : ''}
+                  {STAGE_DESCRIPTION[caseData.returnedToEncodingFromStage] ? ` (${STAGE_DESCRIPTION[caseData.returnedToEncodingFromStage]})` : ''}
+                  {caseData.returnedToEncodingAt ? ` on ${formatDate(caseData.returnedToEncodingAt)}` : ''}
+                </p>
+                <p className="mt-1 whitespace-pre-wrap text-amber-700">{caseData.returnedToEncodingNote}</p>
+              </div>
+            )}
+          </div>
           <div className="flex gap-2">
             <button
               onClick={() => onTransition('intake')}

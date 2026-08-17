@@ -179,6 +179,18 @@ export function serializeCase(caseRow: any, assigneesByStage?: ApprovalAssigneeB
     ? latestStatusLog.changedBy?.name ?? null
     : null
 
+  // Likewise, when a case is currently back in encoding because a reviewer/recommender/
+  // approver kicked it back (rather than it just starting out at encoding), the case
+  // maker needs to see why — surface the reason recorded on that transition.
+  const wasReturnedToEncoding =
+    caseRow.status === 'encoding' &&
+    latestStatusLog?.toStatus === 'encoding' &&
+    ['for_review', 'recommending_approval', 'for_approval'].includes(latestStatusLog?.fromStatus ?? '')
+  const returnedToEncodingNote = wasReturnedToEncoding ? latestStatusLog?.notes ?? null : null
+  const returnedToEncodingByName = wasReturnedToEncoding ? latestStatusLog?.changedBy?.name ?? null : null
+  const returnedToEncodingAt = wasReturnedToEncoding ? latestStatusLog?.changedAt?.toISOString() ?? null : null
+  const returnedToEncodingFromStage = wasReturnedToEncoding ? latestStatusLog?.fromStatus ?? null : null
+
   return {
     id: caseRow.id,
     caseNumber: caseRow.caseNumber ?? null,
@@ -196,6 +208,10 @@ export function serializeCase(caseRow: any, assigneesByStage?: ApprovalAssigneeB
     remarks: caseRow.remarks,
     releasedAt,
     releasedByName,
+    returnedToEncodingNote,
+    returnedToEncodingByName,
+    returnedToEncodingAt,
+    returnedToEncodingFromStage,
     beneficiaryName,
     beneficiaryAddress,
     beneficiaryAge: caseRow.beneficiaryAge ?? null,
