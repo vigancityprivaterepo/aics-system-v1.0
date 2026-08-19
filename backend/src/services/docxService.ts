@@ -906,13 +906,13 @@ function renderDocWithDelimiters(
     getImage: (tagValue: unknown) => readSignatureImage(tagValue),
     getSize: (_img: unknown, _tagValue: unknown, tagName?: string) => {
       if (tagName === 'documentQrCode') return [80, 80]
-      // Deliberately smaller than a "real" signature scan would be: at the original
-      // 160x58 size the picture was taller than 3 lines of this text, which is what made
-      // precise vertical placement over the name so fragile (see the centering/lift logic
-      // below) and prone to spilling into neighboring lines in some renderers. Shrinking it
-      // keeps it fully intact and legibly attached to its name with much less positioning
-      // precision required.
-      return [130, 45]
+      // Standard e-signature stamp size: 192x66px = 144 x 49.5pt = 2in x 0.69in, the same
+      // footprint e-sign platforms use for a signature field and what signatories were
+      // manually resizing the picture to in Word when it rendered smaller. The vertical
+      // lift constants below are calibrated to this height so the ink stays centered on
+      // the printed name instead of spilling into the title line under it — change the
+      // two together.
+      return [192, 66]
     },
   })
 
@@ -1431,22 +1431,24 @@ function ensureParagraphSpacingBefore(doc: Document, paragraph: Element, beforeT
 }
 
 const EMU_PER_POINT = 12700
-// The runtime signature picture is always sized [130, 45] px by the image module's
-// getSize() callback below (see `imageModule`), i.e. 1238250 x 428625 EMU = 97.5 x 33.75pt.
-const SIGNATURE_IMAGE_WIDTH_EMU = 1238250
-const SIGNATURE_IMAGE_HEIGHT_EMU = 428625
+// The runtime signature picture is always sized [192, 66] px by the image module's
+// getSize() callback (see `imageModule`), i.e. 1828800 x 628650 EMU = 144 x 49.5pt —
+// the standard ~2in-wide e-signature stamp. Must stay in lockstep with getSize().
+const SIGNATURE_IMAGE_WIDTH_EMU = 1828800
+const SIGNATURE_IMAGE_HEIGHT_EMU = 628650
 const SIGNATURE_IMAGE_WIDTH_POINTS = SIGNATURE_IMAGE_WIDTH_EMU / EMU_PER_POINT
 const SIGNATURE_IMAGE_HEIGHT_POINTS = SIGNATURE_IMAGE_HEIGHT_EMU / EMU_PER_POINT
-// Each anchor point is the TOP of the name's own line. At the picture's original 43.5pt
-// height (roughly 3 lines of this text) that mismatch needed a real lift to keep the ink
-// off the line(s) below — scaled down proportionally now that the picture itself (33.75pt)
-// is shrunk to close to one line, since most of the earlier overflow problem no longer
-// applies. The two mechanisms still need different amounts in real Word: the preparer's
-// DrawingML anchor (embedded in the same paragraph as its name) vs. the other three's VML
-// shapes (hosted in their own dedicated paragraph immediately before the name), confirmed
-// against real Word screenshots, not just LibreOffice.
-const SIGNATURE_VERTICAL_LIFT_DRAWINGML_POINTS = 4
-const SIGNATURE_VERTICAL_LIFT_VML_POINTS = 1
+// Each anchor point is the TOP of the name's own line. These lifts are calibrated to the
+// 49.5pt stamp height above, targeting the placement signatories were producing by hand
+// before the stamp was enlarged: frame top ~26pt above the name's top, frame bottom
+// ~12pt below the name's bottom, so the ink sits on the name and only the frame's
+// padding (not ink) reaches the title line. Measured against real Word LTSC and
+// LibreOffice PDF renders of the same docx — the two mechanisms need very different
+// amounts because the preparer's DrawingML anchor is embedded in the same paragraph as
+// its name while the other three's VML shapes float over a dedicated spacer paragraph
+// above theirs.
+const SIGNATURE_VERTICAL_LIFT_DRAWINGML_POINTS = 26
+const SIGNATURE_VERTICAL_LIFT_VML_POINTS = 13
 // estimateTextWidthPoints still under-measures these three names' rendered width versus how
 // LibreOffice actually draws them (confirmed against real rendered PDFs — worst for shorter
 // names, which point to an underestimate rather than a wrong base offset). This flat bonus,
@@ -2137,11 +2139,14 @@ function hasAncestorTag(node: Element, tagName: string): boolean {
 // would shift the DOCX left of correct to "fix" a gap that's LibreOffice-only), this nudges
 // margin-left back by that fixed amount solely on the buffer fed to LibreOffice.
 const PDF_SIGNATURE_HORIZONTAL_CALIBRATION_POINTS = 19.5
-// Same story vertically: once the horizontal drift was fixed, the remaining ask was to nudge
-// the signature up slightly further over the name (it was sitting a bit low, closer to the
-// title line than the name). SIGNATURE_VERTICAL_LIFT_VML_POINTS (1pt) is the shared Word/
-// LibreOffice baseline lift; this adds an extra LibreOffice-only lift on top of it.
-const PDF_SIGNATURE_VERTICAL_CALIBRATION_POINTS = 8
+// Same story vertically: LibreOffice renders these VML anchors lower than Word does, so
+// the PDF path gets an extra LibreOffice-only lift on top of the shared
+// SIGNATURE_VERTICAL_LIFT_VML_POINTS baseline. Calibrated against the DEPLOYED renderer
+// — the backend Docker image's LibreOffice 7.4 (Debian bookworm) — which places these
+// shapes ~12pt lower than current desktop LibreOffice builds (26.x): 18pt lands the
+// frame at the same ~26pt-above-name-top target as Word. A dev machine's newer local
+// soffice will therefore draw them ~12pt high; trust the container's output, not that.
+const PDF_SIGNATURE_VERTICAL_CALIBRATION_POINTS = 18
 
 export function adjustSignaturePositionForPdfConversion(buffer: Buffer): Buffer {
   const zip = new PizZip(buffer)
