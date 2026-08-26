@@ -158,9 +158,9 @@ function SummaryTab({ data, onTypeDrilldown, onStatusDrilldown }) {
           { label: 'Avg per Case', value: data.totalCases ? peso(data.totalAmount / data.totalCases) : '-', sub: 'average assistance' },
         ].map(({ label, value, sub }) => (
           <div key={label} className="card py-5 text-center">
-            <p className="text-2xl font-bold text-brand-dark">{value}</p>
-            <p className="mt-1 text-xs font-semibold text-slate-500">{label}</p>
-            <p className="mt-1 text-[11px] text-slate-400">{sub}</p>
+            <p className="text-[11.5px] font-semibold uppercase tracking-[0.04em] text-slate-400">{label}</p>
+            <p className="mt-2.5 font-display text-[25px] font-bold text-[#0f2d52]">{value}</p>
+            <p className="mt-1 text-[11.5px] text-slate-400">{sub}</p>
           </div>
         ))}
       </div>
@@ -820,15 +820,15 @@ export default function ReportsPage() {
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-1 border-b border-slate-200 pb-1">
+      <div className="flex flex-wrap gap-2">
         {TABS.map((tabItem) => (
           <button
             key={tabItem.key}
             onClick={() => setTab(tabItem.key)}
-            className={`-mb-px flex items-center gap-2 rounded-t-lg border-b-2 px-4 py-3 text-sm font-medium transition-colors ${
+            className={`inline-flex h-[38px] items-center gap-[7px] rounded-[10px] border px-3.5 text-[12.5px] font-semibold transition-colors ${
               tab === tabItem.key
-                ? 'border-brand-green text-brand-green'
-                : 'border-transparent text-slate-500 hover:text-slate-700'
+                ? 'border-[#0f2d52] bg-[#0f2d52] text-white'
+                : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
             }`}
           >
             <tabItem.Icon className="h-4 w-4" />

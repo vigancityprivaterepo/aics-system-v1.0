@@ -11,7 +11,7 @@ import { buildConversionBasename, convertDocxBufferToHtml } from '../services/of
 const router = Router()
 const VEHICLE_TYPES = ['city_coaster', 'city_bus', 'manlift', 'truck', 'van', 'ambulance', 'other'] as const
 const AVAILABILITY = ['pending', 'available', 'unavailable'] as const
-const STATUS = ['draft', 'pending_admin', 'approved', 'processed', 'pending_cho_review', 'cho_reviewed'] as const
+const STATUS = ['draft', 'pending_admin', 'approved', 'disapproved', 'processed', 'pending_cho_review', 'cho_reviewed'] as const
 
 const requestSchema = z.object({
   vehicleType: z.enum(VEHICLE_TYPES), otherVehicle: z.string().trim().max(150).nullable().optional(),
@@ -129,6 +129,34 @@ router.patch('/:id/approve', asyncHandler(async (req, res) => {
   res.json(serialize(updated))
 }))
 
+router.patch('/:id/disapprove', asyncHandler(async (req, res) => {
+  if (!req.user || isCho(req)) throw new HttpError(403, 'Only administrative employees can disapprove CHO vehicle requests.')
+  const { reason } = z.object({ reason: z.string().trim().max(2000).optional() }).parse(req.body ?? {})
+  const current = await prisma.vehicleRequest.findUnique({ where: { id: String(req.params.id) } })
+  if (!current) throw new HttpError(404, 'Vehicle request not found.')
+  if (current.status === 'approved') throw new HttpError(400, 'Vehicle request is already approved.')
+  if (current.status === 'disapproved') throw new HttpError(400, 'Vehicle request is already disapproved.')
+  const updated = await prisma.vehicleRequest.update({
+    where: { id: current.id },
+    data: {
+      status: 'disapproved',
+      choReviewedById: req.user.id,
+      choReviewedByName: req.user.name,
+      choReviewedAt: new Date(),
+      ...(reason ? { remarks: [current.remarks, `Disapproved by Administration: ${reason}`].filter(Boolean).join('\n') } : {}),
+    },
+    include: { createdBy: { select: { id: true, name: true } }, choReviewedBy: { select: { id: true, name: true } } },
+  })
+  await logAdminAudit(prisma, {
+    actorId: req.user.id,
+    action: 'vehicle_request.disapprove',
+    targetType: 'vehicle_request',
+    targetId: updated.id,
+    summary: `Administrative employee disapproved ${updated.requestNumber}${reason ? ` — ${reason}` : ''}`,
+  })
+  res.json(serialize(updated))
+}))
+
 router.get('/:id', asyncHandler(async (req, res) => {
   const row = await prisma.vehicleRequest.findUnique({ where: { id: String(req.params.id) }, include: { createdBy: { select: { id: true, name: true } }, choReviewedBy: { select: { id: true, name: true } } } })
   if (!row) throw new HttpError(404, 'Vehicle request not found.')
@@ -141,7 +169,11 @@ router.put('/:id', asyncHandler(async (req, res) => {
   const body = requestSchema.parse(req.body)
   const current = await prisma.vehicleRequest.findUnique({ where: { id: String(req.params.id) } })
   if (!current) throw new HttpError(404, 'Vehicle request not found.')
-  const data = current.status === 'approved' ? { remarks: body.remarks } : body
+  const data = current.status === 'approved'
+    ? { remarks: body.remarks }
+    : current.status === 'disapproved'
+      ? { ...body, status: 'pending_admin', choReviewedById: null, choReviewedByName: null, choReviewedAt: null }
+      : body
   const updated = await prisma.vehicleRequest.update({ where: { id: current.id }, data })
   await logAdminAudit(prisma, { actorId: req.user?.id, action: 'vehicle_request.update', targetType: 'vehicle_request', targetId: updated.id, summary: `Updated vehicle request ${updated.requestNumber}` })
   res.json(serialize(updated))

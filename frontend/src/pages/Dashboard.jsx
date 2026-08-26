@@ -6,6 +6,7 @@ import {
 } from 'recharts'
 import api from '../lib/api'
 import { formatDate } from '../lib/utils'
+import { useAuthStore } from '../store/authStore'
 import StatusBadge from '../components/ui/StatusBadge'
 import {
   FolderIcon,
@@ -16,7 +17,6 @@ import {
   HeadstonIcon,
   GlassesIcon,
   FileTextIcon,
-  PlusIcon,
   ArrowRightIcon,
   ClockIcon,
 } from '../components/ui/Icons'
@@ -188,6 +188,7 @@ const QUEUE_META = {
 }
 
 export default function Dashboard() {
+  const user = useAuthStore((state) => state.user)
   const [stats, setStats] = useState(null)
   const [charts, setCharts] = useState(null)
   const [recentCases, setRecentCases] = useState([])
@@ -239,37 +240,34 @@ export default function Dashboard() {
     count: Number(stats?.workflowQueues?.[key] ?? 0),
   }))
 
-  const statCards = [
-    { label: "Today's Cases", value: stats?.todayCases ?? '—', sub: 'Walk-ins today', Icon: FolderIcon, variant: 'stat-card-green' },
-    { label: 'This Week', value: stats?.weekCases ?? '—', sub: 'Cases opened this week', Icon: ClockIcon, variant: 'stat-card-blue' },
-    { label: 'This Month', value: stats?.monthCases ?? '—', sub: 'Total cases this month', Icon: FolderIcon, variant: 'stat-card-teal' },
-    { label: 'Total Clients', value: stats?.totalClients ?? '—', sub: 'Registered in database', Icon: UsersIcon, variant: 'stat-card-violet' },
+  // Hero stat tiles (V.1.2 design): 42px tinted circular icon, serif navy number.
+  const heroTiles = [
+    { label: "Today's Cases", value: stats?.todayCases ?? '—', Icon: FolderIcon, tint: 'bg-[#ecfdf5] text-[#059669]' },
+    { label: 'This Week', value: stats?.weekCases ?? '—', Icon: ClockIcon, tint: 'bg-[#eff6ff] text-[#1d4ed8]' },
+    { label: 'This Month', value: stats?.monthCases ?? '—', Icon: FolderIcon, tint: 'bg-[#f0fdfa] text-[#0d9488]' },
+    { label: 'Pending Review', value: pendingReviewCount, Icon: ClockIcon, tint: 'bg-[#fef2f2] text-[#dc2626]', alert: pendingReviewCount > 0 },
+    { label: 'Beneficiaries', value: stats?.totalClients ?? '—', Icon: UsersIcon, tint: 'bg-[#f5f3ff] text-[#7c3aed]' },
+    { label: 'Released', value: stats?.byStatus?.released ?? '—', Icon: FileTextIcon, tint: 'bg-[#fffbeb] text-[#b45309]' },
+  ]
+
+  const typeTiles = [
     ...PRIMARY_TYPE_CARDS.map((type) => {
       const meta = getTypeMeta(type)
-      const variantMap = {
-        medicine: 'stat-card-green',
-        medical: 'stat-card-blue',
-        hospital: 'stat-card-violet',
-        burial: 'stat-card-slate',
-        plain: 'stat-card-teal',
+      const tintMap = {
+        medicine: 'bg-[#ecfdf5] text-[#059669]',
+        medical: 'bg-[#eff6ff] text-[#1d4ed8]',
+        hospital: 'bg-[#f5f3ff] text-[#7c3aed]',
+        burial: 'bg-slate-100 text-slate-600',
+        plain: 'bg-[#f0fdfa] text-[#0d9488]',
       }
       return {
         label: `${meta.label} Cases`,
         value: typeCounts[type] ?? '—',
-        sub: 'Tracked this month',
         Icon: meta.Icon,
-        variant: variantMap[type] || 'stat-card-slate',
+        tint: tintMap[type] || 'bg-slate-100 text-slate-600',
       }
     }),
-    {
-      label: 'Pending Review',
-      value: pendingReviewCount,
-      sub: pendingReviewCount > 0 ? 'Needs attention now' : 'No pending cases',
-      Icon: ClockIcon,
-      variant: pendingReviewCount > 0 ? 'stat-card-red' : 'stat-card-slate',
-      alert: pendingReviewCount > 0,
-    },
-    { label: 'Pending Intake', value: stats?.pendingRequirements ?? '—', sub: 'Awaiting case study start', Icon: FolderIcon, variant: 'stat-card-amber' },
+    { label: 'Pending Intake', value: stats?.pendingRequirements ?? '—', Icon: FolderIcon, tint: 'bg-[#fffbeb] text-[#b45309]' },
   ]
 
   if (loading) {
@@ -280,36 +278,83 @@ export default function Dashboard() {
     )
   }
 
+  const hour = new Date().getHours()
+  const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening'
+  const firstName = String(user?.name || '').split(/\s+/)[0] || 'there'
+  const pendingIntakeCount = Number(stats?.pendingRequirements ?? 0)
+
   return (
     <div className="animate-fade-in">
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="portal-page-title">Dashboard</h1>
-          <p className="portal-page-subtitle">Overview of assistance cases and client activity</p>
-        </div>
-        <Link to="/cases/new" className="portal-button-green" id="btn-new-case">
-          <PlusIcon className="h-4 w-4" />
-          New Case
-        </Link>
+      <div className="mb-5 border-b border-slate-200 pb-4">
+        <p className="portal-kicker">Case Management</p>
+        <h1 className="portal-page-title">Case Overview</h1>
+        <p className="portal-page-subtitle">Overview of assistance cases and client activity</p>
       </div>
 
-      {/* Stat cards — colourful icon blocks */}
-      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-5">
-        {statCards.map((s) => (
-          <div
-            key={s.label}
-            className={`stat-card ${s.variant}`}
-          >
-            <div className="stat-card-icon">
-              <s.Icon className="h-5 w-5" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-1.5">
-                <p className="text-xs font-medium text-slate-500 leading-tight">{s.label}</p>
-                {s.alert ? <span className="inline-flex h-2 w-2 rounded-full bg-red-500 animate-ping shrink-0" /> : null}
+      {/* Hero + stat tiles (V.1.2 design) */}
+      <div className="mb-6 grid grid-cols-1 gap-5 lg:grid-cols-[minmax(280px,1fr)_2fr]">
+        {/* Greeting hero panel */}
+        <div className="relative flex min-h-[210px] min-w-0 flex-col justify-between overflow-hidden rounded-2xl bg-gradient-to-br from-[#064e3b] via-[#065f46] to-[#059669] p-[26px] shadow-[0_10px_28px_rgba(15,45,82,0.18)]">
+          <div className="absolute -right-10 -top-10 h-[180px] w-[180px] rounded-full bg-emerald-400/[0.18]" aria-hidden="true" />
+          <div className="absolute -bottom-[60px] right-[30px] h-[140px] w-[140px] rounded-full bg-white/[0.06]" aria-hidden="true" />
+          <div className="relative">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.14] px-2.5 py-[5px] text-[11px] font-semibold uppercase tracking-[0.04em] text-emerald-200">
+              Fiscal Year {new Date().getFullYear()}
+            </span>
+            <h2 className="mt-3.5 max-w-[24ch] font-display text-[22px] font-bold leading-snug text-white [text-wrap:pretty]">
+              {greeting}, {firstName}
+            </h2>
+            <p className="mt-2 max-w-[34ch] text-[13.5px] leading-relaxed text-white/[0.78] [text-wrap:pretty]">
+              {pendingReviewCount > 0
+                ? `${pendingReviewCount} ${pendingReviewCount === 1 ? 'case is' : 'cases are'} waiting on review or approval today`
+                : 'No cases are waiting on review or approval right now'}
+              {pendingIntakeCount > 0
+                ? `, and ${pendingIntakeCount} ${pendingIntakeCount === 1 ? 'intake still needs' : 'intakes still need'} requirements.`
+                : '.'}
+            </p>
+          </div>
+          <div className="relative mt-[18px]">
+            <Link
+              to="/my-queue"
+              className="inline-flex h-10 items-center gap-2 rounded-[10px] bg-[#10b981] px-[18px] text-[13px] font-bold text-white shadow-[0_4px_12px_rgba(16,185,129,0.35)] transition-colors hover:bg-[#34d399]"
+            >
+              Review pending queue
+              <ArrowRightIcon className="h-[15px] w-[15px]" />
+            </Link>
+          </div>
+        </div>
+
+        {/* Stat tiles */}
+        <div className="grid min-w-0 grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-4">
+          {heroTiles.map((s) => (
+            <div key={s.label} className="flex flex-col gap-2.5 rounded-[14px] border border-slate-300/80 bg-white p-4 shadow-[0_1px_3px_rgba(15,45,82,0.06)]">
+              <span className={`inline-flex h-[42px] w-[42px] items-center justify-center rounded-full ${s.tint}`}>
+                <s.Icon className="h-[19px] w-[19px]" />
+              </span>
+              <div>
+                <p className="flex items-center gap-1.5 font-display text-[25px] font-bold leading-tight text-[#0f2d52]">
+                  {typeof s.value === 'number' ? s.value.toLocaleString() : s.value}
+                  {s.alert ? <span className="inline-flex h-2 w-2 shrink-0 animate-ping rounded-full bg-red-500" /> : null}
+                </p>
+                <p className="mt-[3px] text-xs text-gray-500">{s.label}</p>
               </div>
-              <p className="mt-1 text-xl font-display font-bold text-slate-800">{s.value}</p>
-              <p className={`text-[10px] mt-0.5 ${s.alert ? 'text-red-500 font-medium' : 'text-slate-400'}`}>{s.sub}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Cases by assistance type */}
+      <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-6">
+        {typeTiles.map((s) => (
+          <div key={s.label} className="flex min-w-0 items-center gap-3 rounded-[14px] border border-slate-300/80 bg-white p-3.5 shadow-[0_1px_3px_rgba(15,45,82,0.06)]">
+            <span className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${s.tint}`}>
+              <s.Icon className="h-4 w-4" />
+            </span>
+            <div className="min-w-0">
+              <p className="font-display text-lg font-bold leading-tight text-[#0f2d52]">
+                {typeof s.value === 'number' ? s.value.toLocaleString() : s.value}
+              </p>
+              <p className="truncate text-[11px] text-gray-500">{s.label}</p>
             </div>
           </div>
         ))}

@@ -8,13 +8,14 @@ import PortalApplicationReviewPanel from '../../components/portal-applications/P
 import { reviewSteps, statusOptions } from '../../components/portal-applications/reviewerConfig'
 import DuplicateReviewModal from '../../components/clients/DuplicateReviewModal'
 
+// Tinted status chips from the V.1.2 design language.
 const APP_STATUS_CLASSES = {
-  submitted: 'bg-amber-100 text-amber-800',
-  under_review: 'bg-blue-100 text-blue-800',
+  submitted: 'bg-[#fef3c7] text-[#92400e]',
+  under_review: 'bg-[#dbeafe] text-[#1e40af]',
   resubmission_required: 'bg-orange-100 text-orange-800',
-  approved: 'bg-emerald-100 text-emerald-800',
+  approved: 'bg-[#d1fae5] text-[#065f46]',
   disapproved: 'bg-rose-100 text-rose-800',
-  released: 'bg-violet-100 text-violet-800',
+  released: 'bg-[#ede9fe] text-[#5b21b6]',
 }
 
 const TRACKER_STEPS = [
@@ -52,32 +53,22 @@ function getProgressIndex(application) {
   return -1
 }
 
+// Emerald progress bar with percent (V.1.2 design); rose when disapproved.
 function MiniStageBar({ application }) {
-  const approvals = application.linkedCase?.approvals ?? []
   const progressIndex = getProgressIndex(application)
   const isDisapprovedApp = application.status === 'disapproved'
+  const pct = Math.max(5, Math.round((Math.max(progressIndex, 0) / (TRACKER_STEPS.length - 1)) * 100))
 
   return (
-    <div className="flex items-center gap-1">
-      {TRACKER_STEPS.map((step, index) => {
-        const approval = step.approvalStage ? approvals.find(a => a.stage === step.approvalStage) : null
-        const isCompleted = index < progressIndex || approval?.action === 'approved'
-        const isActive = index === progressIndex && !isDisapprovedApp
-        const isDisapproved = index === progressIndex && isDisapprovedApp
-        const color = isCompleted ? 'bg-emerald-500'
-          : isActive ? 'bg-blue-500'
-          : isDisapproved ? 'bg-rose-500'
-          : 'bg-slate-200'
-        return (
-          <div key={step.key} className="group relative flex flex-col items-center">
-            <span className={`h-2 w-2 rounded-full ${color} ${isActive ? 'ring-2 ring-blue-300' : ''}`} />
-            <span className="pointer-events-none absolute bottom-full mb-1.5 hidden whitespace-nowrap rounded bg-slate-800 px-1.5 py-0.5 text-[10px] text-white group-hover:block">
-              {step.label}
-            </span>
-          </div>
-        )
-      })}
-    </div>
+    <span className="flex items-center gap-2" title={TRACKER_STEPS[progressIndex]?.label}>
+      <span className="h-1.5 min-w-[70px] flex-1 overflow-hidden rounded-full bg-slate-100">
+        <span
+          className={`block h-full rounded-full ${isDisapprovedApp ? 'bg-[#f43f5e]' : 'bg-[#10b981]'}`}
+          style={{ width: `${pct}%` }}
+        />
+      </span>
+      <span className="text-[11.5px] font-semibold text-slate-600">{pct}%</span>
+    </span>
   )
 }
 
@@ -410,9 +401,9 @@ export default function PortalApplicationsPage() {
     if (activeNavKey === 'monitoring') {
       const monitorable = applications.filter(app => app.status !== 'draft')
       return (
-        <div className="rounded-lg border border-slate-200 bg-white shadow-sm">
+        <div className="overflow-hidden rounded-[14px] border border-slate-300/80 bg-white shadow-[0_1px_3px_rgba(15,45,82,0.06)]">
           <div className="border-b border-slate-100 px-6 py-4">
-            <h3 className="font-display text-base font-semibold text-slate-800">Application Monitoring</h3>
+            <h3 className="font-display text-base font-bold text-[#0f2d52]">Application Monitoring</h3>
             <p className="text-xs text-slate-400 mt-0.5">Workflow tracker — current page</p>
           </div>
           {monitorable.length === 0 ? (
@@ -436,7 +427,7 @@ export default function PortalApplicationsPage() {
                     const activeStep = TRACKER_STEPS[progressIndex] ?? null
                     return (
                       <tr key={app.id} className="table-row">
-                        <td className="table-cell font-mono text-xs font-semibold text-brand-primary">
+                        <td className="table-cell font-mono text-xs font-semibold text-[#0f2d52]">
                           {app.referenceNumber || '—'}
                         </td>
                         <td className="table-cell text-sm font-medium">

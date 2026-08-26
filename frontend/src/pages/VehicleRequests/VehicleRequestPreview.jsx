@@ -112,7 +112,14 @@ export default function VehicleRequestPreview({ request, onClose }) {
             </button>
           </div>
         </div>
-        {request.status !== 'approved' && request.status !== 'processed' && (
+        {request.status === 'disapproved' ? (
+          <div className="flex items-center gap-2.5 border-b border-red-300 bg-red-50 px-4 py-2.5 text-xs text-red-900 font-medium">
+            <span className="text-base">⛔</span>
+            <span>
+              <strong>Disapproved Request Notice:</strong> This request was disapproved by Administration. The City Mayor's e-signature is omitted from this document.
+            </span>
+          </div>
+        ) : request.status !== 'approved' && request.status !== 'processed' && (
           <div className="flex items-center gap-2.5 border-b border-amber-300 bg-amber-50 px-4 py-2.5 text-xs text-amber-900 font-medium">
             <span className="text-base">⚠️</span>
             <span>

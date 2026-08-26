@@ -12,13 +12,28 @@ import {
 } from '../../components/ui/Icons'
 
 const CASE_TYPES = [
-  { type: 'medicine', Icon: PillIcon,     label: 'Medicine', desc: 'Prescription medicine provision',           iconColor: 'text-emerald-600', iconBg: 'bg-emerald-50', available: true  },
-  { type: 'medical',  Icon: CrossIcon,    label: 'Medical',  desc: 'Medical consultation support',              iconColor: 'text-blue-500',    iconBg: 'bg-blue-50',    available: true  },
-  { type: 'hospital', Icon: HospitalIcon, label: 'Hospital', desc: 'Hospital bill financial assistance',        iconColor: 'text-violet-500',  iconBg: 'bg-violet-50',  available: true  },
-  { type: 'burial',   Icon: HeadstonIcon, label: 'Burial',   desc: 'Funeral and burial cost coverage',          iconColor: 'text-slate-600',   iconBg: 'bg-slate-100',  available: true  },
-  { type: 'eyeglass', Icon: GlassesIcon,  label: 'Eyeglass', desc: 'Optical assistance for corrective eyewear', iconColor: 'text-amber-500',   iconBg: 'bg-amber-50',   available: true  },
-  { type: 'plain',    Icon: FileTextIcon, label: 'Plain AICS', desc: 'General financial assistance intake',     iconColor: 'text-cyan-600',    iconBg: 'bg-cyan-50',    available: true  },
+  { type: 'medicine', Icon: PillIcon,     label: 'Medicine', desc: 'Prescription medicine provision',           iconColor: 'text-[#059669]', iconBg: 'bg-[#ecfdf5]', available: true  },
+  { type: 'medical',  Icon: CrossIcon,    label: 'Medical',  desc: 'Medical consultation support',              iconColor: 'text-[#3b82f6]', iconBg: 'bg-[#eff6ff]', available: true  },
+  { type: 'hospital', Icon: HospitalIcon, label: 'Hospital', desc: 'Hospital bill financial assistance',        iconColor: 'text-[#8b5cf6]', iconBg: 'bg-[#f5f3ff]', available: true  },
+  { type: 'burial',   Icon: HeadstonIcon, label: 'Burial',   desc: 'Funeral and burial cost coverage',          iconColor: 'text-slate-600', iconBg: 'bg-slate-100', available: true  },
+  { type: 'eyeglass', Icon: GlassesIcon,  label: 'Eyeglass', desc: 'Optical assistance for corrective eyewear', iconColor: 'text-[#f59e0b]', iconBg: 'bg-[#fffbeb]', available: true  },
+  { type: 'plain',    Icon: FileTextIcon, label: 'Plain AICS', desc: 'General financial assistance intake',     iconColor: 'text-[#0d9488]', iconBg: 'bg-[#f0fdfa]', available: true  },
 ]
+
+function StepPill({ number, label, active }) {
+  return (
+    <span className={`inline-flex items-center gap-2 rounded-full px-[13px] py-[7px] text-[12.5px] font-semibold ${
+      active ? 'bg-[#0f2d52] text-white' : 'bg-slate-100 text-slate-400'
+    }`}>
+      <span className={`inline-flex h-[18px] w-[18px] items-center justify-center rounded-full text-[10.5px] font-bold ${
+        active ? 'bg-white/20' : 'bg-[#0f2d52]/10'
+      }`}>
+        {number}
+      </span>
+      {label}
+    </span>
+  )
+}
 
 const TYPE_LABEL = { medicine: 'Medicine', burial: 'Burial', hospital: 'Hospital', medical: 'Medical', eyeglass: 'Eyeglass', plain: 'Plain AICS' }
 
@@ -126,16 +141,11 @@ export default function NewCase() {
 
   return (
     <div className="animate-fade-in mx-auto w-full max-w-[1440px] px-3 sm:px-5 lg:px-8">
-      <div className="mb-6">
-        {step !== 'type' && !presetType && (
-          <button onClick={goBack} className="btn-ghost mb-3 text-sm">
-            <ChevronLeftIcon className="h-4 w-4" /> Back
-          </button>
-        )}
-        <p className="portal-kicker">AICS - Step {stepNum} of {totalSteps}</p>
+      <div className="mb-5 border-b border-slate-200 pb-4">
+        <p className="portal-kicker">AICS — Step {stepNum} of {totalSteps}</p>
         <h1 className="portal-page-title">
           {step === 'type' && 'Select Assistance Type'}
-          {step === 'client' && `${assistanceType ? TYPE_LABEL[assistanceType] + ' Assistance' : 'New Case'} - Select Client`}
+          {step === 'client' && `${assistanceType ? TYPE_LABEL[assistanceType] + ' Assistance' : 'New Case'} — Select Client`}
         </h1>
         <p className="portal-page-subtitle">
           {step === 'type' && 'Choose the type of assistance for this case'}
@@ -143,32 +153,41 @@ export default function NewCase() {
         </p>
       </div>
 
+      {/* Stepper pills (V.1.2 design) */}
+      {totalSteps > 1 && (
+        <div className="mb-5 flex flex-wrap items-center gap-2.5">
+          <StepPill number={1} label="Assistance Type" active={step === 'type' || step === 'client'} />
+          <span className="h-px w-7 shrink-0 bg-slate-300" aria-hidden="true" />
+          <StepPill number={2} label="Select Client" active={step === 'client'} />
+        </div>
+      )}
+
       {step === 'type' && (
         <div className="card">
-          <div className="form-section-title mb-4">Select Assistance Type</div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          <h2 className="border-b-2 border-slate-100 pb-3.5 font-display text-base font-bold text-[#0f2d52]">Select Assistance Type</h2>
+          <div className="mt-5 grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4">
             {visibleCaseTypes.map((caseType) => (
               <button
                 key={caseType.type}
                 onClick={() => caseType.available && handleSelectType(caseType.type)}
                 disabled={!caseType.available}
                 title={!caseType.available ? 'Coming soon' : undefined}
-                className={`relative flex flex-col items-start gap-3 rounded-xl border-2 p-4 text-left
-                  transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400
+                className={`relative flex flex-col items-start gap-3 rounded-[14px] border p-5 text-left
+                  transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400
                   ${!caseType.available
                     ? 'border-slate-100 bg-slate-50 opacity-50 cursor-not-allowed'
-                    : 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm cursor-pointer'
+                    : 'border-slate-200 bg-white hover:border-[#10b981] hover:shadow-[0_6px_18px_rgba(15,45,82,0.08)] cursor-pointer'
                   }`}
               >
                 {!caseType.available && (
                   <span className="absolute top-2 right-2 text-[9px] font-semibold uppercase tracking-wide text-slate-400 bg-slate-100 rounded px-1.5 py-0.5">Soon</span>
                 )}
-                <div className={`rounded-lg p-2 ${caseType.iconBg}`}>
-                  <caseType.Icon className={`h-5 w-5 ${caseType.iconColor}`} />
-                </div>
+                <span className={`inline-flex h-11 w-11 items-center justify-center rounded-full ${caseType.iconBg}`}>
+                  <caseType.Icon className={`h-[21px] w-[21px] ${caseType.iconColor}`} />
+                </span>
                 <div>
-                  <p className="font-display font-bold text-brand-primary text-sm">{caseType.label}</p>
-                  <p className="text-xs text-slate-500 mt-0.5 leading-snug">{caseType.desc}</p>
+                  <p className="font-display text-[15px] font-bold text-[#0f2d52]">{caseType.label}</p>
+                  <p className="mt-0.5 text-[12.5px] leading-normal text-gray-500">{caseType.desc}</p>
                 </div>
               </button>
             ))}
@@ -177,25 +196,24 @@ export default function NewCase() {
       )}
 
       {step === 'client' && (
-        <div className="space-y-4">
+        <div className="space-y-5">
           <div className="card mx-auto w-full max-w-6xl">
-            <div className="form-section-title mb-4">Search Client Profile</div>
-            <ClientSearchBar onSelect={handleClientSelect} onFamilyMatchSelect={handleFamilyMatchSelect} includeFamilyMatches returnTo={{ assistanceType }} />
-
-            {!selectedClient && (
-              <>
-                <div className="mt-3 flex items-center justify-center">
-                  <span className="text-slate-400 text-xs">- or -</span>
-                </div>
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b-2 border-slate-100 pb-3.5">
+              <h2 className="font-display text-base font-bold text-[#0f2d52]">Search Client Profile</h2>
+              {!presetType && (
                 <button
-                  onClick={() => navigate('/clients/new', { state: { returnTo: { assistanceType } } })}
-                  className="portal-button-secondary w-full mt-2 justify-center"
+                  type="button"
+                  onClick={goBack}
+                  className="inline-flex h-9 items-center gap-1.5 rounded-[9px] border border-slate-300 bg-white px-3 text-[12.5px] font-semibold text-slate-600 transition-colors hover:bg-slate-50"
                 >
-                  <PlusIcon className="h-4 w-4" />
-                  Create New Client Profile
+                  <ChevronLeftIcon className="h-3.5 w-3.5" />
+                  Change type
                 </button>
-              </>
-            )}
+              )}
+            </div>
+            <div className="mt-[18px]">
+              <ClientSearchBar onSelect={handleClientSelect} onFamilyMatchSelect={handleFamilyMatchSelect} includeFamilyMatches returnTo={{ assistanceType }} />
+            </div>
 
             {selectedClient && beneficiaryOverride && (
               <div className="mt-4 rounded-xl border border-amber-300 bg-amber-50 p-4">
@@ -215,26 +233,42 @@ export default function NewCase() {
             )}
 
             {selectedClient && (
-              <div className="mt-4 rounded-xl border border-brand-green/30 bg-emerald-50 p-4">
+              <div className="mt-4 rounded-xl bg-[#ecfdf5] p-4">
                 <div className="flex items-start justify-between gap-6">
                   <div>
-                    <p className="font-semibold text-brand-dark">
+                    <p className="font-semibold text-[#065f46]">
                       {formatClientName(selectedClient)}
                     </p>
-                    <p className="text-xs text-slate-500 mt-0.5">
-                      {selectedClient.caseNumber} - {selectedClient.barangay}, {selectedClient.municipality}
+                    <p className="mt-0.5 text-xs text-slate-500">
+                      {selectedClient.caseNumber} — {selectedClient.barangay}, {selectedClient.municipality}
                     </p>
-                    <div className="flex gap-1 mt-2">
-                      {selectedClient.is4ps && <span className="badge badge-green">4Ps</span>}
-                      {selectedClient.isPwd && <span className="badge badge-blue">PWD</span>}
-                      {selectedClient.isSenior && <span className="badge badge-amber">Senior Citizen</span>}
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {selectedClient.is4ps && <span className="inline-flex items-center rounded-md bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-600">4Ps</span>}
+                      {selectedClient.isPwd && <span className="inline-flex items-center rounded-md bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-600">PWD</span>}
+                      {selectedClient.isSenior && <span className="inline-flex items-center rounded-md bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-600">Senior Citizen</span>}
                     </div>
                   </div>
-                  <span className="text-emerald-600 text-xl">OK</span>
+                  <span className="text-xl text-[#047857]">✓</span>
                 </div>
               </div>
             )}
           </div>
+
+          {!selectedClient && (
+            <div className="card mx-auto w-full max-w-6xl">
+              <h2 className="font-display text-[15px] font-bold text-[#0f2d52]">No profile yet?</h2>
+              <p className="mt-2 max-w-prose text-[12.5px] leading-relaxed text-gray-500 [text-wrap:pretty]">
+                Register the beneficiary first — the new profile carries over into this {assistanceType ? TYPE_LABEL[assistanceType] : 'AICS'} case automatically.
+              </p>
+              <button
+                onClick={() => navigate('/clients/new', { state: { returnTo: { assistanceType } } })}
+                className="mt-3.5 inline-flex h-10 items-center gap-[7px] rounded-[10px] border border-[#0f2d52] bg-[#0f2d52] px-4 text-[13px] font-semibold text-white transition-colors hover:bg-[#164070]"
+              >
+                <PlusIcon className="h-[15px] w-[15px]" />
+                Register new client
+              </button>
+            </div>
+          )}
 
           {selectedClient && (
             <div className="mx-auto flex w-full max-w-6xl justify-end">

@@ -3,7 +3,7 @@ import toast from 'react-hot-toast'
 import api from '../../lib/api'
 import { useAuthStore } from '../../store/authStore'
 import {
-  UsersIcon, ClockIcon, IdCardIcon, ShieldCheckIcon, FileTextIcon, DatabaseIcon, FolderIcon, ChevronDownIcon,
+  UsersIcon, ClockIcon, IdCardIcon, ShieldCheckIcon, FileTextIcon, DatabaseIcon, FolderIcon,
 } from '../../components/ui/Icons'
 import ApplicantAccountsPage from '../Applicants/ApplicantAccountsPage'
 import NarrativeOptionsSettings from './NarrativeOptionsSettings'
@@ -137,36 +137,39 @@ export default function SettingsPage() {
     )
   }
 
-  const activeMeta = TABS.find((tab) => tab.key === activeTab) ?? TABS[0]
-  const ActiveIcon = activeMeta.icon
-
   return (
     <div className="animate-fade-in">
       {/* Page header */}
-      <div className="mb-6">
+      <div className="mb-5 border-b border-slate-200 pb-4">
         <p className="portal-kicker">Administration</p>
         <h1 className="portal-page-title">Settings</h1>
         <p className="portal-page-subtitle">Manage users, system configuration, and activity logs.</p>
       </div>
 
-      {/* Section picker */}
-      <div className="mb-6 max-w-md">
-        <label className="portal-label" htmlFor="settings-section">Section</label>
-        <div className="relative">
-          <ActiveIcon className="pointer-events-none absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
-          <select
-            id="settings-section"
-            className="portal-input appearance-none pl-11 pr-10 font-semibold text-slate-800"
-            value={activeTab}
-            onChange={(e) => setActiveTab(e.target.value)}
-          >
-            {TABS.map((tab) => (
-              <option key={tab.key} value={tab.key}>{tab.label}</option>
-            ))}
-          </select>
-          <ChevronDownIcon className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-        </div>
-        <p className="mt-1.5 text-xs text-slate-400">{activeMeta.description}</p>
+      {/* Section picker — card grid (V.1.2 design) */}
+      <div className="mb-6 grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-3.5">
+        {TABS.map((tab) => {
+          const active = tab.key === activeTab
+          return (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => setActiveTab(tab.key)}
+              aria-pressed={active}
+              className={`flex min-w-0 items-start gap-3 rounded-xl border p-4 text-left transition-colors ${
+                active ? 'border-[#0f2d52] bg-[#f6faf8]' : 'border-slate-200 bg-white hover:border-slate-300'
+              }`}
+            >
+              <span className="inline-flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full bg-[#ecfdf5] text-[#059669]">
+                <tab.icon className="h-[18px] w-[18px]" />
+              </span>
+              <span className="min-w-0">
+                <span className="block font-display text-[13.5px] font-bold text-[#0f2d52]">{tab.label}</span>
+                <span className="mt-[3px] block text-xs text-gray-500">{tab.description}</span>
+              </span>
+            </button>
+          )
+        })}
       </div>
 
       {/* Active section */}

@@ -32,8 +32,14 @@ export default function PortalApplicationsToolbar({
 }) {
   return (
     <div className="space-y-4">
-      <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm">
-        <div className="flex min-w-max items-center gap-1 px-3 py-2.5">
+      <div className="border-b border-slate-200 pb-4">
+        <p className="portal-kicker">Citizen Portal</p>
+        <h1 className="portal-page-title">Portal Applications</h1>
+        <p className="portal-page-subtitle">Online submissions from the citizen portal awaiting intake.</p>
+      </div>
+
+      <div className="overflow-x-auto rounded-[14px] border border-slate-300/80 bg-white shadow-[0_1px_3px_rgba(15,45,82,0.06)]">
+        <div className="flex min-w-max items-center gap-0.5 px-3 py-2">
           {navItems.map((item) => {
             const Icon = navIcons[item.key] || LayoutDashboard
             const isActive = activeNavKey === item.key
@@ -43,18 +49,16 @@ export default function PortalApplicationsToolbar({
                 key={item.key}
                 type="button"
                 onClick={() => onNavigate(item.key)}
-                className={`inline-flex items-center gap-2 rounded-md px-3.5 py-2 text-sm font-medium transition ${
+                className={`inline-flex items-center gap-2 rounded-[10px] px-[13px] py-[9px] text-[13.5px] transition-colors ${
                   isActive
-                    ? 'bg-emerald-700 text-white shadow-sm'
-                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-800'
+                    ? 'bg-[#ecfdf5] font-semibold text-[#065f46]'
+                    : 'font-medium text-slate-600 hover:bg-slate-100 hover:text-[#0f2d52]'
                 }`}
               >
                 <Icon className="h-3.5 w-3.5" />
                 <span>{item.label}</span>
                 {typeof item.count === 'number' && item.count > 0 && (
-                  <span className={`inline-flex min-w-5 items-center justify-center rounded-full px-1.5 py-0.5 text-[11px] font-bold ${
-                    isActive ? 'bg-white/25 text-white' : 'bg-rose-500 text-white'
-                  }`}>
+                  <span className="inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#f43f5e] px-[5px] text-[10px] font-bold text-white">
                     {item.count}
                   </span>
                 )}
@@ -64,12 +68,9 @@ export default function PortalApplicationsToolbar({
         </div>
       </div>
 
-      <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <h1 className="portal-page-title">Portal Applications</h1>
-            <p className="portal-page-subtitle">Review applicant-filed requests, inspect uploaded documents, and update processing status.</p>
-          </div>
+      <div className="rounded-[14px] border border-slate-300/80 bg-white p-4 shadow-[0_1px_3px_rgba(15,45,82,0.06)]">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <p className="text-sm font-semibold text-[#0f2d52]">Find an application</p>
 
           <div className="grid gap-3 sm:grid-cols-2 lg:min-w-[420px]">
             <input
@@ -92,10 +93,10 @@ export default function PortalApplicationsToolbar({
         </div>
       </div>
 
-      <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="rounded-[14px] border border-slate-300/80 bg-white p-4 shadow-[0_1px_3px_rgba(15,45,82,0.06)]">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <p className="text-sm font-medium text-slate-700">Bulk Actions</p>
+            <p className="text-sm font-semibold text-[#0f2d52]">Bulk Actions</p>
             <p className="mt-0.5 text-xs text-slate-500">
               {selectedIdsCount
                 ? `${selectedIdsCount} application(s) selected for reviewer actions.`

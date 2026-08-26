@@ -5,9 +5,11 @@
 @layer base {
   * { box-sizing: border-box; }
 
+  /* overflow-x: clip (not hidden) — hidden would make html/body a scroll
+     container and silently break position:sticky on the app header. */
   html {
     min-width: 0;
-    overflow-x: hidden;
+    overflow-x: clip;
     font-family: 'Inter', system-ui, sans-serif;
     scroll-behavior: smooth;
     -webkit-font-smoothing: antialiased;
@@ -16,8 +18,9 @@
 
   body {
     min-width: 0;
-    overflow-x: hidden;
-    @apply bg-[#f0f2f5] text-slate-800 antialiased;
+    overflow-x: clip;
+    /* Deeper page ground than the prototype's #f0f2f5 — less overall glare. */
+    @apply bg-[#e5e8ec] text-slate-800 antialiased;
     margin: 0;
     padding: 0;
   }
@@ -53,7 +56,7 @@
     @apply border border-slate-100 bg-slate-50 rounded-lg;
   }
   .portal-button-primary {
-    @apply inline-flex max-w-full items-center justify-center gap-2 rounded-lg border border-[#0c2340] bg-[#0c2340] px-4 py-2.5 text-sm font-semibold text-white transition-all duration-150 hover:bg-[#0f3460] hover:shadow-md;
+    @apply inline-flex max-w-full items-center justify-center gap-2 rounded-[10px] border border-[#059669] bg-[#059669] px-4 py-2.5 text-sm font-semibold text-white transition-all duration-150 hover:bg-[#047857] hover:border-[#047857] hover:shadow-md;
   }
   .portal-button-secondary {
     @apply inline-flex max-w-full items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition-all duration-150 hover:border-slate-400 hover:bg-slate-50 hover:text-slate-900;
@@ -69,7 +72,7 @@
     @apply text-xs font-medium text-slate-400;
   }
   .portal-page-title {
-    @apply break-words font-display text-2xl font-bold text-slate-900;
+    @apply break-words font-display text-2xl font-bold text-brand-primary tracking-[-0.01em];
   }
   .portal-page-subtitle {
     @apply mt-1 text-sm text-slate-500;
@@ -117,12 +120,12 @@
     @apply mb-6 flex flex-wrap items-center justify-between gap-4 pb-5 border-b border-slate-200;
   }
 
-  /* === Cards === */
+  /* === Cards (V.1.2 design: 14px radius, soft navy shadow) === */
   .card {
-    @apply min-w-0 bg-white rounded-xl shadow-sm border border-slate-200/80 p-4 sm:p-6;
+    @apply min-w-0 bg-white rounded-[14px] shadow-[0_1px_3px_rgba(15,45,82,0.06)] border border-slate-300/80 p-4 sm:p-6;
   }
   .card-sm {
-    @apply min-w-0 bg-white rounded-xl shadow-sm border border-slate-200/80 p-4;
+    @apply min-w-0 bg-white rounded-[14px] shadow-[0_1px_3px_rgba(15,45,82,0.06)] border border-slate-300/80 p-4;
   }
 
   /* === Stat cards (Akkhor-inspired colored icon blocks) === */
@@ -183,7 +186,7 @@
     @apply card mb-5 min-w-0;
   }
   .form-section-title {
-    @apply font-display text-lg font-bold text-slate-800 border-b-2 border-slate-100 pb-3 mb-5;
+    @apply font-display text-lg font-bold text-brand-primary border-b-2 border-slate-100 pb-3 mb-5;
   }
 
   /* === Queue cards === */

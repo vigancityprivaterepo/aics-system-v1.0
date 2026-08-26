@@ -4,6 +4,9 @@ export default {
   theme: {
     extend: {
       colors: {
+        // Softened white: every bg-white / text-white surface renders as a warm
+        // off-white instead of pure #fff, cutting glare app-wide in one place.
+        white: '#f9fafa',
         brand: {
           primary: '#0f2d52',     // richer navy (was flat #0c2340)
           green: '#10b981',       // emerald — unchanged
