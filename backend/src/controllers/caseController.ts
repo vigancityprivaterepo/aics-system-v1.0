@@ -310,6 +310,7 @@ export async function createCase(req: Request, res: Response) {
   const cooldownDays = await loadRepeatAssistanceCooldownDays()
   const repeatConflicts = await findRepeatAssistanceConflicts(prisma, {
     clientId,
+    assistanceType,
     cooldownDays,
     beneficiaryName: body.beneficiaryName ?? null,
   })

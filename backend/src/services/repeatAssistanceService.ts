@@ -34,10 +34,32 @@ function isMissingLegacyColumnError(error: unknown, columnName: string) {
   return message.toLowerCase().includes(columnName.toLowerCase())
 }
 
+// Assistance types that are considered the same "kind" of assistance for cooldown
+// purposes: an open/recent case of any type in a client's group blocks a new
+// application for any other type in that same group. Hospital and medical cases
+// both require selecting a hospital facility and cover the same hospitalization
+// event, so they conflict with each other. Medicine, plain AICS, eyeglass, and
+// burial assistance each address a distinct need and only conflict with a repeat
+// of themselves — medicine can be combined with medical, hospital, plain, or
+// eyeglass assistance even within the cooldown window.
+const ASSISTANCE_CONFLICT_GROUPS: AssistanceType[][] = [
+  ['hospital', 'medical'] as AssistanceType[],
+  ['medicine'] as AssistanceType[],
+  ['burial'] as AssistanceType[],
+  ['eyeglass'] as AssistanceType[],
+  ['plain'] as AssistanceType[],
+]
+
+function conflictingAssistanceTypes(assistanceType: AssistanceType): AssistanceType[] {
+  const group = ASSISTANCE_CONFLICT_GROUPS.find((types) => types.includes(assistanceType))
+  return group ?? [assistanceType]
+}
+
 export async function findRepeatAssistanceConflicts(
   db: any,
   input: {
     clientId: string
+    assistanceType: AssistanceType
     cooldownDays: number
     excludeCaseId?: string | null
     beneficiaryName?: string | null
@@ -47,13 +69,18 @@ export async function findRepeatAssistanceConflicts(
   const cutoff = new Date()
   cutoff.setDate(cutoff.getDate() - cooldownDays)
   const normalizedBeneficiaryName = String(input.beneficiaryName ?? '').trim()
+  const conflictingTypes = conflictingAssistanceTypes(input.assistanceType)
 
   // A case's beneficiary is the client themself unless a beneficiaryName override is
   // set (e.g. a case created for a household member found in the client's family
   // composition). Only compare cooldown conflicts against other cases for the same
   // beneficiary, so a case for a family member doesn't collide with the client's own.
+  // Only cases whose assistance type conflicts with the one being applied for count
+  // (see ASSISTANCE_CONFLICT_GROUPS) — e.g. medicine + plain AICS, or medicine +
+  // eyeglass, are allowed to coexist and are not treated as repeats of each other.
   const buildWhere = (includeArchiveFilter: boolean) => ({
     clientId: input.clientId,
+    assistanceType: { in: conflictingTypes },
     beneficiaryName: normalizedBeneficiaryName
       ? { equals: normalizedBeneficiaryName, mode: 'insensitive' as const }
       : null,
