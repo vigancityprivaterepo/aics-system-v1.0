@@ -74,6 +74,11 @@ function withReportSignaturePermissions(serialized: any, caseData: any, user: Ex
   }
 }
 
+// Medicine has its own shorter cooldown than the general repeat-assistance
+// window (currently defaulting to 90 days for every other assistance type),
+// since medicine assistance is requested more frequently than other types.
+const MEDICINE_REPEAT_ASSISTANCE_COOLDOWN_DAYS = 30
+
 async function loadRepeatAssistanceCooldownDays() {
   try {
     const settings = await prisma.systemSettings.upsert({
@@ -307,7 +312,9 @@ export async function createCase(req: Request, res: Response) {
 
   const client = await prisma.client.findUnique({ where: { id: clientId } })
   if (!client) throw new HttpError(404, 'Client not found')
-  const cooldownDays = await loadRepeatAssistanceCooldownDays()
+  const cooldownDays = assistanceType === 'medicine'
+    ? MEDICINE_REPEAT_ASSISTANCE_COOLDOWN_DAYS
+    : await loadRepeatAssistanceCooldownDays()
   const repeatConflicts = await findRepeatAssistanceConflicts(prisma, {
     clientId,
     assistanceType,
