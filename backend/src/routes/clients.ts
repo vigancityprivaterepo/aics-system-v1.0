@@ -124,17 +124,29 @@ router.get('/', asyncHandler(async (req, res) => {
   const limit = Math.min(Number(req.query.limit ?? 15), 100)
   const page = Math.max(Number(req.query.page ?? 1), 1)
 
+  // Name fields are stored separately (first/middle/last), so a single "contains"
+  // check per field only matches a one-word query against that one field. Splitting
+  // the search into words and requiring each word to match some name field lets a
+  // first name, last name, or full name (in any order) all find the client, the
+  // same way findFamilyCompositionMatches already matches full names.
+  const searchTerms = search.split(/\s+/).filter(Boolean)
   const where = search
     ? {
       mergedIntoClientId: null,
       OR: [
         { caseNumber: { contains: search, mode: 'insensitive' as const } },
-        { firstName: { contains: search, mode: 'insensitive' as const } },
-        { lastName: { contains: search, mode: 'insensitive' as const } },
-        { middleName: { contains: search, mode: 'insensitive' as const } },
         { barangay: { contains: search, mode: 'insensitive' as const } },
         { municipality: { contains: search, mode: 'insensitive' as const } },
         { province: { contains: search, mode: 'insensitive' as const } },
+        {
+          AND: searchTerms.map((term) => ({
+            OR: [
+              { firstName: { contains: term, mode: 'insensitive' as const } },
+              { lastName: { contains: term, mode: 'insensitive' as const } },
+              { middleName: { contains: term, mode: 'insensitive' as const } },
+            ],
+          })),
+        },
       ],
     }
     : { mergedIntoClientId: null }

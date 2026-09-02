@@ -638,11 +638,22 @@ router.get('/', asyncHandler(async (req, res) => {
   const where: any = {}
 
   if (search) {
+    // Split into words so a first name, last name, or full name (in any order)
+    // all match, instead of only matching a single word against a single field.
+    const searchTerms = search.split(/\s+/).filter(Boolean)
     where.OR = [
       { referenceNumber: { contains: search, mode: 'insensitive' } },
-      { applicant: { firstName: { contains: search, mode: 'insensitive' } } },
-      { applicant: { lastName: { contains: search, mode: 'insensitive' } } },
       { applicant: { email: { contains: search, mode: 'insensitive' } } },
+      {
+        applicant: {
+          AND: searchTerms.map((term) => ({
+            OR: [
+              { firstName: { contains: term, mode: 'insensitive' } },
+              { lastName: { contains: term, mode: 'insensitive' } },
+            ],
+          })),
+        },
+      },
     ]
   }
 

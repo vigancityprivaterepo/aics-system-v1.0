@@ -62,13 +62,22 @@ function removeApplicantPortalFiles(applications: Array<{ documents?: Array<{ fi
 
 router.get('/', adminOnly, asyncHandler(async (req, res) => {
   const { page, limit, search } = listQuerySchema.parse(req.query)
+  // Split into words so a first name, last name, or full name (in any order)
+  // all match, instead of only matching a single word against a single field.
+  const searchTerms = search ? search.split(/\s+/).filter(Boolean) : []
   const where = search
     ? {
         OR: [
           { email: { contains: search, mode: 'insensitive' as const } },
-          { firstName: { contains: search, mode: 'insensitive' as const } },
-          { lastName: { contains: search, mode: 'insensitive' as const } },
           { mobileNumber: { contains: search, mode: 'insensitive' as const } },
+          {
+            AND: searchTerms.map((term) => ({
+              OR: [
+                { firstName: { contains: term, mode: 'insensitive' as const } },
+                { lastName: { contains: term, mode: 'insensitive' as const } },
+              ],
+            })),
+          },
         ],
       }
     : {}
