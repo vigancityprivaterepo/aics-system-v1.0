@@ -334,12 +334,12 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false, on
                   {family.length === 0 && <tr><td colSpan={6} className="px-3 py-4 text-center text-slate-400">No family members added</td></tr>}
                   {family.map((member, index) => (
                     <tr key={index} className="border-t border-slate-100">
-                      <td className="px-2 py-1.5"><input type="text" value={member.name || ''} onChange={(e) => updateFamilyMember(index, 'name', e.target.value.toUpperCase())} className="portal-input py-1 text-xs" /></td>
-                      <td className="px-2 py-1.5"><input type="number" value={member.age || ''} onChange={(e) => updateFamilyMember(index, 'age', e.target.value)} className="portal-input py-1 text-xs" /></td>
-                      <td className="px-2 py-1.5 min-w-[10rem]"><PresetSelectField value={member.relationship || ''} onChange={(value) => updateFamilyMember(index, 'relationship', value)} options={RELATIONSHIP_OPTIONS} placeholder="Select" otherPlaceholder="Specify relationship" disabled={readOnly} /></td>
-                      <td className="px-2 py-1.5"><select value={member.sex || ''} onChange={(e) => updateFamilyMember(index, 'sex', e.target.value)} className="portal-input py-1 text-xs"><option value="">Select sex</option>{SEX_OPTIONS.map((sex) => <option key={sex} value={sex}>{sex}</option>)}</select></td>
-                      <td className="px-2 py-1.5"><SearchablePresetInput value={member.occupation || ''} onChange={(value) => updateFamilyMember(index, 'occupation', value)} options={OCCUPATION_OPTIONS} placeholder="Search occupation" className="portal-input py-1 text-xs" listId={`family-occupation-${index}`} /></td>
-                      <td className="px-2 py-1.5"><button type="button" onClick={() => removeFamilyMember(index)} className="text-red-400 hover:text-red-600"><TrashIcon className="h-3.5 w-3.5" /></button></td>
+                      <td className="px-2 py-1.5 align-top"><input type="text" value={member.name || ''} onChange={(e) => updateFamilyMember(index, 'name', e.target.value.toUpperCase())} className="portal-input py-1 text-xs" /></td>
+                      <td className="px-2 py-1.5 align-top"><input type="number" value={member.age || ''} onChange={(e) => updateFamilyMember(index, 'age', e.target.value)} className="portal-input py-1 text-xs" /></td>
+                      <td className="px-2 py-1.5 min-w-[10rem] align-top"><PresetSelectField value={member.relationship || ''} onChange={(value) => updateFamilyMember(index, 'relationship', value)} options={RELATIONSHIP_OPTIONS} placeholder="Select" otherPlaceholder="Specify relationship" disabled={readOnly} /></td>
+                      <td className="px-2 py-1.5 align-top"><select value={member.sex || ''} onChange={(e) => updateFamilyMember(index, 'sex', e.target.value)} className="portal-input py-1 text-xs"><option value="">Select sex</option>{SEX_OPTIONS.map((sex) => <option key={sex} value={sex}>{sex}</option>)}</select></td>
+                      <td className="px-2 py-1.5 align-top"><SearchablePresetInput value={member.occupation || ''} onChange={(value) => updateFamilyMember(index, 'occupation', value)} options={OCCUPATION_OPTIONS} placeholder="Search occupation" className="portal-input py-1 text-xs" listId={`family-occupation-${index}`} /></td>
+                      <td className="px-2 py-1.5 align-top"><button type="button" onClick={() => removeFamilyMember(index)} className="text-red-400 hover:text-red-600"><TrashIcon className="h-3.5 w-3.5" /></button></td>
                     </tr>
                   ))}
                 </tbody>
