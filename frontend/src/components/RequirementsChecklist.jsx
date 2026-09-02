@@ -43,7 +43,6 @@ const EYEGLASS_REQUIREMENTS = [
 const PLAIN_REQUIREMENTS = [
   { key: 'indigency', label: 'Certificate of Indigency' },
   { key: 'id_copy', label: 'Photocopy of ID' },
-  { key: 'personal_letter', label: 'Personal Letter addressed to the LCE' },
   { key: 'sales_invoice', label: 'Sales Invoice' },
 ]
 

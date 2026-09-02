@@ -37,7 +37,6 @@ export const REQUIREMENT_DEFINITIONS: Record<AssistanceType, Array<{ key: string
   plain: [
     { key: 'indigency', label: 'Certificate of Indigency' },
     { key: 'id_copy', label: 'Photocopy of ID' },
-    { key: 'personal_letter', label: 'Personal Letter addressed to the LCE' },
     { key: 'sales_invoice', label: 'Sales Invoice' },
   ],
 }
