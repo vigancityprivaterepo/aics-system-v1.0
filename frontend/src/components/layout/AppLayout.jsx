@@ -28,7 +28,7 @@ const CASE_CHILDREN = [
   { label: 'Medical',   type: 'medical',   Icon: CrossIcon,    available: true  },
   { label: 'Hospital',  type: 'hospital',  Icon: HospitalIcon, available: true  },
   { label: 'Burial',    type: 'burial',    Icon: HeadstonIcon, available: true  },
-  { label: 'Eyeglass',  type: 'eyeglass',  Icon: GlassesIcon,   available: true  },
+  { label: 'Eyeglass',  type: 'eyeglass',  Icon: GlassesIcon,  available: true  },
   { label: 'Plain AICS', type: 'plain',   Icon: FileTextIcon,  available: true  },
 ]
 
@@ -583,10 +583,13 @@ export default function AppLayout() {
             full row instead of clumping them on the left with dead space
             after the last one; the items wrap amongst themselves if there
             are too many for one line, but never scroll, so every module
-            stays visible with no arrows needed */}
+            stays visible with no arrows needed. The City Health Office role
+            only has two tabs, so justify-between would shove them to
+            opposite corners of the row — keep those two clumped together
+            on the left instead. */}
         <nav
           aria-label="Primary modules"
-          className="mx-auto flex w-full max-w-[1560px] flex-wrap items-center justify-between gap-1 border-t border-slate-100 px-4 py-1.5 sm:px-6"
+          className={`mx-auto flex w-full max-w-[1560px] flex-wrap items-center ${isCityHealthOffice ? 'justify-start' : 'justify-between'} gap-1 border-t border-slate-100 px-4 py-1.5 sm:px-6`}
         >
           <ModuleNav
             user={user}
