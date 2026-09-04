@@ -7,6 +7,7 @@ import { requireRole } from '../middleware/auth.js'
 import { HttpError } from '../utils/httpError.js'
 import { createBackup, getBackupFile, listBackups, restoreBackup, restoreBackupFromUpload } from '../services/backupService.js'
 import { logAdminAudit } from '../services/adminAuditService.js'
+import { logger } from '../utils/logger.js'
 import {
   buildModuleAccessConfig,
   buildModuleAccessOverrides,
@@ -362,7 +363,14 @@ router.get('/backups/:filename/download', adminOnly, asyncHandler(async (req, re
     summary: `Downloaded system backup ${filename}`,
     details: { filename },
   })
-  res.download(filePath, filename)
+  res.download(filePath, filename, (err) => {
+    if (!err) return
+    // A user-supplied callback takes over error handling from here (Express won't
+    // auto-respond) - log it so a mid-stream failure (truncated response, client
+    // abort) is visible server-side instead of only showing as a browser network error.
+    logger.withError('Backup download failed', err, { filename, headersSent: res.headersSent })
+    if (!res.headersSent) res.status(500).json({ message: 'Failed to download backup file.' })
+  })
 }))
 
 // A restore replaces the entire users table with whatever the snapshot contains -

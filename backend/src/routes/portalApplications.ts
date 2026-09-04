@@ -389,7 +389,7 @@ async function resolveMedicineSelection(
       genericName: medicine.genericName,
       brandName: medicine.brandName,
       unit: medicine.unit,
-      strength: medicine.strength,
+      strength: medicine.strength, 
       category: medicine.category,
     })),
   }

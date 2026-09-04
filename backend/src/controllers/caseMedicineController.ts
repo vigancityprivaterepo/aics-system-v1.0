@@ -6,9 +6,10 @@ import { assertCaseReadable, assertEditableCase, paramId } from '../services/cas
 import { saveMedicinesSchema } from '../schemas/caseSchemas.js'
 import { resetApprovalsAfterMaterialEdit, valuesDiffer } from '../services/workflowIntegrityService.js'
 import { currencyFromDb, parseOptionalCurrency, roundCurrency } from '../utils/currency.js'
+import { toTitleCase } from '../utils/textFormat.js'
 
 async function resolveOrCreateMedicineId(medicineName: string, unit: string | null, unitPrice: number): Promise<string> {
-  const trimmedName = medicineName.trim()
+  const trimmedName = toTitleCase(medicineName)
   const existing = await prisma.medicineItem.findFirst({
     where: {
       OR: [
@@ -104,18 +105,19 @@ export async function saveMedicines(req: Request, res: Response) {
     const quantity = Number(m.quantity || 1)
     const unitPrice = Number(m.unitPrice || 0)
     const calculated = roundCurrency(Number(m.totalPrice ?? quantity * unitPrice))
+    const medicineName = toTitleCase(m.medicineName)
 
     let medicineId = m.medicineId ?? null
     if (!medicineId) {
-      const cacheKey = m.medicineName.trim().toLowerCase()
+      const cacheKey = medicineName.toLowerCase()
       medicineId = resolvedMedicineIds.get(cacheKey) ?? null
       if (!medicineId) {
-        medicineId = await resolveOrCreateMedicineId(m.medicineName, m.unit ?? null, unitPrice)
+        medicineId = await resolveOrCreateMedicineId(medicineName, m.unit ?? null, unitPrice)
         resolvedMedicineIds.set(cacheKey, medicineId)
       }
     }
 
-    normalized.push({ medicineId, medicineName: m.medicineName, quantity, unit: m.unit ?? null, unitPrice: roundCurrency(unitPrice), totalPrice: calculated })
+    normalized.push({ medicineId, medicineName, quantity, unit: m.unit ?? null, unitPrice: roundCurrency(unitPrice), totalPrice: calculated })
   }
 
   const existingItems = await prisma.caseMedicine.findMany({ where: { caseId: caseData.id }, orderBy: { createdAt: 'asc' } })

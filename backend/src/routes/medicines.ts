@@ -5,6 +5,7 @@ import { prisma } from '../utils/prisma.js'
 import { asyncHandler } from '../utils/asyncHandler.js'
 import { HttpError } from '../utils/httpError.js'
 import { requireRole } from '../middleware/auth.js'
+import { toTitleCase } from '../utils/textFormat.js'
 
 const router = Router()
 const adminOnly = requireRole(['admin'])
@@ -140,12 +141,13 @@ router.post('/bulk-import', adminOnly, csvUpload.single('file'), asyncHandler(as
     // Skip blank rows, purely-numeric rows (row numbers), or header-like repeats
     if (!genericName || /^\d+$/.test(genericName)) { skipped++; continue }
 
-    const brandName  = cleanOptionalText(r[iBrand], 200)
+    const brandNameRaw = cleanOptionalText(r[iBrand], 200)
+    const brandName  = brandNameRaw ? toTitleCase(brandNameRaw) : brandNameRaw
     const category   = cleanOptionalText(r[iCategory], 100)
     const unit       = cleanOptionalText(r[iStrength], 50)   // Strength / Concentration -> unit
     const strength   = cleanOptionalText(r[iDosage], 50)     // Dosage Form -> strength
 
-    toInsert.push({ genericName: genericName.slice(0, 200), brandName, unit, strength, category, unitPrice: 0, isAvailable: true })
+    toInsert.push({ genericName: toTitleCase(genericName.slice(0, 200)), brandName, unit, strength, category, unitPrice: 0, isAvailable: true })
   }
 
   if (toInsert.length === 0) throw new HttpError(400, 'No valid medicine rows found in CSV')
@@ -259,18 +261,21 @@ router.get('/', asyncHandler(async (req, res) => {
 
 router.post('/', canManageMedicine, asyncHandler(async (req, res) => {
   const body = medicineSchema.parse(req.body)
+  const genericName = toTitleCase(body.genericName)
+  const brandNameRaw = cleanOptionalText(body.brandName, 200)
+  const brandName = brandNameRaw ? toTitleCase(brandNameRaw) : brandNameRaw
   const unit = cleanOptionalText(body.unit, 50)
   const strength = cleanOptionalText(body.strength, 50)
 
-  const duplicate = await findDuplicateMedicine(body.genericName, unit, strength)
+  const duplicate = await findDuplicateMedicine(genericName, unit, strength)
   if (duplicate) {
     throw new HttpError(409, `"${duplicate.genericName}"${unit ? ` (${unit})` : ''}${strength ? ` — ${strength}` : ''} already exists in the database.`)
   }
 
   const created = await prisma.medicineItem.create({
     data: {
-      genericName: body.genericName,
-      brandName: cleanOptionalText(body.brandName, 200),
+      genericName,
+      brandName,
       unit,
       strength,
       category: cleanOptionalText(body.category, 100),
@@ -298,6 +303,9 @@ router.post('/', canManageMedicine, asyncHandler(async (req, res) => {
 router.put('/:id', canManageMedicine, asyncHandler(async (req, res) => {
   const medicineId = paramId(req.params.id)
   const body = medicineSchema.parse(req.body)
+  const genericName = toTitleCase(body.genericName)
+  const brandNameRaw = cleanOptionalText(body.brandName, 200)
+  const brandName = brandNameRaw ? toTitleCase(brandNameRaw) : brandNameRaw
 
   const existing = await prisma.medicineItem.findUnique({ where: { id: medicineId } })
   if (!existing) throw new HttpError(404, 'Medicine not found')
@@ -306,7 +314,7 @@ router.put('/:id', canManageMedicine, asyncHandler(async (req, res) => {
 
   const unit = cleanOptionalText(body.unit, 50)
   const strength = cleanOptionalText(body.strength, 50)
-  const duplicate = await findDuplicateMedicine(body.genericName, unit, strength, medicineId)
+  const duplicate = await findDuplicateMedicine(genericName, unit, strength, medicineId)
   if (duplicate) {
     throw new HttpError(409, `"${duplicate.genericName}"${unit ? ` (${unit})` : ''}${strength ? ` — ${strength}` : ''} already exists in the database.`)
   }
@@ -314,8 +322,8 @@ router.put('/:id', canManageMedicine, asyncHandler(async (req, res) => {
   const updated = await prisma.medicineItem.update({
     where: { id: medicineId },
     data: {
-      genericName: body.genericName,
-      brandName: cleanOptionalText(body.brandName, 200),
+      genericName,
+      brandName,
       unit,
       strength,
       category: cleanOptionalText(body.category, 100),
