@@ -6,10 +6,11 @@ import { formatClientName } from '../../../lib/utils'
 import { GlassesIcon } from '../../../components/ui/Icons'
 import HouseholdMemberQuickFill from '../../../components/HouseholdMemberQuickFill'
 import FieldError from '../../../components/ui/FieldError'
+import AmountPreview from '../../../components/ui/AmountPreview'
 import DraftRecoveryBanner from '../../../components/ui/DraftRecoveryBanner'
 import { scrollToFirstError } from '../../../lib/formNavigation'
 import { useAutosaveDraft, readLocalDraft, clearLocalDraft } from '../../../lib/localDraft'
-import { registerUppercase } from '../../../lib/formHelpers'
+import { registerUppercase, registerAmount } from '../../../lib/formHelpers'
 
 export default function StepEyeglassDetails({ caseData, onUpdate, onNext }) {
   const [saving, setSaving] = useState(false)
@@ -29,6 +30,7 @@ export default function StepEyeglassDetails({ caseData, onUpdate, onNext }) {
   })
 
   const formValues = watch()
+  const amount = watch('amount')
   useAutosaveDraft(draftKey, { formValues }, { enabled: true })
 
   const restoreDraft = () => {
@@ -137,8 +139,9 @@ export default function StepEyeglassDetails({ caseData, onUpdate, onNext }) {
 
           <div>
             <label className="portal-label">Amount (PHP) *</label>
-            <input type="number" min="0" step="any" {...register('amount', { required: 'Amount is required' })} className="portal-input" placeholder="0.00" />
+            <input type="number" min="0" step="any" {...registerAmount(register, 'amount', { required: 'Amount is required' })} className="portal-input" placeholder="0.00" />
             <p className="mt-1 text-xs text-slate-400">Same amount shown in Case Encoding — saving here updates it there too.</p>
+            <AmountPreview amount={amount} />
             <FieldError message={errors.amount?.message} />
           </div>
         </div>

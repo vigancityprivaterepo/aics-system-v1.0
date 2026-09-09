@@ -7,6 +7,7 @@ import HospitalFacilityPicker from '../../../components/HospitalFacilityPicker'
 import PresetSelectField from '../../../components/PresetSelectField'
 import HouseholdMemberQuickFill from '../../../components/HouseholdMemberQuickFill'
 import FieldError from '../../../components/ui/FieldError'
+import AmountPreview from '../../../components/ui/AmountPreview'
 import DraftRecoveryBanner from '../../../components/ui/DraftRecoveryBanner'
 import {
   DOCTOR_POSITION_OPTIONS,
@@ -16,7 +17,7 @@ import {
 import { scrollToFirstError } from '../../../lib/formNavigation'
 import { formatCurrency, formatClientName } from '../../../lib/utils'
 import { useAutosaveDraft, readLocalDraft, clearLocalDraft } from '../../../lib/localDraft'
-import { registerUppercase } from '../../../lib/formHelpers'
+import { registerUppercase, registerAmount } from '../../../lib/formHelpers'
 
 const GL_MAX = 30000
 
@@ -238,8 +239,9 @@ export default function StepHospitalDetails({ caseData, onUpdate, onNext }) {
 
           <div>
             <label className="portal-label">Guarantee Letter Amount (PHP) *</label>
-            <input type="number" min="0" step="any" {...register('amount', { required: 'Amount is required' })} className="portal-input" placeholder="0.00" />
+            <input type="number" min="0" step="any" {...registerAmount(register, 'amount', { required: 'Amount is required' })} className="portal-input" placeholder="0.00" />
             <p className="mt-1 text-xs text-slate-400">Same amount shown in Case Encoding — saving here updates it there too.</p>
+            <AmountPreview amount={amount} />
             <FieldError message={errors.amount?.message} />
             {isOverCap && (
               <p className="mt-1 text-xs text-amber-600">                Amount exceeds the maximum cap of {formatCurrency(GL_MAX)} per DSWD MC.

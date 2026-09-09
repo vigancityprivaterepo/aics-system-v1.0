@@ -9,13 +9,14 @@ import SearchablePresetInput from '../../../components/SearchablePresetInput'
 import PresetSelectField from '../../../components/PresetSelectField'
 import HouseholdMemberQuickFill from '../../../components/HouseholdMemberQuickFill'
 import FieldError from '../../../components/ui/FieldError'
+import AmountPreview from '../../../components/ui/AmountPreview'
 import DraftRecoveryBanner from '../../../components/ui/DraftRecoveryBanner'
 import { useAuthStore } from '../../../store/authStore'
 import { OCCUPATION_OPTIONS, RELATIONSHIP_OPTIONS } from '../../../constants/caseFormOptions'
 import { scrollToFirstError } from '../../../lib/formNavigation'
 import { formatCurrency, calculateAge } from '../../../lib/utils'
 import { useAutosaveDraft, readLocalDraft, clearLocalDraft } from '../../../lib/localDraft'
-import { registerUppercase } from '../../../lib/formHelpers'
+import { registerUppercase, registerAmount } from '../../../lib/formHelpers'
 
 const defaultMember = { name: '', age: '', relationship: '', sex: '', occupation: '', monthlyIncome: '' }
 const CIVIL_STATUS_OPTIONS = ['Single', 'Married', 'Widowed', 'Separated', 'Annulled']
@@ -429,8 +430,9 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false, on
               <div className="mt-5 grid grid-cols-1 gap-4 border-t border-slate-200 pt-4 sm:max-w-2xl sm:grid-cols-2">
                 <div>
                   <label className="portal-label">Total Amount Requested (PHP) *</label>
-                  <input type="number" min="0" step="0.01" required {...register('amount', { required: 'Amount is required' })} className="portal-input" placeholder="0.00" />
+                  <input type="number" min="0" step="0.01" required {...registerAmount(register, 'amount', { required: 'Amount is required' })} className="portal-input" placeholder="0.00" />
                   <p className="mt-1 text-xs text-slate-500">Manually encode the financial assistance amount requested for this medicine case.</p>
+                  <AmountPreview amount={amount} />
                   <FieldError message={errors.amount?.message} />
                 </div>
                 <div>
@@ -441,7 +443,7 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false, on
               </div>
             </section>
           ) : (
-            <section className="rounded-lg border border-slate-200 bg-white p-4"><EncodingSectionHeader number="4" title="Assistance Amount" description="Enter the amount for the guarantee letter or cash assistance." /><div className="grid grid-cols-1 gap-4 sm:max-w-sm"><div><label className="portal-label">{amountLabelForType(caseData.assistanceType)} *</label><input type="number" min="0" step="any" {...register('amount', { required: 'Amount is required' })} className="portal-input" placeholder="0.00" />{isOverCap && <p className="mt-1 text-xs text-amber-600">Amount exceeds {formatCurrency(amountCap)}. Ensure proper authorization.</p>}<FieldError message={errors.amount?.message} /></div></div></section>
+            <section className="rounded-lg border border-slate-200 bg-white p-4"><EncodingSectionHeader number="4" title="Assistance Amount" description="Enter the amount for the guarantee letter or cash assistance." /><div className="grid grid-cols-1 gap-4 sm:max-w-sm"><div><label className="portal-label">{amountLabelForType(caseData.assistanceType)} *</label><input type="number" min="0" step="any" {...registerAmount(register, 'amount', { required: 'Amount is required' })} className="portal-input" placeholder="0.00" /><AmountPreview amount={amount} />{isOverCap && <p className="mt-1 text-xs text-amber-600">Amount exceeds {formatCurrency(amountCap)}. Ensure proper authorization.</p>}<FieldError message={errors.amount?.message} /></div></div></section>
           )}
         </fieldset>
         {!readOnly && <div className="mt-5 flex flex-wrap justify-end gap-3"><button type="submit" onClick={() => { submitModeRef.current = 'save' }} disabled={saving} className="portal-button-secondary" id="btn-save-case-study">{saving ? 'Saving...' : 'Save Case Encoding'}</button><button type="submit" onClick={() => { submitModeRef.current = 'next' }} disabled={saving} className="portal-button-primary" id="btn-save-next-case-study">{saving ? 'Saving...' : 'Save and Next'}</button></div>}
