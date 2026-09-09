@@ -593,6 +593,7 @@ function buildRenderData(caseData: any): Record<string, any> {
     // Header
     dateOfAssessment:    resolvedDateOfAssessment,
     caseNumber:          fmt(caseData.caseNumber),
+    yearNow:             String(new Date().getFullYear()),
 
     // Global CGV AICS template checkboxes and labels
     hospitalCheckBox:    checkbox(hasHospitalRequest),
