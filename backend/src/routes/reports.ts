@@ -124,7 +124,10 @@ async function loadCasesForReport(options: {
   }
   const where = {
     ...(options.type ? { assistanceType: options.type as typeof REPORT_TYPES[number] } : {}),
-    ...(options.status ? { status: normalizeStatusForDb(options.status) } : {}),
+    // Cancelled/voided cases never got the assistance disbursed, so they're left out of
+    // aggregate totals/breakdowns by default — they're still fully viewable and reportable
+    // individually via the case detail page, or by explicitly filtering status=cancelled.
+    ...(options.status ? { status: normalizeStatusForDb(options.status) } : { status: { not: 'cancelled' as CaseStatus } }),
     ...(Object.keys(clientWhere).length > 0 ? { client: clientWhere } : {}),
   }
 
