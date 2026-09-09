@@ -191,6 +191,10 @@ export function serializeCase(caseRow: any, assigneesByStage?: ApprovalAssigneeB
   const returnedToEncodingAt = wasReturnedToEncoding ? latestStatusLog?.changedAt?.toISOString() ?? null : null
   const returnedToEncodingFromStage = wasReturnedToEncoding ? latestStatusLog?.fromStatus ?? null : null
 
+  const cancelledByName = caseRow.status === 'cancelled' && latestStatusLog?.toStatus === 'cancelled'
+    ? latestStatusLog.changedBy?.name ?? null
+    : null
+
   return {
     id: caseRow.id,
     caseNumber: caseRow.caseNumber ?? null,
@@ -208,6 +212,9 @@ export function serializeCase(caseRow: any, assigneesByStage?: ApprovalAssigneeB
     remarks: caseRow.remarks,
     releasedAt,
     releasedByName,
+    cancelledAt: caseRow.cancelledAt?.toISOString() ?? null,
+    cancelReason: caseRow.cancelReason ?? null,
+    cancelledByName,
     returnedToEncodingNote,
     returnedToEncodingByName,
     returnedToEncodingAt,

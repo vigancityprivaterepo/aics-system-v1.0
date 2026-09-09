@@ -2,9 +2,9 @@ import path from 'node:path'
 import { Router } from 'express'
 import multer from 'multer'
 import { asyncHandler } from '../utils/asyncHandler.js'
-import { requireAuth } from '../middleware/auth.js'
+import { requireAuth, requireRole } from '../middleware/auth.js'
 import { listCases, getCase, createCase, updateCase, deleteCase, pendingApprovalsByType } from '../controllers/caseController.js'
-import { updateStatus } from '../controllers/caseApprovalController.js'
+import { updateStatus, cancelCase } from '../controllers/caseApprovalController.js'
 import { caseStudyDocx, caseStudyHtml, caseStudyPdf, caseStudyPreviewPdf, guaranteeLetterPdf, guaranteeLetterDocx, endorsementDocx, acknowledgementDocx, choCertificationDocx } from '../controllers/caseDocumentController.js'
 import { getMedicines, saveMedicines, deleteMedicine } from '../controllers/caseMedicineController.js'
 import { getRequirements, updateRequirements, patchRequirement } from '../controllers/caseRequirementController.js'
@@ -34,6 +34,7 @@ router.delete('/:id', asyncHandler(deleteCase))
 
 // ── Workflow ────────────────────────────────────────────────────────────────
 router.patch('/:id/status', asyncHandler(updateStatus))
+router.patch('/:id/cancel', requireAuth, requireRole(['admin']), asyncHandler(cancelCase))
 
 // ── Requirements ────────────────────────────────────────────────────────────
 router.get('/:id/requirements', asyncHandler(getRequirements))

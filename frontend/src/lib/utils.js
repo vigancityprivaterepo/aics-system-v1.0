@@ -81,6 +81,7 @@ export function getStatusColor(status) {
     approved: 'badge-green',
     released: 'badge-green',
     rejected: 'badge-red',
+    cancelled: 'badge-red',
   }
   return map[status] || 'badge-slate'
 }
@@ -96,6 +97,7 @@ export function getStatusLabel(status) {
     approved: 'Approved',
     released: 'Released',
     rejected: 'Disapproved',
+    cancelled: 'Cancelled',
   }
   return map[status] || status
 }

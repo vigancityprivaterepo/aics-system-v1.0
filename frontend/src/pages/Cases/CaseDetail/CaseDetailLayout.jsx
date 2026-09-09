@@ -49,6 +49,7 @@ const QUEUE_LABELS = {
   ready_for_release: 'Ready for Release',
   blocked_incomplete: 'Blocked / Incomplete',
   released: 'Released',
+  cancelled: 'Cancelled',
 }
 
 function statusLabel(status) {
@@ -145,6 +146,31 @@ export default function CaseDetailLayout() {
     await transitionStatus('rejected', reason.trim())
   }
 
+  const handleCancelCase = async () => {
+    if (!caseData) return
+    const reason = window.prompt('Enter reason for cancelling/voiding this case:')
+    if (reason == null) return
+    if (!reason.trim()) {
+      toast.error('A cancellation reason is required')
+      return
+    }
+    const confirmed = window.confirm(
+      `Cancel case ${caseData.caseNumber}? This cannot be undone, and the case number will not be reused.`,
+    )
+    if (!confirmed) return
+    setActionLoading(true)
+    try {
+      await api.patch(`/cases/${id}/cancel`, { reason: reason.trim() })
+      const refreshed = await api.get(`/cases/${id}`)
+      setCaseData(refreshed.data)
+      toast.success('Case cancelled')
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to cancel case')
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
   const handleApprovalStage = async () => {
     if (!caseData) return
     const next = APPROVAL_NEXT[caseData.status]
@@ -223,10 +249,17 @@ export default function CaseDetailLayout() {
   return (
     <div className="animate-fade-in">
       <div className="mb-6">
-        <button onClick={() => navigate('/cases')} className="btn-ghost mb-4 text-sm min-h-[44px]">
-          <ChevronLeftIcon className="h-4 w-4" />
-          Back to Cases
-        </button>
+        <div className="mb-4 flex items-center justify-between">
+          <button onClick={() => navigate('/cases')} className="btn-ghost text-sm min-h-[44px]">
+            <ChevronLeftIcon className="h-4 w-4" />
+            Back to Cases
+          </button>
+          {permissions.canCancel && (
+            <button onClick={handleCancelCase} disabled={actionLoading} className="portal-button-red text-sm">
+              Cancel / Void Case
+            </button>
+          )}
+        </div>
         <div>
           <p className="portal-kicker">Case File</p>
           <h1 className="font-mono text-2xl font-bold text-brand-primary">{caseData.caseNumber}</h1>
@@ -325,7 +358,7 @@ export default function CaseDetailLayout() {
         )}
       </div>
 
-      {(canManageWorkflow || permissions.canRelease || caseData?.status === 'released') ? (
+      {(canManageWorkflow || permissions.canRelease || caseData?.status === 'released' || caseData?.status === 'cancelled') ? (
         <CaseActionBar
           caseData={caseData}
           canManageWorkflow={canManageWorkflow}

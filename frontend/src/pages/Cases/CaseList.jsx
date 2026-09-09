@@ -19,6 +19,7 @@ const QUEUE_LABEL = {
   ready_for_release: 'Ready for Release',
   released: 'Released',
   blocked_incomplete: 'Blocked / Incomplete',
+  cancelled: 'Cancelled',
 }
 
 function workflowApprovalMessages(caseRow) {
@@ -37,7 +38,7 @@ function workflowApprovalMessages(caseRow) {
     return summaries.filter((summary) => ['for_review', 'recommending_approval'].includes(summary.stage))
   }
 
-  if (caseRow.status === 'approved' || caseRow.status === 'released' || caseRow.status === 'rejected') {
+  if (caseRow.status === 'approved' || caseRow.status === 'released' || caseRow.status === 'rejected' || caseRow.status === 'cancelled') {
     return summaries
   }
 

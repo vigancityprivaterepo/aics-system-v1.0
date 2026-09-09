@@ -13,6 +13,7 @@ export type WorkflowQueue =
   | 'ready_for_release'
   | 'blocked_incomplete'
   | 'released'
+  | 'cancelled'
 
 const QUEUE_SLA_HOURS: Record<WorkflowQueue, number | null> = {
   needs_intake: 24,
@@ -23,6 +24,7 @@ const QUEUE_SLA_HOURS: Record<WorkflowQueue, number | null> = {
   ready_for_release: 48,
   blocked_incomplete: 24,
   released: null,
+  cancelled: null,
 }
 
 function textPresent(value: unknown) {
@@ -153,6 +155,9 @@ export function assessCaseWorkflow(caseRow: any, assigneesByStage?: ApprovalAssi
   } else if (status === 'rejected') {
     queue = 'blocked_incomplete'
     nextAction = 'Re-open the case and correct the disapproval findings.'
+  } else if (status === 'cancelled') {
+    queue = 'cancelled'
+    nextAction = 'This case was cancelled/voided. No further action is possible.'
   }
 
   const dueHours = QUEUE_SLA_HOURS[isBlocked && queue === 'needs_encoding' ? 'blocked_incomplete' : queue]

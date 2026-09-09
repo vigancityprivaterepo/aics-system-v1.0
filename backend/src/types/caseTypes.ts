@@ -19,7 +19,7 @@ export const STATUS_FLOW: CaseStatus[] = [
   'intake', 'encoding', 'for_review', 'recommending_approval', 'for_approval', 'approved', 'released',
 ]
 
-export const EDIT_LOCKED_STATUSES = new Set<CaseStatus>(['approved', 'released', 'rejected'])
+export const EDIT_LOCKED_STATUSES = new Set<CaseStatus>(['approved', 'released', 'rejected', 'cancelled'])
 
 export const ACTIVE_APPROVAL_STATUSES = new Set<CaseStatus>([
   'for_review', 'recommending_approval', 'for_approval',

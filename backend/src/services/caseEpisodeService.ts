@@ -90,7 +90,7 @@ export async function syncCaseEpisodeStatus(
       caseEpisodeId: episodeId,
       isArchived: false,
       status: {
-        notIn: ['released', 'rejected'],
+        notIn: ['released', 'rejected', 'cancelled'],
       },
     },
     select: { id: true },

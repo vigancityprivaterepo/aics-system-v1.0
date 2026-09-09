@@ -4,7 +4,7 @@ import { prisma } from '../utils/prisma.js'
 import { HttpError } from '../utils/httpError.js'
 import { ACTIVE_APPROVAL_STATUSES, APPROVAL_STAGE_META } from '../types/caseTypes.js'
 import { findCaseWithDetails, getApprovalSettings } from '../queries/caseQueries.js'
-import { updateStatusSchema } from '../schemas/caseSchemas.js'
+import { updateStatusSchema, cancelCaseSchema } from '../schemas/caseSchemas.js'
 import { paramId, assertCaseReadable, assertEditableCase, normalizeWorkflowStatus, caseStatusToStep } from '../services/caseService.js'
 import {
   resolveApprovalAssignees,
@@ -19,6 +19,7 @@ import {
 } from '../services/approvalService.js'
 import { sendPortalStatusNotifications } from '../services/portalStatusNotifications.js'
 import { auditLog } from '../utils/auditLog.js'
+import { logAdminAudit } from '../services/adminAuditService.js'
 import { assessCaseWorkflow } from '../services/caseWorkflowService.js'
 
 // APPROVAL_STAGE_META's `label` is phrased for "Approved by: {label}" display, not for
@@ -41,6 +42,12 @@ export async function updateStatus(req: Request, res: Response) {
 
   if (caseData.status === requestedStatus) {
     return res.json({ id: caseData.id, status: caseData.status })
+  }
+
+  // Cancelled/voided is terminal — it never re-enters the normal workflow, and it's not
+  // reachable through this generic endpoint in the first place (see cancelCase below).
+  if (caseData.status === 'cancelled') {
+    throw new HttpError(400, 'This case has been cancelled and cannot be modified.')
   }
 
   const currentStatus = normalizeWorkflowStatus(caseData.status)
@@ -232,4 +239,69 @@ export async function updateStatus(req: Request, res: Response) {
   }
 
   res.json({ id: updated.id, status: updated.status })
+}
+
+// Cancelling/voiding a case is terminal and admin-only. The case row (and its
+// caseNumber) is never deleted or reused — generateCaseCaseNumber() always picks the
+// next number after the highest one on record, so a voided number simply stays
+// retired instead of being freed up for a future case.
+export async function cancelCase(req: Request, res: Response) {
+  const caseId = paramId(req.params.id)
+  const { reason } = cancelCaseSchema.parse(req.body)
+
+  const caseData = await findCaseWithDetails(caseId)
+  if (!caseData) throw new HttpError(404, 'Case not found')
+  if (caseData.status === 'cancelled') throw new HttpError(400, 'Case is already cancelled')
+
+  const cancelledAt = new Date()
+
+  const updated = await prisma.$transaction(async (tx) => {
+    const next = await tx.case.update({
+      where: { id: caseData.id },
+      data: {
+        status: 'cancelled',
+        cancelledAt,
+        cancelReason: reason,
+        cancelledByUserId: req.user?.id,
+      },
+    })
+
+    await auditLog(tx, {
+      caseId: caseData.id,
+      changedById: req.user?.id,
+      fromStatus: caseData.status,
+      toStatus: 'cancelled',
+      notes: reason,
+    })
+
+    await logAdminAudit(tx, {
+      actorId: req.user?.id,
+      action: 'case.cancel',
+      targetType: 'case',
+      targetId: caseData.id,
+      summary: `Cancelled case ${caseData.caseNumber ?? caseData.id}`,
+      details: { reason, fromStatus: caseData.status },
+    })
+
+    await tx.applicantApplication.updateMany({
+      where: { caseId: caseData.id },
+      data: {
+        status: ApplicantApplicationStatus.disapproved,
+        reviewedAt: cancelledAt,
+        adminNotes: reason,
+      },
+    })
+
+    return next
+  })
+
+  const linkedApplication = await prisma.applicantApplication.findFirst({
+    where: { caseId: caseData.id },
+    include: { applicant: { select: { firstName: true, email: true, mobileNumber: true } } },
+  })
+  if (linkedApplication) {
+    sendPortalStatusNotifications({ ...linkedApplication, status: 'rejected', adminNotes: reason }).catch(console.error)
+  }
+
+  res.json({ id: updated.id, status: updated.status, cancelledAt: updated.cancelledAt, cancelReason: updated.cancelReason })
 }

@@ -248,6 +248,15 @@ export default function Dashboard() {
     { label: 'Pending Review', value: pendingReviewCount, Icon: ClockIcon, tint: 'bg-[#fef2f2] text-[#dc2626]', alert: pendingReviewCount > 0 },
     { label: 'Beneficiaries', value: stats?.totalClients ?? '—', Icon: UsersIcon, tint: 'bg-[#f5f3ff] text-[#7c3aed]' },
     { label: 'Released', value: stats?.byStatus?.released ?? '—', Icon: FileTextIcon, tint: 'bg-[#fffbeb] text-[#b45309]' },
+    ...(user?.role === 'admin'
+      ? [{
+          label: 'Cancelled',
+          value: stats?.byStatus?.cancelled ?? '—',
+          Icon: FileTextIcon,
+          tint: 'bg-[#fef2f2] text-[#dc2626]',
+          to: '/cases?queue=cancelled',
+        }]
+      : []),
   ]
 
   const typeTiles = [
@@ -326,20 +335,28 @@ export default function Dashboard() {
 
         {/* Stat tiles */}
         <div className="grid min-w-0 grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-4">
-          {heroTiles.map((s) => (
-            <div key={s.label} className="flex flex-col gap-2.5 rounded-[14px] border border-slate-300/80 bg-white p-4 shadow-[0_1px_3px_rgba(15,45,82,0.06)]">
-              <span className={`inline-flex h-[42px] w-[42px] items-center justify-center rounded-full ${s.tint}`}>
-                <s.Icon className="h-[19px] w-[19px]" />
-              </span>
-              <div>
-                <p className="flex items-center gap-1.5 font-display text-[25px] font-bold leading-tight text-[#0f2d52]">
-                  {typeof s.value === 'number' ? s.value.toLocaleString() : s.value}
-                  {s.alert ? <span className="inline-flex h-2 w-2 shrink-0 animate-ping rounded-full bg-red-500" /> : null}
-                </p>
-                <p className="mt-[3px] text-xs text-gray-500">{s.label}</p>
-              </div>
-            </div>
-          ))}
+          {heroTiles.map((s) => {
+            const Tag = s.to ? Link : 'div'
+            return (
+              <Tag
+                key={s.label}
+                {...(s.to ? { to: s.to } : {})}
+                className={`flex flex-col gap-2.5 rounded-[14px] border border-slate-300/80 bg-white p-4 shadow-[0_1px_3px_rgba(15,45,82,0.06)] ${s.to ? 'transition-colors hover:border-emerald-300 hover:shadow-md' : ''}`}
+              >
+                <span className={`inline-flex h-[42px] w-[42px] items-center justify-center rounded-full ${s.tint}`}>
+                  <s.Icon className="h-[19px] w-[19px]" />
+                </span>
+                <div>
+                  <p className="flex items-center gap-1.5 font-display text-[25px] font-bold leading-tight text-[#0f2d52]">
+                    {typeof s.value === 'number' ? s.value.toLocaleString() : s.value}
+                    {s.alert ? <span className="inline-flex h-2 w-2 shrink-0 animate-ping rounded-full bg-red-500" /> : null}
+                  </p>
+                  <p className="mt-[3px] text-xs text-gray-500">{s.label}</p>
+                  {s.to ? <p className="mt-0.5 text-[10px] text-emerald-700">Tap to open filtered list</p> : null}
+                </div>
+              </Tag>
+            )
+          })}
         </div>
       </div>
 

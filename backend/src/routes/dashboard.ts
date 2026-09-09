@@ -80,6 +80,7 @@ router.get('/stats', asyncHandler(async (_req, res) => {
     approved: 0,
     released: 0,
     rejected: 0,
+    cancelled: 0,
   }
   for (const row of byStatus) {
     const normalizedStatus = row.status === 'requirements' ? 'encoding' : row.status
@@ -94,6 +95,7 @@ router.get('/stats', asyncHandler(async (_req, res) => {
     waiting_for_approver: 0,
     ready_for_release: 0,
     blocked_incomplete: 0,
+    cancelled: 0,
   }
   let blockedCases = 0
   let overdueCases = 0

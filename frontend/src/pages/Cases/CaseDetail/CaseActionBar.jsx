@@ -40,6 +40,25 @@ export default function CaseActionBar({
     )
   }
 
+  if (status === 'cancelled') {
+    return (
+      <div className="card mb-4 flex items-center gap-3 border-l-4 border-red-600">
+        <div className="text-sm">
+          <p className="font-semibold text-slate-800">
+            Cancelled{caseData.cancelledAt ? ` on ${formatDateTime(caseData.cancelledAt)}` : ''}
+            {caseData.cancelledByName ? ` by ${caseData.cancelledByName}` : ''}
+          </p>
+          <p className="mt-1 whitespace-pre-wrap text-slate-600">
+            Reason: {caseData.cancelReason || 'No reason was recorded.'}
+          </p>
+          <p className="mt-1 text-xs text-slate-400">
+            This case number stays retired — it will not be reused for a new case.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="card mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       {status === 'rejected' && (

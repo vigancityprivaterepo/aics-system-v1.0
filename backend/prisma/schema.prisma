@@ -26,6 +26,7 @@ enum CaseStatus {
   approved
   released
   rejected
+  cancelled
 }
 
 enum UserRole {
@@ -90,6 +91,7 @@ model User {
   updatedAt    DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
   cases                Case[]                  @relation("case_social_worker")
   archivedCases        Case[]                  @relation("case_archived_by_user")
+  cancelledCases       Case[]                  @relation("case_cancelled_by_user")
   caseOverrides        CaseOverride[]          @relation("case_override_created_by_user")
   openedCaseEpisodes   CaseEpisode[]           @relation("case_episode_opened_by_user")
   statusLogs           CaseStatusLog[]         @relation("changed_by_user")
@@ -178,12 +180,16 @@ model Case {
   isArchived         Boolean           @default(false) @map("is_archived")
   archivedAt         DateTime?         @map("archived_at") @db.Timestamptz(6)
   archiveReason      String?           @map("archive_reason")
+  cancelledAt        DateTime?         @map("cancelled_at") @db.Timestamptz(6)
+  cancelReason       String?           @map("cancel_reason")
+  cancelledByUserId  String?           @map("cancelled_by_user_id") @db.Uuid
   createdAt          DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt          DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   client             Client            @relation(fields: [clientId], references: [id])
   socialWorker       User?             @relation("case_social_worker", fields: [socialWorkerId], references: [id])
   archivedByUser     User?             @relation("case_archived_by_user", fields: [archivedByUserId], references: [id], onDelete: SetNull)
+  cancelledByUser    User?             @relation("case_cancelled_by_user", fields: [cancelledByUserId], references: [id], onDelete: SetNull)
   caseEpisode        CaseEpisode?      @relation(fields: [caseEpisodeId], references: [id], onDelete: SetNull)
   requirements       CaseRequirement[]
   medicines          CaseMedicine[]
