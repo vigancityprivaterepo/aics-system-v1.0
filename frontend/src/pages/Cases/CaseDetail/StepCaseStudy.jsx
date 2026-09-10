@@ -341,7 +341,6 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false, on
               <div className="sm:col-span-2">
                 <label className="portal-label">Employee Name *</label>
                 <input type="text" {...register('socialWorkerName', { required: 'Employee name is required' })} className="portal-input" placeholder="Full name of assigned social worker" />
-                <p className="mt-1 text-xs text-slate-500">Auto-filled from the signed-in account. You can adjust it here if needed.</p>
                 <FieldError message={errors.socialWorkerName?.message} />
               </div>
             </div>
@@ -377,7 +376,7 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false, on
           </section>
 
           <section className="rounded-lg border border-slate-200 bg-white p-4">
-            <EncodingSectionHeader number="3" title="Narrative" description="State the concern and write the findings used in the generated report." />
+            <EncodingSectionHeader number="3" title="Narrative" />
             <div className="grid grid-cols-1 gap-4">
               {isBurial && (
                 <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
@@ -422,7 +421,6 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false, on
                     <div><label className="portal-label">Occupation</label><SearchablePresetInput value={watch('beneficiaryOccupation') || ''} onChange={(value) => setValue('beneficiaryOccupation', value, { shouldDirty: true, shouldTouch: true })} options={OCCUPATION_OPTIONS} placeholder="Search occupation" /></div>
                     <div className="sm:col-span-2">
                       <label className="portal-label">Category</label>
-                      <p className="mb-1 text-xs text-slate-400">Describes this beneficiary specifically — Senior is auto-suggested from age above, but always double-check before saving.</p>
                       <div className="flex flex-wrap gap-4">
                         <label className="flex items-center gap-2 text-sm text-slate-700"><input type="checkbox" {...register('beneficiaryIs4ps')} className="h-4 w-4 rounded border-slate-300" />4Ps Beneficiary</label>
                         <label className="flex items-center gap-2 text-sm text-slate-700"><input type="checkbox" {...register('beneficiaryIsPwd')} className="h-4 w-4 rounded border-slate-300" />PWD</label>
