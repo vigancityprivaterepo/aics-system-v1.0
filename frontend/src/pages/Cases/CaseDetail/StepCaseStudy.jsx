@@ -96,6 +96,11 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false, on
   const initialBeneficiaryIs4ps = caseData.beneficiaryIs4ps ?? (initialBeneficiaryIsClient && Boolean(caseData.client?.is4ps))
   const initialBeneficiaryIsPwd = caseData.beneficiaryIsPwd ?? (initialBeneficiaryIsClient && Boolean(caseData.client?.isPwd))
   const initialBeneficiaryIsSenior = caseData.beneficiaryIsSenior ?? (initialBeneficiaryIsClient && Boolean(caseData.client?.isSenior))
+  // A beneficiary belongs to exactly one category for reporting purposes. If more
+  // than one flag is already true (e.g. inherited independently from the client's
+  // own profile), Senior takes priority since it's objectively age-based, then PWD,
+  // then 4Ps — picking one collapses the rest the next time this case is saved.
+  const initialBeneficiaryCategory = initialBeneficiaryIsSenior ? 'senior' : initialBeneficiaryIsPwd ? 'pwd' : initialBeneficiaryIs4ps ? '4ps' : 'none'
   const currentUser = useAuthStore((state) => state.user)
   const [family, setFamily] = useState(caseData.familyComposition || [])
   const [medicines, setMedicines] = useState(normalizeMedicineRows(caseData.medicines || []))
@@ -125,9 +130,7 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false, on
       beneficiaryOccupation: caseData.beneficiaryOccupation || clientOccupation,
       beneficiaryRequestorName: caseData.beneficiaryRequestorName || '',
       beneficiaryRequestorRelationship: caseData.beneficiaryRequestorRelationship || '',
-      beneficiaryIs4ps: initialBeneficiaryIs4ps,
-      beneficiaryIsPwd: initialBeneficiaryIsPwd,
-      beneficiaryIsSenior: initialBeneficiaryIsSenior,
+      beneficiaryCategory: initialBeneficiaryCategory,
       choCertGivenDate: caseData.choCertGivenDate || '',
     },
   })
@@ -137,11 +140,12 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false, on
 
   const beneficiaryAgeField = register('beneficiaryAge')
   // Senior status is objectively determined by age, so suggest it automatically —
-  // the encoder can still uncheck it (e.g. the office hasn't verified the ID yet).
+  // but only when no category is already chosen, so it never silently overrides
+  // an explicit 4Ps/PWD selection the encoder already made.
   const suggestSeniorFromAge = (ageValue) => {
     const ageNum = Number(ageValue)
-    if (ageValue !== '' && Number.isFinite(ageNum)) {
-      setValue('beneficiaryIsSenior', ageNum >= 60, { shouldDirty: true, shouldTouch: true })
+    if (ageValue !== '' && Number.isFinite(ageNum) && ageNum >= 60 && getValues('beneficiaryCategory') === 'none') {
+      setValue('beneficiaryCategory', 'senior', { shouldDirty: true, shouldTouch: true })
     }
   }
 
@@ -223,9 +227,12 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false, on
       beneficiaryOccupation: beneficiaryIsStillClient ? null : (data.beneficiaryOccupation || null),
       beneficiaryRequestorName: data.beneficiaryRequestorName || null,
       beneficiaryRequestorRelationship: data.beneficiaryRequestorRelationship || null,
-      beneficiaryIs4ps: sendBeneficiaryCategoryOverride ? Boolean(data.beneficiaryIs4ps) : null,
-      beneficiaryIsPwd: sendBeneficiaryCategoryOverride ? Boolean(data.beneficiaryIsPwd) : null,
-      beneficiaryIsSenior: sendBeneficiaryCategoryOverride ? Boolean(data.beneficiaryIsSenior) : null,
+      // Category is a single radio choice in the UI (a beneficiary counts toward
+      // exactly one report bucket), decomposed here into the three independent
+      // flags the backend stores.
+      beneficiaryIs4ps: sendBeneficiaryCategoryOverride ? data.beneficiaryCategory === '4ps' : null,
+      beneficiaryIsPwd: sendBeneficiaryCategoryOverride ? data.beneficiaryCategory === 'pwd' : null,
+      beneficiaryIsSenior: sendBeneficiaryCategoryOverride ? data.beneficiaryCategory === 'senior' : null,
     }
     const burialPayload = isBurial
       ? {
@@ -405,13 +412,12 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false, on
                           setValue('beneficiaryAge', computedAge ?? (member.age ?? ''), { shouldDirty: true, shouldTouch: true })
                           if (member.sex) setValue('beneficiarySex', member.sex, { shouldDirty: true, shouldTouch: true })
                           if (member.occupation) setValue('beneficiaryOccupation', member.occupation, { shouldDirty: true, shouldTouch: true })
-                          // Family composition doesn't track 4Ps/PWD/Senior per member, so
-                          // switching to a different beneficiary starts their category blank
-                          // rather than carrying over whoever was selected before.
-                          setValue('beneficiaryIs4ps', false, { shouldDirty: true, shouldTouch: true })
-                          setValue('beneficiaryIsPwd', false, { shouldDirty: true, shouldTouch: true })
+                          // Family composition doesn't track category per member, so switching
+                          // to a different beneficiary starts their category blank (aside from
+                          // an age-based Senior suggestion) rather than carrying over whoever
+                          // was selected before.
                           const computedAgeForSenior = member.dateOfBirth ? calculateAge(member.dateOfBirth) : (member.age ? Number(member.age) : null)
-                          setValue('beneficiaryIsSenior', Number.isFinite(computedAgeForSenior) && computedAgeForSenior >= 60, { shouldDirty: true, shouldTouch: true })
+                          setValue('beneficiaryCategory', Number.isFinite(computedAgeForSenior) && computedAgeForSenior >= 60 ? 'senior' : 'none', { shouldDirty: true, shouldTouch: true })
                         }}
                       />
                     </div>
@@ -422,9 +428,10 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false, on
                     <div className="sm:col-span-2">
                       <label className="portal-label">Category</label>
                       <div className="flex flex-wrap gap-4">
-                        <label className="flex items-center gap-2 text-sm text-slate-700"><input type="checkbox" {...register('beneficiaryIs4ps')} className="h-4 w-4 rounded border-slate-300" />4Ps Beneficiary</label>
-                        <label className="flex items-center gap-2 text-sm text-slate-700"><input type="checkbox" {...register('beneficiaryIsPwd')} className="h-4 w-4 rounded border-slate-300" />PWD</label>
-                        <label className="flex items-center gap-2 text-sm text-slate-700"><input type="checkbox" {...register('beneficiaryIsSenior')} className="h-4 w-4 rounded border-slate-300" />Senior Citizen</label>
+                        <label className="flex items-center gap-2 text-sm text-slate-700"><input type="radio" value="none" {...register('beneficiaryCategory')} className="h-4 w-4 border-slate-300" />None</label>
+                        <label className="flex items-center gap-2 text-sm text-slate-700"><input type="radio" value="4ps" {...register('beneficiaryCategory')} className="h-4 w-4 border-slate-300" />4Ps Beneficiary</label>
+                        <label className="flex items-center gap-2 text-sm text-slate-700"><input type="radio" value="pwd" {...register('beneficiaryCategory')} className="h-4 w-4 border-slate-300" />PWD</label>
+                        <label className="flex items-center gap-2 text-sm text-slate-700"><input type="radio" value="senior" {...register('beneficiaryCategory')} className="h-4 w-4 border-slate-300" />Senior Citizen</label>
                       </div>
                     </div>
                     <div>
