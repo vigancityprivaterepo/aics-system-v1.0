@@ -331,7 +331,7 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false, on
       <form onSubmit={handleSubmit(onSave, handleInvalid)}>
         <fieldset disabled={readOnly} className="space-y-4">
           <section className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-            <EncodingSectionHeader number="1" title="Assessment Info" description="Set the assessment date and assigned case worker." />
+            <EncodingSectionHeader number="1" title="Assessment Info" />
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <div>
                 <label className="portal-label">Date of Assessment *</label>
@@ -348,7 +348,7 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false, on
           </section>
 
           <section className="rounded-lg border border-slate-200 bg-white p-4">
-            <EncodingSectionHeader number="2" title="Household Members" description="Add family members included in the case study." />
+            <EncodingSectionHeader number="2" title="Household Members" />
             <div className="mt-1 overflow-x-auto rounded-lg border border-slate-200">
               <table className="w-full text-xs">
                 <thead>
@@ -393,7 +393,7 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false, on
               )}
               {!isBurial && (
                 <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-                  <EncodingSectionHeader number="3A" title="Beneficiary" description="Defaults to the client. Change the name only if the assistance is actually for someone else (e.g. a household member)." />
+                  <EncodingSectionHeader number="3A" title="Beneficiary" />
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div className="sm:col-span-2">
                       <label className="portal-label">Beneficiary Name</label>
@@ -468,7 +468,7 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false, on
 
           {isMedicine ? (
             <section className="rounded-lg border border-slate-200 bg-white p-4">
-              <EncodingSectionHeader number="4" title="Medicine Items" description="Encode prescribed medicines and quantities for this assistance." />
+              <EncodingSectionHeader number="4" title="Medicine Items" />
               <MedicineTable items={medicines} onChange={setMedicines} readOnly={readOnly} />
               <div className="mt-5 grid grid-cols-1 gap-4 border-t border-slate-200 pt-4 sm:max-w-2xl sm:grid-cols-2">
                 <div>
