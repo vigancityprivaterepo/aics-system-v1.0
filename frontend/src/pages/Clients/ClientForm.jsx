@@ -28,6 +28,7 @@ export default function ClientForm() {
       clientCategory: 'walk-in', sex: '', civilStatus: '',
       region: 'Region I', municipality: 'Vigan City', province: 'Ilocos Sur',
       firstName: prefill?.firstName ?? '', lastName: prefill?.lastName ?? '', occupation: prefill?.occupation ?? '',
+      category: 'none',
     },
   })
 
@@ -62,7 +63,17 @@ export default function ClientForm() {
     .filter((member) => member.name || member.relationship || member.occupation || member.age !== null || member.dateOfBirth)
 
   const onSubmit = async (data) => {
-    const payload = { ...data, familyComposition: cleanFamily() }
+    const { category, ...rest } = data
+    const payload = {
+      ...rest,
+      // Category is a single radio choice in the UI (a client counts toward exactly
+      // one report bucket), decomposed here into the three independent flags the
+      // backend stores.
+      is4ps: category === '4ps',
+      isPwd: category === 'pwd',
+      isSenior: category === 'senior',
+      familyComposition: cleanFamily(),
+    }
     setSaving(true)
     try {
       const duplicateCheck = await api.post('/clients/duplicate-check', payload)
@@ -250,12 +261,13 @@ export default function ClientForm() {
           <div className="form-section-title">Classifications</div>
           <div className="flex flex-wrap gap-4">
             {[
-              { key: 'is4ps', label: '4Ps Beneficiary' },
-              { key: 'isPwd', label: 'Person with Disability (PWD)' },
-              { key: 'isSenior', label: 'Senior Citizen (60+)' },
-            ].map(({ key, label }) => (
-              <label key={key} className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" {...register(key)} className="h-4 w-4 rounded border-slate-300 text-brand-green focus:ring-brand-green" />
+              { value: 'none', label: 'None' },
+              { value: '4ps', label: '4Ps Beneficiary' },
+              { value: 'pwd', label: 'Person with Disability (PWD)' },
+              { value: 'senior', label: 'Senior Citizen (60+)' },
+            ].map(({ value, label }) => (
+              <label key={value} className="flex items-center gap-2 cursor-pointer">
+                <input type="radio" value={value} {...register('category')} className="h-4 w-4 border-slate-300 text-brand-green focus:ring-brand-green" />
                 <span className="text-sm font-medium text-slate-700">{label}</span>
               </label>
             ))}

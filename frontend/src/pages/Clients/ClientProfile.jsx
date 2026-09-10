@@ -132,6 +132,9 @@ function toEditForm(client) {
     sex: client.sex ?? '',
     civilStatus: client.civilStatus ?? '',
     clientCategory: client.clientCategory ?? 'walk-in',
+    // Single radio choice decomposed from the three independent is4ps/isPwd/isSenior
+    // flags so a client counts toward exactly one report bucket.
+    classification: client.isSenior ? 'senior' : client.isPwd ? 'pwd' : client.is4ps ? '4ps' : 'none',
     barangay: client.barangay ?? '',
     municipality: client.municipality ?? 'Vigan City',
     province: client.province ?? 'Ilocos Sur',
@@ -184,6 +187,7 @@ export default function ClientProfile() {
     sex: '',
     civilStatus: '',
     clientCategory: 'walk-in',
+    classification: 'none',
     barangay: '',
     municipality: 'Vigan City',
     province: 'Ilocos Sur',
@@ -277,6 +281,9 @@ export default function ClientProfile() {
       sex: form.sex || null,
       civilStatus: form.civilStatus || null,
       clientCategory: form.clientCategory || 'walk-in',
+      is4ps: form.classification === '4ps',
+      isPwd: form.classification === 'pwd',
+      isSenior: form.classification === 'senior',
       barangay: form.barangay || null,
       municipality: form.municipality.trim() || null,
       province: form.province.trim() || null,
@@ -510,6 +517,7 @@ export default function ClientProfile() {
                 {client.is4ps && <span className="badge badge-green">4Ps</span>}
                 {client.isPwd && <span className="badge badge-blue">PWD</span>}
                 {client.isSenior && <span className="badge badge-amber">Senior Citizen</span>}
+                {!client.is4ps && !client.isPwd && !client.isSenior && <span className="text-slate-400 text-xs">None</span>}
               </div>
             </div>
           ) : (
@@ -606,6 +614,29 @@ export default function ClientProfile() {
                   <option value="referred">Referred</option>
                   <option value="rescued">Rescued</option>
                 </select>
+              </div>
+              <div className="sm:col-span-2 lg:col-span-3">
+                <label className="portal-label">Classifications</label>
+                <div className="flex flex-wrap gap-4 pt-1">
+                  {[
+                    { value: 'none', label: 'None' },
+                    { value: '4ps', label: '4Ps Beneficiary' },
+                    { value: 'pwd', label: 'Person with Disability (PWD)' },
+                    { value: 'senior', label: 'Senior Citizen (60+)' },
+                  ].map(({ value, label }) => (
+                    <label key={value} className="flex items-center gap-2 cursor-pointer text-sm text-slate-700">
+                      <input
+                        type="radio"
+                        name="classification"
+                        value={value}
+                        checked={form.classification === value}
+                        onChange={(e) => setForm((prev) => ({ ...prev, classification: e.target.value }))}
+                        className="h-4 w-4 border-slate-300 text-brand-green focus:ring-brand-green"
+                      />
+                      {label}
+                    </label>
+                  ))}
+                </div>
               </div>
               <div>
                 <label className="portal-label">Phone</label>
