@@ -474,14 +474,12 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false, on
                 <div>
                   <label className="portal-label">Total Amount Requested (PHP) *</label>
                   <input type="number" min="0" step="0.01" required {...registerAmount(register, 'amount', { required: 'Amount is required' })} className="portal-input" placeholder="0.00" />
-                  <p className="mt-1 text-xs text-slate-500">Manually encode the financial assistance amount requested for this medicine case.</p>
                   <AmountPreview amount={amount} />
                   <FieldError message={errors.amount?.message} />
                 </div>
                 <div>
                   <label className="portal-label">CHO Certification Given Date</label>
                   <input type="date" {...register('choCertGivenDate')} className="portal-input" disabled={readOnly} />
-                  <p className="mt-1 text-xs text-slate-500">Date printed on the CHO certification for unavailable medicines. Leave blank to use today — set a later date if the client will actually get the medicine on a different day.</p>
                 </div>
               </div>
             </section>
