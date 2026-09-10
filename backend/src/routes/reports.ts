@@ -226,6 +226,20 @@ async function loadCasesForReport(options: {
   return { cases, eventDateByCaseId }
 }
 
+// A case's beneficiary can be a different household member than the registrant
+// client (see Case.beneficiaryName). Its category overrides are null until the
+// encoder sets them explicitly; while unset, only fall back to the client's own
+// flags if the beneficiary is still the client — otherwise default to "no"
+// rather than incorrectly inheriting the registrant's own designation.
+function resolveBeneficiaryCategory(c: ReportCase) {
+  const isClient = !c.beneficiaryName
+  return {
+    is4ps: c.beneficiaryIs4ps ?? (isClient && c.client.is4ps),
+    isPwd: c.beneficiaryIsPwd ?? (isClient && c.client.isPwd),
+    isSenior: c.beneficiaryIsSenior ?? (isClient && c.client.isSenior),
+  }
+}
+
 async function loadCaseStatusLogs(caseIds: string[]) {
   if (caseIds.length === 0) return []
   return prisma.caseStatusLog.findMany({
@@ -266,9 +280,10 @@ async function loadSummaryReport(from: string, to: string, basis: ReportBasis) {
     const normalizedStatus = normalizeWorkflowStatus(c.status)
     byStatusMap.set(normalizedStatus, (byStatusMap.get(normalizedStatus) ?? 0) + 1)
 
-    if (c.client.is4ps) is4psCount += 1
-    if (c.client.isPwd) isPwdCount += 1
-    if (c.client.isSenior) isSeniorCount += 1
+    const category = resolveBeneficiaryCategory(c)
+    if (category.is4ps) is4psCount += 1
+    if (category.isPwd) isPwdCount += 1
+    if (category.isSenior) isSeniorCount += 1
   }
 
   return {
@@ -455,9 +470,7 @@ router.get('/cases', asyncHandler(async (req, res) => {
       socialWorkerName: c.socialWorkerName ?? '-',
       dateOfAssessment: formatDate(c.dateOfAssessment),
       basisDate: formatDate(eventDateByCaseId.get(c.id)),
-      is4ps: c.client.is4ps,
-      isPwd: c.client.isPwd,
-      isSenior: c.client.isSenior,
+      ...resolveBeneficiaryCategory(c),
       createdAt: formatDate(c.createdAt),
     })),
   })
@@ -475,7 +488,9 @@ router.get('/cases/csv', asyncHandler(async (req, res) => {
 
   sendCsv(res, `report-cases-${basis}-${from}_to_${to}.csv`, [
     ['Case Number', 'Client ID', 'Client Name', 'Barangay', 'Municipality', 'Assistance Type', 'Current Status', 'Amount', 'Social Worker', basisLabel(basis), 'Assessment Date', 'Created Date', '4Ps', 'PWD', 'Senior'],
-    ...cases.map((c) => [
+    ...cases.map((c) => {
+      const category = resolveBeneficiaryCategory(c)
+      return [
       c.caseNumber ?? '',
       c.client.caseNumber,
       `${c.client.lastName}, ${c.client.firstName}`,
@@ -488,10 +503,11 @@ router.get('/cases/csv', asyncHandler(async (req, res) => {
       formatDate(eventDateByCaseId.get(c.id)),
       formatDate(c.dateOfAssessment),
       formatDate(c.createdAt),
-      c.client.is4ps ? 'Yes' : 'No',
-      c.client.isPwd ? 'Yes' : 'No',
-      c.client.isSenior ? 'Yes' : 'No',
-    ]),
+      category.is4ps ? 'Yes' : 'No',
+      category.isPwd ? 'Yes' : 'No',
+      category.isSenior ? 'Yes' : 'No',
+      ]
+    }),
   ])
 }))
 

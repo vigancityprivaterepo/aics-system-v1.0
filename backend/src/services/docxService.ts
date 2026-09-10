@@ -461,6 +461,14 @@ function buildRenderData(caseData: any): Record<string, any> {
   const isIntakeSourceCategory = ['walk-in', 'walk_in', 'referred', 'rescued'].includes(clientCategory)
   const isKnownBeneficiaryCategory = hasCategory('4ps') || hasCategory('solo') || hasCategory('senior') || hasCategory('pwd')
   const hasOtherBeneficiaryCategory = Boolean(clientCategory) && !isIntakeSourceCategory && !isKnownBeneficiaryCategory
+  // No override name stored means the beneficiary is still the client themself,
+  // so it's safe to fall back to the client's own category flags; once the
+  // beneficiary is a different household member, an unset flag defaults to
+  // "no" rather than incorrectly inheriting the client's own designation.
+  const beneficiaryIsClient = !beneficiaryOverrideName
+  const resolvedBeneficiaryIs4ps = caseData.beneficiaryIs4ps ?? (beneficiaryIsClient && Boolean(c.is4ps))
+  const resolvedBeneficiaryIsPwd = caseData.beneficiaryIsPwd ?? (beneficiaryIsClient && Boolean(c.isPwd))
+  const resolvedBeneficiaryIsSenior = caseData.beneficiaryIsSenior ?? (beneficiaryIsClient && Boolean(c.isSenior))
   const rawRequirements = caseData.requirements ?? []
   const requirementMap = new Map<string, boolean>()
   if (Array.isArray(rawRequirements)) {
@@ -603,10 +611,12 @@ function buildRenderData(caseData: any): Record<string, any> {
     burialCheckBox:      checkbox(hasBurialRequest),
     otherAssistanceCheckBox: checkbox(hasOtherPlainRequest),
     otherAssistanceText: isAssistanceType('plain') && resolvedNatureOfAssistance !== '-' ? resolvedNatureOfAssistance : '',
-    fourPsCheckBox:      checkbox(Boolean(c.is4ps) || hasCategory('4ps')),
+    // These reflect the case's actual beneficiary (who may be a different household
+    // member than the registrant client), not the client's own profile flags.
+    fourPsCheckBox:      checkbox(resolvedBeneficiaryIs4ps),
     soloParentCheckBox:  checkbox(hasCategory('solo')),
-    seniorCitizenCheckBox: checkbox(Boolean(c.isSenior) || hasCategory('senior')),
-    pwdCheckBox:         checkbox(Boolean(c.isPwd) || hasCategory('pwd')),
+    seniorCitizenCheckBox: checkbox(resolvedBeneficiaryIsSenior),
+    pwdCheckBox:         checkbox(resolvedBeneficiaryIsPwd),
     otherCategoryCheckBox: checkbox(hasOtherBeneficiaryCategory),
     otherCategoryText:   hasOtherBeneficiaryCategory ? fmt(c.clientCategory) : '',
 
@@ -689,9 +699,9 @@ function buildRenderData(caseData: any): Record<string, any> {
     relationshipToBeneficiary: resolvedRelationshipToBeneficiary,
     requestingPartyPhrase: resolvedRequestingPartyPhrase,
     clientCategory:      fmt(c.clientCategory),
-    is4ps:               c.is4ps    ? 'Yes' : 'No',
-    isPwd:               c.isPwd    ? 'Yes' : 'No',
-    isSenior:            c.isSenior ? 'Yes' : 'No',
+    is4ps:               resolvedBeneficiaryIs4ps    ? 'Yes' : 'No',
+    isPwd:               resolvedBeneficiaryIsPwd    ? 'Yes' : 'No',
+    isSenior:            resolvedBeneficiaryIsSenior ? 'Yes' : 'No',
 
     // Family composition loop
     familyComposition,

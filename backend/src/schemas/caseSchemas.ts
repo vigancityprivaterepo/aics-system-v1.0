@@ -25,6 +25,9 @@ export const createCaseSchema = z.object({
   beneficiaryOccupation: z.string().optional().nullable(),
   beneficiaryRequestorName: z.string().optional().nullable().transform(normalizeNameOrNullish),
   beneficiaryRequestorRelationship: z.string().optional().nullable(),
+  beneficiaryIs4ps: z.boolean().optional().nullable(),
+  beneficiaryIsPwd: z.boolean().optional().nullable(),
+  beneficiaryIsSenior: z.boolean().optional().nullable(),
 })
 
 export const updateCaseSchema = z.object({
@@ -51,6 +54,9 @@ export const updateCaseSchema = z.object({
   beneficiaryOccupation: z.string().optional().nullable(),
   beneficiaryRequestorName: z.string().optional().nullable().transform(normalizeNameOrNullish),
   beneficiaryRequestorRelationship: z.string().optional().nullable(),
+  beneficiaryIs4ps: z.boolean().optional().nullable(),
+  beneficiaryIsPwd: z.boolean().optional().nullable(),
+  beneficiaryIsSenior: z.boolean().optional().nullable(),
 })
 
 export const updateStatusSchema = z.object({

@@ -351,6 +351,9 @@ export async function createCase(req: Request, res: Response) {
         beneficiaryOccupation: body.beneficiaryOccupation ?? null,
         beneficiaryRequestorName: body.beneficiaryRequestorName ?? null,
         beneficiaryRequestorRelationship: body.beneficiaryRequestorRelationship ?? null,
+        beneficiaryIs4ps: body.beneficiaryIs4ps ?? null,
+        beneficiaryIsPwd: body.beneficiaryIsPwd ?? null,
+        beneficiaryIsSenior: body.beneficiaryIsSenior ?? null,
       },
       include: { client: true },
     })
@@ -466,6 +469,9 @@ export async function updateCase(req: Request, res: Response) {
   const nextBeneficiaryOccupation = body.beneficiaryOccupation !== undefined ? body.beneficiaryOccupation : current.beneficiaryOccupation
   const nextBeneficiaryRequestorName = body.beneficiaryRequestorName !== undefined ? body.beneficiaryRequestorName : current.beneficiaryRequestorName
   const nextBeneficiaryRequestorRelationship = body.beneficiaryRequestorRelationship !== undefined ? body.beneficiaryRequestorRelationship : current.beneficiaryRequestorRelationship
+  const nextBeneficiaryIs4ps = body.beneficiaryIs4ps !== undefined ? body.beneficiaryIs4ps : current.beneficiaryIs4ps
+  const nextBeneficiaryIsPwd = body.beneficiaryIsPwd !== undefined ? body.beneficiaryIsPwd : current.beneficiaryIsPwd
+  const nextBeneficiaryIsSenior = body.beneficiaryIsSenior !== undefined ? body.beneficiaryIsSenior : current.beneficiaryIsSenior
   const nextSocialWorkerName = body.socialWorkerName !== undefined ? body.socialWorkerName : current.socialWorkerName
   const nextSocialWorkerEmpId = body.socialWorkerEmpId !== undefined ? body.socialWorkerEmpId : current.socialWorkerEmpId
   const nextPresentingProblem = body.presentingProblem !== undefined ? body.presentingProblem : current.presentingProblem
@@ -495,6 +501,9 @@ export async function updateCase(req: Request, res: Response) {
   if (body.beneficiaryOccupation !== undefined && valuesDiffer(current.beneficiaryOccupation ?? null, nextBeneficiaryOccupation ?? null)) changedFields.push('beneficiaryOccupation')
   if (body.beneficiaryRequestorName !== undefined && valuesDiffer(current.beneficiaryRequestorName ?? null, nextBeneficiaryRequestorName ?? null)) changedFields.push('beneficiaryRequestorName')
   if (body.beneficiaryRequestorRelationship !== undefined && valuesDiffer(current.beneficiaryRequestorRelationship ?? null, nextBeneficiaryRequestorRelationship ?? null)) changedFields.push('beneficiaryRequestorRelationship')
+  if (body.beneficiaryIs4ps !== undefined && valuesDiffer(current.beneficiaryIs4ps, nextBeneficiaryIs4ps)) changedFields.push('beneficiaryIs4ps')
+  if (body.beneficiaryIsPwd !== undefined && valuesDiffer(current.beneficiaryIsPwd, nextBeneficiaryIsPwd)) changedFields.push('beneficiaryIsPwd')
+  if (body.beneficiaryIsSenior !== undefined && valuesDiffer(current.beneficiaryIsSenior, nextBeneficiaryIsSenior)) changedFields.push('beneficiaryIsSenior')
   if (current.assistanceType === 'medicine') {
     const currentMedicineTemplateType = typeof (current.auditFlags as any)?.medicine_template_type === 'string' && (current.auditFlags as any).medicine_template_type === 'proxy' ? 'proxy' : 'personal'
     const currentMedicineConformeName = typeof (current.auditFlags as any)?.medicine_conforme_name === 'string' ? (current.auditFlags as any).medicine_conforme_name : null
@@ -534,6 +543,9 @@ export async function updateCase(req: Request, res: Response) {
         beneficiaryOccupation: body.beneficiaryOccupation,
         beneficiaryRequestorName: body.beneficiaryRequestorName,
         beneficiaryRequestorRelationship: body.beneficiaryRequestorRelationship,
+        beneficiaryIs4ps: body.beneficiaryIs4ps,
+        beneficiaryIsPwd: body.beneficiaryIsPwd,
+        beneficiaryIsSenior: body.beneficiaryIsSenior,
         auditFlags: auditFlags as Prisma.InputJsonValue,
       },
     })

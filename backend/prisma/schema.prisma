@@ -175,6 +175,15 @@ model Case {
   beneficiaryOccupation            String? @map("beneficiary_occupation") @db.VarChar(200)
   beneficiaryRequestorName         String? @map("beneficiary_requestor_name") @db.VarChar(200)
   beneficiaryRequestorRelationship String? @map("beneficiary_requestor_relationship") @db.VarChar(100)
+  // Category override for the actual case beneficiary, who can differ from the
+  // registrant client (e.g. a case filed for the client's senior parent or minor
+  // dependent). Null means "same as the client" and is resolved live from
+  // Client.is4ps/isPwd/isSenior only while the beneficiary is still the client;
+  // once the beneficiary is a different person these must be set explicitly so
+  // reports and the generated case study checkboxes describe the real beneficiary.
+  beneficiaryIs4ps    Boolean?         @map("beneficiary_is_4ps")
+  beneficiaryIsPwd    Boolean?         @map("beneficiary_is_pwd")
+  beneficiaryIsSenior Boolean?         @map("beneficiary_is_senior")
   choCertGivenDate   DateTime?         @map("cho_cert_given_date") @db.Date
   auditFlags         Json?             @map("audit_flags")
   isArchived         Boolean           @default(false) @map("is_archived")

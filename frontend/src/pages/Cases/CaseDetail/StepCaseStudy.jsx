@@ -89,6 +89,13 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false, on
   const clientSex = caseData.client?.sex || ''
   const clientCivilStatus = caseData.client?.civilStatus || ''
   const clientOccupation = caseData.client?.occupation || ''
+  // A stored beneficiary name means the case is already known to be for someone
+  // other than the client, so category checkboxes must not inherit the client's
+  // own flags by default — only the still-the-client case may do that.
+  const initialBeneficiaryIsClient = !caseData.beneficiaryName
+  const initialBeneficiaryIs4ps = caseData.beneficiaryIs4ps ?? (initialBeneficiaryIsClient && Boolean(caseData.client?.is4ps))
+  const initialBeneficiaryIsPwd = caseData.beneficiaryIsPwd ?? (initialBeneficiaryIsClient && Boolean(caseData.client?.isPwd))
+  const initialBeneficiaryIsSenior = caseData.beneficiaryIsSenior ?? (initialBeneficiaryIsClient && Boolean(caseData.client?.isSenior))
   const currentUser = useAuthStore((state) => state.user)
   const [family, setFamily] = useState(caseData.familyComposition || [])
   const [medicines, setMedicines] = useState(normalizeMedicineRows(caseData.medicines || []))
@@ -118,12 +125,25 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false, on
       beneficiaryOccupation: caseData.beneficiaryOccupation || clientOccupation,
       beneficiaryRequestorName: caseData.beneficiaryRequestorName || '',
       beneficiaryRequestorRelationship: caseData.beneficiaryRequestorRelationship || '',
+      beneficiaryIs4ps: initialBeneficiaryIs4ps,
+      beneficiaryIsPwd: initialBeneficiaryIsPwd,
+      beneficiaryIsSenior: initialBeneficiaryIsSenior,
       choCertGivenDate: caseData.choCertGivenDate || '',
     },
   })
 
   const formValues = watch()
   useAutosaveDraft(draftKey, { formValues, family, medicines }, { enabled: !readOnly })
+
+  const beneficiaryAgeField = register('beneficiaryAge')
+  // Senior status is objectively determined by age, so suggest it automatically —
+  // the encoder can still uncheck it (e.g. the office hasn't verified the ID yet).
+  const suggestSeniorFromAge = (ageValue) => {
+    const ageNum = Number(ageValue)
+    if (ageValue !== '' && Number.isFinite(ageNum)) {
+      setValue('beneficiaryIsSenior', ageNum >= 60, { shouldDirty: true, shouldTouch: true })
+    }
+  }
 
   const restoreDraft = () => {
     if (!draft) return
@@ -180,6 +200,10 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false, on
 
     const trimmedBeneficiaryName = String(data.beneficiaryName || '').trim()
     const beneficiaryIsStillClient = trimmedBeneficiaryName.toUpperCase() === clientFullName.toUpperCase()
+    // Burial's beneficiary section isn't rendered (the assistance goes to the client,
+    // not the deceased), so its category always tracks the client live, same as when
+    // the beneficiary is still the client themself.
+    const sendBeneficiaryCategoryOverride = !isBurial && !beneficiaryIsStillClient
 
     const casePayload = {
       dateOfAssessment: data.dateOfAssessment || null,
@@ -199,6 +223,9 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false, on
       beneficiaryOccupation: beneficiaryIsStillClient ? null : (data.beneficiaryOccupation || null),
       beneficiaryRequestorName: data.beneficiaryRequestorName || null,
       beneficiaryRequestorRelationship: data.beneficiaryRequestorRelationship || null,
+      beneficiaryIs4ps: sendBeneficiaryCategoryOverride ? Boolean(data.beneficiaryIs4ps) : null,
+      beneficiaryIsPwd: sendBeneficiaryCategoryOverride ? Boolean(data.beneficiaryIsPwd) : null,
+      beneficiaryIsSenior: sendBeneficiaryCategoryOverride ? Boolean(data.beneficiaryIsSenior) : null,
     }
     const burialPayload = isBurial
       ? {
@@ -379,13 +406,29 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false, on
                           setValue('beneficiaryAge', computedAge ?? (member.age ?? ''), { shouldDirty: true, shouldTouch: true })
                           if (member.sex) setValue('beneficiarySex', member.sex, { shouldDirty: true, shouldTouch: true })
                           if (member.occupation) setValue('beneficiaryOccupation', member.occupation, { shouldDirty: true, shouldTouch: true })
+                          // Family composition doesn't track 4Ps/PWD/Senior per member, so
+                          // switching to a different beneficiary starts their category blank
+                          // rather than carrying over whoever was selected before.
+                          setValue('beneficiaryIs4ps', false, { shouldDirty: true, shouldTouch: true })
+                          setValue('beneficiaryIsPwd', false, { shouldDirty: true, shouldTouch: true })
+                          const computedAgeForSenior = member.dateOfBirth ? calculateAge(member.dateOfBirth) : (member.age ? Number(member.age) : null)
+                          setValue('beneficiaryIsSenior', Number.isFinite(computedAgeForSenior) && computedAgeForSenior >= 60, { shouldDirty: true, shouldTouch: true })
                         }}
                       />
                     </div>
-                    <div><label className="portal-label">Age</label><input type="number" min="0" {...register('beneficiaryAge')} className="portal-input" placeholder="0" /></div>
+                    <div><label className="portal-label">Age</label><input type="number" min="0" {...beneficiaryAgeField} onBlur={(e) => { beneficiaryAgeField.onBlur(e); suggestSeniorFromAge(e.target.value) }} className="portal-input" placeholder="0" /></div>
                     <div><label className="portal-label">Sex</label><select {...register('beneficiarySex')} className="portal-input"><option value="">Select sex</option><option value="Male">Male</option><option value="Female">Female</option></select></div>
                     <div><label className="portal-label">Civil Status</label><select {...register('beneficiaryCivilStatus')} className="portal-input"><option value="">Select status</option>{CIVIL_STATUS_OPTIONS.map((status) => <option key={status} value={status}>{status}</option>)}</select></div>
                     <div><label className="portal-label">Occupation</label><SearchablePresetInput value={watch('beneficiaryOccupation') || ''} onChange={(value) => setValue('beneficiaryOccupation', value, { shouldDirty: true, shouldTouch: true })} options={OCCUPATION_OPTIONS} placeholder="Search occupation" /></div>
+                    <div className="sm:col-span-2">
+                      <label className="portal-label">Category</label>
+                      <p className="mb-1 text-xs text-slate-400">Describes this beneficiary specifically — Senior is auto-suggested from age above, but always double-check before saving.</p>
+                      <div className="flex flex-wrap gap-4">
+                        <label className="flex items-center gap-2 text-sm text-slate-700"><input type="checkbox" {...register('beneficiaryIs4ps')} className="h-4 w-4 rounded border-slate-300" />4Ps Beneficiary</label>
+                        <label className="flex items-center gap-2 text-sm text-slate-700"><input type="checkbox" {...register('beneficiaryIsPwd')} className="h-4 w-4 rounded border-slate-300" />PWD</label>
+                        <label className="flex items-center gap-2 text-sm text-slate-700"><input type="checkbox" {...register('beneficiaryIsSenior')} className="h-4 w-4 rounded border-slate-300" />Senior Citizen</label>
+                      </div>
+                    </div>
                     <div>
                       <label className="portal-label">Requesting Party</label>
                       <input type="text" {...registerUppercase(register, 'beneficiaryRequestorName')} className="portal-input" placeholder="Who is filing this on the beneficiary's behalf" />

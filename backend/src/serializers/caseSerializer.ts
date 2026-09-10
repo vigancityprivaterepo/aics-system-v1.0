@@ -227,6 +227,12 @@ export function serializeCase(caseRow: any, assigneesByStage?: ApprovalAssigneeB
     beneficiaryOccupation: caseRow.beneficiaryOccupation ?? null,
     beneficiaryRequestorName: caseRow.beneficiaryRequestorName ?? null,
     beneficiaryRequestorRelationship: caseRow.beneficiaryRequestorRelationship ?? null,
+    // Null here means "not overridden for this beneficiary" — the frontend and
+    // docxService both resolve that live against the client's own flags only
+    // while the beneficiary is still the client (see beneficiaryName above).
+    beneficiaryIs4ps: caseRow.beneficiaryIs4ps,
+    beneficiaryIsPwd: caseRow.beneficiaryIsPwd,
+    beneficiaryIsSenior: caseRow.beneficiaryIsSenior,
     choCertGivenDate: caseRow.choCertGivenDate?.toISOString().slice(0, 10) ?? null,
     proxyName,
     proxyRelationship,
