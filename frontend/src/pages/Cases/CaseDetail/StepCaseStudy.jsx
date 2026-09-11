@@ -105,7 +105,23 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false, on
   // switches the beneficiary picker back to "self" (see applyBeneficiarySelection).
   const clientOwnCategory = caseData.client?.isSenior ? 'senior' : caseData.client?.isPwd ? 'pwd' : caseData.client?.is4ps ? '4ps' : 'none'
   const currentUser = useAuthStore((state) => state.user)
-  const [family, setFamily] = useState(caseData.familyComposition || [])
+  // A case keeps its own copy of the household so it can be edited per case-study
+  // report, but it's only seeded from the client's list at case creation and never
+  // synced afterward — if the client's household was edited later (e.g. a member
+  // added on the Client Profile page), this case's own copy can fall behind. Merge
+  // in any client household member missing from this case's copy so the Beneficiary
+  // picker below always offers everyone actually in the household; saving this case
+  // persists the merged list, healing the drift going forward.
+  const [family, setFamily] = useState(() => {
+    const caseFamily = Array.isArray(caseData.familyComposition) ? caseData.familyComposition : []
+    const clientFamily = Array.isArray(caseData.client?.familyComposition) ? caseData.client.familyComposition : []
+    const caseNames = new Set(caseFamily.map((m) => String(m?.name || '').trim().toUpperCase()).filter(Boolean))
+    const missingFromCase = clientFamily.filter((m) => {
+      const name = String(m?.name || '').trim().toUpperCase()
+      return name && !caseNames.has(name)
+    })
+    return [...caseFamily, ...missingFromCase]
+  })
   const [medicines, setMedicines] = useState(normalizeMedicineRows(caseData.medicines || []))
   const [saving, setSaving] = useState(false)
   const [narrativeOptions, setNarrativeOptions] = useState([])

@@ -258,6 +258,7 @@ export function serializeCase(caseRow: any, assigneesByStage?: ApprovalAssigneeB
       is4ps: caseRow.client.is4ps,
       isPwd: caseRow.client.isPwd,
       isSenior: caseRow.client.isSenior,
+      familyComposition: caseRow.client.familyComposition ?? [],
     },
     requirements,
     medicines: (caseRow.medicines ?? []).map((m: any) => ({
