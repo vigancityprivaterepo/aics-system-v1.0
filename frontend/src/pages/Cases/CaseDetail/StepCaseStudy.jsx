@@ -101,14 +101,27 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false, on
   // own profile), Senior takes priority since it's objectively age-based, then PWD,
   // then 4Ps — picking one collapses the rest the next time this case is saved.
   const initialBeneficiaryCategory = initialBeneficiaryIsSenior ? 'senior' : initialBeneficiaryIsPwd ? 'pwd' : initialBeneficiaryIs4ps ? '4ps' : 'none'
+  // The client's own category, re-derivable on demand for whenever the encoder
+  // switches the beneficiary picker back to "self" (see applyBeneficiarySelection).
+  const clientOwnCategory = caseData.client?.isSenior ? 'senior' : caseData.client?.isPwd ? 'pwd' : caseData.client?.is4ps ? '4ps' : 'none'
   const currentUser = useAuthStore((state) => state.user)
   const [family, setFamily] = useState(caseData.familyComposition || [])
   const [medicines, setMedicines] = useState(normalizeMedicineRows(caseData.medicines || []))
   const [saving, setSaving] = useState(false)
   const [narrativeOptions, setNarrativeOptions] = useState([])
   const submitModeRef = useRef('save')
+  const householdSectionRef = useRef(null)
   const draftKey = `case-draft:${caseData.id}:case-study`
   const [draft, setDraft] = useState(() => (readOnly ? null : readLocalDraft(draftKey)))
+  // The beneficiary must be the client or someone already in the household list
+  // (see applyBeneficiarySelection) so every case's beneficiaryName is one of a
+  // known set of exact strings — free text let near-duplicate spellings of the
+  // same person dodge the repeat-assistance cooldown check. "custom" represents
+  // a name saved before this restriction existed that no longer matches anyone
+  // in the current household list.
+  const normalizedStoredBeneficiaryName = String(caseData.beneficiaryName || '').trim().toUpperCase()
+  const matchedFamilyIndex = family.findIndex((m) => String(m?.name || '').trim().toUpperCase() === normalizedStoredBeneficiaryName)
+  const initialBeneficiarySelection = !caseData.beneficiaryName ? 'self' : matchedFamilyIndex >= 0 ? String(matchedFamilyIndex) : 'custom'
 
   const { control, register, handleSubmit, watch, setValue, getValues, reset, formState: { errors } } = useForm({
     mode: 'onBlur',
@@ -123,6 +136,7 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false, on
       deceasedAge: caseData.burialDetails?.deceasedAge ?? '',
       deceasedOccupation: caseData.burialDetails?.deceasedOccupation || '',
       deceasedCivilStatus: caseData.burialDetails?.deceasedCivilStatus || '',
+      beneficiarySelection: initialBeneficiarySelection,
       beneficiaryName: caseData.beneficiaryName || clientFullName || '',
       beneficiaryAge: caseData.beneficiaryAge || (clientAge != null ? String(clientAge) : ''),
       beneficiarySex: caseData.beneficiarySex || clientSex,
@@ -147,6 +161,36 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false, on
     if (ageValue !== '' && Number.isFinite(ageNum) && ageNum >= 60 && getValues('beneficiaryCategory') === 'none') {
       setValue('beneficiaryCategory', 'senior', { shouldDirty: true, shouldTouch: true })
     }
+  }
+
+  const addHouseholdMemberAndScroll = () => {
+    setFamily((current) => [...current, { ...defaultMember }])
+    householdSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }
+
+  // Selecting "self" or a household member fills in every beneficiary field from
+  // that person's known record, instead of letting the encoder type a name that
+  // might not exactly match how this same person is spelled on other cases.
+  const applyBeneficiarySelection = (value) => {
+    setValue('beneficiarySelection', value, { shouldDirty: true, shouldTouch: true })
+    if (value === 'self') {
+      setValue('beneficiaryName', clientFullName, { shouldDirty: true, shouldTouch: true })
+      setValue('beneficiaryAge', clientAge != null ? String(clientAge) : '', { shouldDirty: true, shouldTouch: true })
+      setValue('beneficiarySex', clientSex, { shouldDirty: true, shouldTouch: true })
+      setValue('beneficiaryCivilStatus', clientCivilStatus, { shouldDirty: true, shouldTouch: true })
+      setValue('beneficiaryOccupation', clientOccupation, { shouldDirty: true, shouldTouch: true })
+      setValue('beneficiaryCategory', clientOwnCategory, { shouldDirty: true, shouldTouch: true })
+      return
+    }
+    const member = family[Number(value)]
+    if (!member) return
+    setValue('beneficiaryName', (member.name || '').toUpperCase(), { shouldDirty: true, shouldTouch: true })
+    const computedAge = member.dateOfBirth ? calculateAge(member.dateOfBirth) : null
+    setValue('beneficiaryAge', computedAge ?? (member.age ?? ''), { shouldDirty: true, shouldTouch: true })
+    setValue('beneficiarySex', member.sex || '', { shouldDirty: true, shouldTouch: true })
+    setValue('beneficiaryOccupation', member.occupation || '', { shouldDirty: true, shouldTouch: true })
+    const computedAgeForSenior = member.dateOfBirth ? calculateAge(member.dateOfBirth) : (member.age ? Number(member.age) : null)
+    setValue('beneficiaryCategory', Number.isFinite(computedAgeForSenior) && computedAgeForSenior >= 60 ? 'senior' : 'none', { shouldDirty: true, shouldTouch: true })
   }
 
   const restoreDraft = () => {
@@ -185,6 +229,7 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false, on
   }, [caseData.socialWorkerName, currentUser?.name, getValues, setValue])
 
   const amount = watch('amount')
+  const beneficiarySelection = watch('beneficiarySelection')
   const parsedAmount = Number(amount)
   const amountCap = resolveAmountCap(caseData.assistanceType)
   const isOverCap = !isMedicine && amountCap != null && Number.isFinite(parsedAmount) && parsedAmount > amountCap
@@ -353,7 +398,7 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false, on
             </div>
           </section>
 
-          <section className="rounded-lg border border-slate-200 bg-white p-4">
+          <section ref={householdSectionRef} className="rounded-lg border border-slate-200 bg-white p-4">
             <EncodingSectionHeader number="2" title="Household Members" />
             <div className="mt-1 overflow-x-auto rounded-lg border border-slate-200">
               <table className="w-full text-xs">
@@ -402,24 +447,37 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false, on
                   <EncodingSectionHeader number="3A" title="Beneficiary" />
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div className="sm:col-span-2">
-                      <label className="portal-label">Beneficiary Name</label>
-                      <input type="text" {...registerUppercase(register, 'beneficiaryName')} className="portal-input" placeholder="Full name of the beneficiary" />
-                      <HouseholdMemberQuickFill
-                        members={family}
-                        onSelect={(member) => {
-                          setValue('beneficiaryName', (member.name || '').toUpperCase(), { shouldDirty: true, shouldTouch: true })
-                          const computedAge = member.dateOfBirth ? calculateAge(member.dateOfBirth) : null
-                          setValue('beneficiaryAge', computedAge ?? (member.age ?? ''), { shouldDirty: true, shouldTouch: true })
-                          if (member.sex) setValue('beneficiarySex', member.sex, { shouldDirty: true, shouldTouch: true })
-                          if (member.occupation) setValue('beneficiaryOccupation', member.occupation, { shouldDirty: true, shouldTouch: true })
-                          // Family composition doesn't track category per member, so switching
-                          // to a different beneficiary starts their category blank (aside from
-                          // an age-based Senior suggestion) rather than carrying over whoever
-                          // was selected before.
-                          const computedAgeForSenior = member.dateOfBirth ? calculateAge(member.dateOfBirth) : (member.age ? Number(member.age) : null)
-                          setValue('beneficiaryCategory', Number.isFinite(computedAgeForSenior) && computedAgeForSenior >= 60 ? 'senior' : 'none', { shouldDirty: true, shouldTouch: true })
-                        }}
-                      />
+                      <label className="portal-label">Beneficiary</label>
+                      <select
+                        className="portal-input"
+                        value={beneficiarySelection}
+                        onChange={(e) => applyBeneficiarySelection(e.target.value)}
+                        disabled={readOnly}
+                      >
+                        <option value="self">{clientFullName} (Client)</option>
+                        {family
+                          .map((member, index) => ({ member, index }))
+                          .filter(({ member }) => String(member?.name || '').trim())
+                          .map(({ member, index }) => (
+                            <option key={index} value={String(index)}>
+                              {member.name}{member.relationship ? ` (${member.relationship})` : ''}
+                            </option>
+                          ))}
+                        {beneficiarySelection === 'custom' && (
+                          <option value="custom" disabled>{caseData.beneficiaryName} (not in household list)</option>
+                        )}
+                      </select>
+                      <input type="hidden" {...register('beneficiaryName')} />
+                      <p className="mt-1 text-xs text-slate-400">
+                        Not listed?{' '}
+                        <button type="button" onClick={addHouseholdMemberAndScroll} className="font-medium text-brand-green underline underline-offset-2">
+                          Add a household member
+                        </button>{' '}
+                        above, then select them here — this keeps beneficiary names consistent so repeat-assistance checks work correctly.
+                      </p>
+                      {beneficiarySelection === 'custom' && (
+                        <p className="mt-1 text-xs text-amber-600">This case's beneficiary isn't in the household list yet — add them above and reselect. Until then, the previously saved name is kept as-is.</p>
+                      )}
                     </div>
                     <div><label className="portal-label">Age</label><input type="number" min="0" {...beneficiaryAgeField} onBlur={(e) => { beneficiaryAgeField.onBlur(e); suggestSeniorFromAge(e.target.value) }} className="portal-input" placeholder="0" /></div>
                     <div><label className="portal-label">Sex</label><select {...register('beneficiarySex')} className="portal-input"><option value="">Select sex</option><option value="Male">Male</option><option value="Female">Female</option></select></div>
