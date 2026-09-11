@@ -80,7 +80,7 @@ const MOCK_STATS = {
   weekCases: 47,
   monthCases: 183,
   pendingRequirements: 14,
-  totalClients: 1249,
+  totalCases: 1249,
   byType: { medicine: 127, medical: 36, hospital: 24, burial: 56, eyeglass: 9 },
   byStatus: {
     intake: 14,
@@ -246,7 +246,7 @@ export default function Dashboard() {
     { label: 'This Week', value: stats?.weekCases ?? '—', Icon: ClockIcon, tint: 'bg-[#eff6ff] text-[#1d4ed8]' },
     { label: 'This Month', value: stats?.monthCases ?? '—', Icon: FolderIcon, tint: 'bg-[#f0fdfa] text-[#0d9488]' },
     { label: 'Pending Review', value: pendingReviewCount, Icon: ClockIcon, tint: 'bg-[#fef2f2] text-[#dc2626]', alert: pendingReviewCount > 0 },
-    { label: 'Beneficiaries', value: stats?.totalClients ?? '—', Icon: UsersIcon, tint: 'bg-[#f5f3ff] text-[#7c3aed]' },
+    { label: 'Beneficiaries', value: stats?.totalCases ?? '—', Icon: UsersIcon, tint: 'bg-[#f5f3ff] text-[#7c3aed]' },
     { label: 'Released', value: stats?.byStatus?.released ?? '—', Icon: FileTextIcon, tint: 'bg-[#fffbeb] text-[#b45309]' },
     ...(user?.role === 'admin'
       ? [{

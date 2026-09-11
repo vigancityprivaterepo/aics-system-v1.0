@@ -27,6 +27,7 @@ router.get('/stats', asyncHandler(async (_req, res) => {
     todayCases,
     weekCases,
     monthCases,
+    totalCases,
     totalClients,
     byType,
     byStatus,
@@ -37,6 +38,11 @@ router.get('/stats', asyncHandler(async (_req, res) => {
     prisma.case.count({ where: { createdAt: { gte: todayStart } } }),
     prisma.case.count({ where: { createdAt: { gte: weekStart } } }),
     prisma.case.count({ where: { createdAt: { gte: monthStart } } }),
+    // "Beneficiaries" counts cases, not registered clients — a single client
+    // profile can cover several household members, each served by their own
+    // case (see Case.beneficiaryName), so counting clients undercounts who was
+    // actually assisted. Cancelled cases never had assistance disbursed.
+    prisma.case.count({ where: { status: { not: 'cancelled' } } }),
     prisma.client.count(),
     prisma.case.groupBy({ by: ['assistanceType'], _count: { _all: true } }),
     prisma.case.groupBy({ by: ['status'], _count: { _all: true } }),
@@ -115,6 +121,7 @@ router.get('/stats', asyncHandler(async (_req, res) => {
     todayCases,
     weekCases,
     monthCases,
+    totalCases,
     totalClients,
     byType: byTypeMap,
     byStatus: byStatusMap,

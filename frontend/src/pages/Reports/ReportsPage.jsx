@@ -154,7 +154,7 @@ function SummaryTab({ data, onTypeDrilldown, onStatusDrilldown }) {
         {[
           { label: 'Total Cases', value: data.totalCases, sub: data.basisLabel },
           { label: 'Total Amount', value: peso(data.totalAmount), sub: 'matching cases' },
-          { label: 'Distinct Clients', value: data.distinctClients, sub: 'beneficiaries in report' },
+          { label: 'Distinct Clients', value: data.distinctClients, sub: 'households in report' },
           { label: 'Avg per Case', value: data.totalCases ? peso(data.totalAmount / data.totalCases) : '-', sub: 'average assistance' },
         ].map(({ label, value, sub }) => (
           <div key={label} className="card py-5 text-center">
