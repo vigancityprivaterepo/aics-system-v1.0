@@ -17,9 +17,6 @@ import { allowedCaseTypesForUser, canAccessAllCases } from '../../utils/accessRu
 import { canAccessModule } from '../../utils/moduleAccess'
 
 // How often the notification bell's badge count re-checks for newly-queued cases
-// while a staff member is sitting on some other page (the top-bar counts only
-// refresh on navigation otherwise, so someone parked on one screen would never
-// see new work land in their queue).
 const PENDING_POLL_MS = 45000
 
 // ── Case sub-types ────────────────────────────────────────────────────────────
@@ -62,9 +59,6 @@ function ModuleTab({ to, Icon, label, badge = 0, badgeTone = 'rose', end = false
 }
 
 // ── Dropdown module tab (Cases sub-types, Database) ───────────────────────────
-// The panel uses fixed positioning anchored to the tab button rather than being
-// an absolutely-positioned child, so it floats above the page instead of being
-// clipped by an ancestor's layout.
 function DropdownTab({ label, Icon, active, badge = 0, badgeTone = 'rose', badgePulse = false, items }) {
   const containerRef = useRef(null)
   const location = useLocation()
@@ -143,15 +137,6 @@ function DropdownTab({ label, Icon, active, badge = 0, badgeTone = 'rose', badge
 }
 
 // ── Header notification bell ───────────────────────────────────────────────────
-// Lets a reviewer/recommender/approver see what's waiting on them without leaving
-// whatever page they're on. `items` and `count` both come from the same polled
-// /cases/pending-approvals-by-type response in AppLayout — that endpoint counts
-// cases by workflow STATUS (anyone holding that approval role sees the same
-// queue), which is the same model the Dashboard's operational-queue tiles use.
-// It deliberately does NOT reuse `/cases?owner=me`: that filter matches a single
-// fixed assignee configured in Settings, which isn't necessarily this user even
-// when they hold the role — mixing the two produced a badge that said "1" while
-// the panel said "all caught up".
 const NOTIFICATION_QUEUE_LABEL = {
   ready_for_review: 'Ready for Review',
   waiting_for_recommender: 'Waiting for Recommender',
@@ -361,11 +346,6 @@ function ModuleNav({ user, isAdmin, isCityHealthOffice, pendingByType, pendingSt
     ? new URLSearchParams(location.search).get('type')
     : null
   const casesActive = location.pathname.startsWith('/cases')
-  // When this user holds exactly one approval role, a type with pending work links
-  // straight to that queue (e.g. ?type=medicine&queue=ready_for_review) so a
-  // reviewer/recommender/approver lands on only the cases awaiting their action
-  // instead of scanning the full list. The Cases page's queue filter stays visible,
-  // so clearing it to browse everything is one click.
   const pendingQueue = pendingStatuses.length === 1
     ? QUEUE_BY_STATUS[pendingStatuses[0]] ?? null
     : null

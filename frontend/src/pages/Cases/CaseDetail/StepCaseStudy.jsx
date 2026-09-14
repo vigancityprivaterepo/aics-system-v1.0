@@ -491,9 +491,6 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false, on
                         </button>{' '}
                         above, then select them here — this keeps beneficiary names consistent so repeat-assistance checks work correctly.
                       </p>
-                      {beneficiarySelection === 'custom' && (
-                        <p className="mt-1 text-xs text-amber-600">This case's beneficiary isn't in the household list yet — add them above and reselect. Until then, the previously saved name is kept as-is.</p>
-                      )}
                     </div>
                     <div><label className="portal-label">Age</label><input type="number" min="0" {...beneficiaryAgeField} onBlur={(e) => { beneficiaryAgeField.onBlur(e); suggestSeniorFromAge(e.target.value) }} className="portal-input" placeholder="0" /></div>
                     <div><label className="portal-label">Sex</label><select {...register('beneficiarySex')} className="portal-input"><option value="">Select sex</option><option value="Male">Male</option><option value="Female">Female</option></select></div>
