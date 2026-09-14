@@ -8,6 +8,7 @@ export default function PresetSelectField({
   placeholder = 'Select option',
   otherPlaceholder = 'Specify value',
   disabled = false,
+  className = 'portal-input',
 }) {
   const [selection, setSelection] = useState(() => resolvePresetSelection(value, options))
 
@@ -24,7 +25,7 @@ export default function PresetSelectField({
           setSelection(nextSelection)
           onChange(nextSelection === OTHER_OPTION_VALUE ? '' : nextSelection)
         }}
-        className="portal-input"
+        className={className}
         disabled={disabled}
       >
         <option value="">{placeholder}</option>
@@ -39,7 +40,7 @@ export default function PresetSelectField({
           type="text"
           value={value || ''}
           onChange={(e) => onChange(e.target.value)}
-          className="portal-input mt-2"
+          className={`${className} mt-2`}
           placeholder={otherPlaceholder}
           disabled={disabled}
         />
