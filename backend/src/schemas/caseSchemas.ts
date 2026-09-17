@@ -72,6 +72,10 @@ export const cancelCaseSchema = z.object({
   reason: z.string().trim().min(3, 'A cancellation reason is required'),
 })
 
+export const reassignCaseSchema = z.object({
+  socialWorkerId: z.string().uuid(),
+})
+
 export const updateRequirementsSchema = z.object({
   requirements: z.record(z.boolean()),
 })

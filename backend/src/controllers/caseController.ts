@@ -13,9 +13,10 @@ import { activeReportSignatureStage, userCanUploadReportSignatureStage } from '.
 import { assessCaseWorkflow } from '../services/caseWorkflowService.js'
 import { allowedCaseTypesForUser, assertAllowedCaseTypeForUser, assertCaseReadable, assertEditableCase, casePermissions, ensureRequirementRows, paramId } from '../services/caseService.js'
 import { APPROVAL_STAGE_META, APPROVAL_STAGE_ORDER } from '../types/caseTypes.js'
-import { updateCaseSchema } from '../schemas/caseSchemas.js'
+import { updateCaseSchema, reassignCaseSchema } from '../schemas/caseSchemas.js'
 import { statusToApprovalStage } from '../services/approvalService.js'
 import { auditLog } from '../utils/auditLog.js'
+import { logAdminAudit } from '../services/adminAuditService.js'
 import { resetApprovalsAfterMaterialEdit, valuesDiffer } from '../services/workflowIntegrityService.js'
 import { normalizePlainAssistanceKinds } from '../utils/requirements.js'
 import { findRepeatAssistanceConflicts, repeatAssistanceConflict } from '../services/repeatAssistanceService.js'
@@ -575,6 +576,53 @@ export async function updateCase(req: Request, res: Response) {
     status: result.resetResult.status ?? result.updated.status,
     amount: currencyFromDb(result.updated.amount),
     approvalsReset: result.resetResult.approvalsReset,
+  })
+}
+
+export async function reassignCase(req: Request, res: Response) {
+  const caseId = paramId(req.params.id)
+  const { socialWorkerId } = reassignCaseSchema.parse(req.body)
+
+  const current = await prisma.case.findUnique({ where: { id: caseId } })
+  if (!current) throw new HttpError(404, 'Case not found')
+  if (current.status === 'cancelled') throw new HttpError(400, 'Cannot reassign a cancelled case')
+
+  const nextWorker = await prisma.user.findUnique({ where: { id: socialWorkerId } })
+  if (!nextWorker) throw new HttpError(404, 'Selected case worker not found')
+  if (!nextWorker.isActive) throw new HttpError(400, 'Selected case worker is inactive')
+  if (nextWorker.role !== 'admin' && nextWorker.role !== 'employee') {
+    throw new HttpError(400, 'Selected user cannot be assigned as a case worker')
+  }
+
+  const previousSocialWorkerId = current.socialWorkerId
+
+  const updated = await prisma.$transaction(async (tx) => {
+    const next = await tx.case.update({
+      where: { id: current.id },
+      data: {
+        socialWorkerId: nextWorker.id,
+        socialWorkerName: nextWorker.name,
+        socialWorkerEmpId: nextWorker.employeeId,
+      },
+    })
+
+    await logAdminAudit(tx, {
+      actorId: req.user?.id,
+      action: 'case.reassign',
+      targetType: 'case',
+      targetId: current.id,
+      summary: `Reassigned case ${current.caseNumber ?? current.id} to ${nextWorker.name}`,
+      details: { fromSocialWorkerId: previousSocialWorkerId, toSocialWorkerId: nextWorker.id },
+    })
+
+    return next
+  })
+
+  res.json({
+    id: updated.id,
+    socialWorkerId: updated.socialWorkerId,
+    socialWorkerName: updated.socialWorkerName,
+    socialWorkerEmpId: updated.socialWorkerEmpId,
   })
 }
 

@@ -8,6 +8,7 @@ import StatusBadge from '../../../components/ui/StatusBadge'
 import { ChevronLeftIcon } from '../../../components/ui/Icons'
 import CaseActionBar from './CaseActionBar'
 import ReturnToEncodingModal from './ReturnToEncodingModal'
+import ReassignCaseModal from './ReassignCaseModal'
 
 const APPROVAL_NEXT = {
   for_review: 'recommending_approval',
@@ -65,6 +66,10 @@ export default function CaseDetailLayout() {
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState(false)
   const [returnToEncodingOpen, setReturnToEncodingOpen] = useState(false)
+  const [reassignOpen, setReassignOpen] = useState(false)
+  const [reassignLoading, setReassignLoading] = useState(false)
+  const [employees, setEmployees] = useState([])
+  const [employeesLoading, setEmployeesLoading] = useState(false)
   const permissions = caseData?.permissions ?? {}
   const canEdit = !!permissions.canEdit
   const canManageWorkflow = !!permissions.canManageWorkflow
@@ -168,6 +173,36 @@ export default function CaseDetailLayout() {
       toast.error(err.response?.data?.message || 'Failed to cancel case')
     } finally {
       setActionLoading(false)
+    }
+  }
+
+  const openReassign = async () => {
+    setReassignOpen(true)
+    setEmployeesLoading(true)
+    try {
+      const { data } = await api.get('/users')
+      const eligible = (data.users || []).filter((u) => u.isActive && (u.role === 'admin' || u.role === 'employee'))
+      setEmployees(eligible)
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to load employees')
+    } finally {
+      setEmployeesLoading(false)
+    }
+  }
+
+  const handleReassign = async (socialWorkerId) => {
+    if (!caseData) return
+    setReassignLoading(true)
+    try {
+      await api.patch(`/cases/${id}/reassign`, { socialWorkerId })
+      const refreshed = await api.get(`/cases/${id}`)
+      setCaseData(refreshed.data)
+      toast.success('Case transferred')
+      setReassignOpen(false)
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to transfer case')
+    } finally {
+      setReassignLoading(false)
     }
   }
 
@@ -288,6 +323,11 @@ export default function CaseDetailLayout() {
               {TYPE_LABELS[caseData.assistanceType] || caseData.assistanceType}
             </span>
             <span className="text-xs text-slate-400">SW: {caseData.socialWorkerName}</span>
+            {permissions.canReassign && (
+              <button onClick={openReassign} className="text-xs font-medium text-brand-green underline underline-offset-2">
+                Transfer
+              </button>
+            )}
             {readOnlyAccess ? (
               <span className="inline-flex items-center rounded border border-amber-300 bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-700">
                 Read-only access
@@ -377,6 +417,16 @@ export default function CaseDetailLayout() {
         loading={actionLoading}
         onCancel={() => setReturnToEncodingOpen(false)}
         onConfirm={handleReturnToEncoding}
+      />
+
+      <ReassignCaseModal
+        isOpen={reassignOpen}
+        caseData={caseData ?? {}}
+        employees={employees}
+        employeesLoading={employeesLoading}
+        loading={reassignLoading}
+        onCancel={() => setReassignOpen(false)}
+        onConfirm={handleReassign}
       />
 
       <div className="mb-4 overflow-x-auto">

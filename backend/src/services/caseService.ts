@@ -137,6 +137,7 @@ export function casePermissions(
   const canDelete = Boolean(user) && ((user?.role === 'admin') || isOwner)
   const canRelease = caseData.status === 'approved' && userCanRelease(user)
   const canCancel = user?.role === 'admin' && caseData.status !== 'cancelled'
+  const canReassign = user?.role === 'admin' && caseData.status !== 'cancelled'
 
   return {
     isOwner,
@@ -145,6 +146,7 @@ export function casePermissions(
     canRelease,
     canDelete,
     canCancel,
+    canReassign,
     readOnly: !canModify,
     workflowLocked,
   }
