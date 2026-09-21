@@ -264,6 +264,9 @@ async function loadSummaryReport(from: string, to: string, basis: ReportBasis) {
   let is4psCount = 0
   let isPwdCount = 0
   let isSeniorCount = 0
+  let is4psAmount = 0
+  let isPwdAmount = 0
+  let isSeniorAmount = 0
 
   for (const row of REPORT_TYPES) {
     byTypeMap.set(row, { type: row, count: 0, amount: 0 })
@@ -281,9 +284,10 @@ async function loadSummaryReport(from: string, to: string, basis: ReportBasis) {
     byStatusMap.set(normalizedStatus, (byStatusMap.get(normalizedStatus) ?? 0) + 1)
 
     const category = resolveBeneficiaryCategory(c)
-    if (category.is4ps) is4psCount += 1
-    if (category.isPwd) isPwdCount += 1
-    if (category.isSenior) isSeniorCount += 1
+    const caseAmount = Number(c.amount ?? 0)
+    if (category.is4ps) { is4psCount += 1; is4psAmount += caseAmount }
+    if (category.isPwd) { isPwdCount += 1; isPwdAmount += caseAmount }
+    if (category.isSenior) { isSeniorCount += 1; isSeniorAmount += caseAmount }
   }
 
   return {
@@ -294,9 +298,9 @@ async function loadSummaryReport(from: string, to: string, basis: ReportBasis) {
     totalAmount,
     distinctClients: distinctClientIds.size,
     demographics: {
-      is4ps: is4psCount,
-      isPwd: isPwdCount,
-      isSenior: isSeniorCount,
+      is4ps: { count: is4psCount, amount: is4psAmount },
+      isPwd: { count: isPwdCount, amount: isPwdAmount },
+      isSenior: { count: isSeniorCount, amount: isSeniorAmount },
     },
     byType: [...byTypeMap.values()],
     byStatus: Array.from(byStatusMap.entries()).map(([status, count]) => ({ status, count })),
@@ -416,16 +420,16 @@ router.get('/summary/csv', asyncHandler(async (req, res) => {
   const summary = await loadSummaryReport(from, to, basis)
 
   sendCsv(res, `report-summary-${basis}-${from}_to_${to}.csv`, [
-    ['Metric', 'Value'],
+    ['Metric', 'Value', 'Amount'],
     ['Report Basis', summary.basisLabel],
     ['From', from],
     ['To', to],
     ['Total Cases', summary.totalCases],
     ['Total Amount', summary.totalAmount],
     ['Distinct Clients', summary.distinctClients],
-    ['4Ps Beneficiaries', summary.demographics.is4ps],
-    ['PWD Beneficiaries', summary.demographics.isPwd],
-    ['Senior Beneficiaries', summary.demographics.isSenior],
+    ['4Ps Beneficiaries', summary.demographics.is4ps.count, summary.demographics.is4ps.amount],
+    ['PWD Beneficiaries', summary.demographics.isPwd.count, summary.demographics.isPwd.amount],
+    ['Senior Beneficiaries', summary.demographics.isSenior.count, summary.demographics.isSenior.amount],
     [],
     ['Assistance Type', 'Cases', 'Amount'],
     ...summary.byType.map((row) => [row.type, row.count, row.amount]),

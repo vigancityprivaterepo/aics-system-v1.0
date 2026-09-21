@@ -167,14 +167,15 @@ function SummaryTab({ data, onTypeDrilldown, onStatusDrilldown }) {
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         {[
-          { label: '4Ps', value: data.demographics?.is4ps ?? 0, color: 'bg-emerald-100 text-emerald-700' },
-          { label: 'PWD', value: data.demographics?.isPwd ?? 0, color: 'bg-blue-100 text-blue-700' },
-          { label: 'Senior Citizens', value: data.demographics?.isSenior ?? 0, color: 'bg-amber-100 text-amber-700' },
+          { label: '4Ps', value: data.demographics?.is4ps?.count ?? 0, amount: data.demographics?.is4ps?.amount ?? 0, color: 'bg-emerald-100 text-emerald-700' },
+          { label: 'PWD', value: data.demographics?.isPwd?.count ?? 0, amount: data.demographics?.isPwd?.amount ?? 0, color: 'bg-blue-100 text-blue-700' },
+          { label: 'Senior Citizens', value: data.demographics?.isSenior?.count ?? 0, amount: data.demographics?.isSenior?.amount ?? 0, color: 'bg-amber-100 text-amber-700' },
         ].map((item) => (
           <div key={item.label} className="card flex items-center justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{item.label}</p>
               <p className="mt-2 text-2xl font-bold text-slate-900">{item.value}</p>
+              <p className="mt-1 text-xs text-slate-500">{peso(item.amount)} total</p>
             </div>
             <span className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${item.color}`}>
               Beneficiaries
