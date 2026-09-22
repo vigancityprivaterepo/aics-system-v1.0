@@ -90,9 +90,14 @@ export async function findRepeatAssistanceConflicts(
       { status: { in: OPEN_CASE_STATUSES } },
       {
         status: CaseStatus.released,
+        // The cooldown reference date is dateOfAssessment when set, falling back to
+        // createdAt only for legacy rows that never had one — mirrors caseReferenceDate
+        // below. Falling back to createdAt unconditionally would flag a case as still
+        // within cooldown just because it was encoded late, even though the actual
+        // service date (dateOfAssessment) already cleared the window.
         OR: [
           { dateOfAssessment: { gte: cutoff } },
-          { createdAt: { gte: cutoff } },
+          { AND: [{ dateOfAssessment: null }, { createdAt: { gte: cutoff } }] },
         ],
       },
     ],
@@ -135,29 +140,35 @@ export async function findRepeatAssistanceConflicts(
     })
   }
 
-  const conflicts = rows.map((row: any) => {
-    const referenceDate = caseReferenceDate(row)
-    const active = OPEN_CASE_STATUSES.includes(row.status)
-    const withinCooldown = !active && cooldownDays > 0 && referenceDate.getTime() >= cutoff.getTime()
-    const daysSinceReference = Math.max(0, Math.floor((Date.now() - referenceDate.getTime()) / (24 * 60 * 60 * 1000)))
+  const conflicts = rows
+    .map((row: any) => {
+      const referenceDate = caseReferenceDate(row)
+      const active = OPEN_CASE_STATUSES.includes(row.status)
+      const withinCooldown = !active && cooldownDays > 0 && referenceDate.getTime() >= cutoff.getTime()
+      const daysSinceReference = Math.max(0, Math.floor((Date.now() - referenceDate.getTime()) / (24 * 60 * 60 * 1000)))
 
-    return {
-      id: row.id,
-      caseNumber: row.caseNumber ?? null,
-      assistanceType: row.assistanceType as AssistanceType,
-      status: normalizeStatus(row.status as CaseStatus),
-      statusLabel: statusLabel(row.status as CaseStatus),
-      amount: currencyFromDb(row.amount),
-      createdAt: row.createdAt?.toISOString?.() ?? null,
-      dateOfAssessment: row.dateOfAssessment?.toISOString?.().slice(0, 10) ?? null,
-      active,
-      withinCooldown,
-      daysSinceReference,
-      reason: active
-        ? `Client already has an active ${statusLabel(row.status as CaseStatus)} case.`
-        : `Client received released assistance within the ${cooldownDays}-day cooldown window.`,
-    }
-  })
+      return {
+        id: row.id,
+        caseNumber: row.caseNumber ?? null,
+        assistanceType: row.assistanceType as AssistanceType,
+        status: normalizeStatus(row.status as CaseStatus),
+        statusLabel: statusLabel(row.status as CaseStatus),
+        amount: currencyFromDb(row.amount),
+        createdAt: row.createdAt?.toISOString?.() ?? null,
+        dateOfAssessment: row.dateOfAssessment?.toISOString?.().slice(0, 10) ?? null,
+        active,
+        withinCooldown,
+        daysSinceReference,
+        reason: active
+          ? `Client already has an active ${statusLabel(row.status as CaseStatus)} case.`
+          : `Client received released assistance within the ${cooldownDays}-day cooldown window.`,
+      }
+    })
+    // The DB query above can only approximate "within cooldown" (it ORs in createdAt
+    // for legacy rows without dateOfAssessment); active/withinCooldown here are the
+    // authoritative check, so a row that doesn't actually meet either is not a real
+    // conflict and must not count toward hasConflicts.
+    .filter((c) => c.active || c.withinCooldown)
 
   return {
     cooldownDays,
