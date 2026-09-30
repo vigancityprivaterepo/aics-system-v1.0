@@ -371,7 +371,7 @@ function renderFixedCaseReportPdf(payload: CaseReportPayload, renderable: Serial
   doc.font('Helvetica-Bold').fontSize(7.5).text('Category:', left, top + 40)
   drawCheckboxText(doc, left + 52, top + 40, '4Ps', categoryText.includes('4ps') || Boolean(client?.is4ps), 38)
   drawCheckboxText(doc, left + 92, top + 40, 'PWD', categoryText.includes('pwd') || Boolean(client?.isPwd), 40)
-  drawCheckboxText(doc, left + 135, top + 40, 'Solo Parent', categoryText.includes('solo'), 64)
+  drawCheckboxText(doc, left + 135, top + 40, 'Solo Parent', categoryText.includes('solo') || Boolean(client?.isSoloParent), 64)
   drawCheckboxText(doc, left + 201, top + 40, 'Senior Citizen', categoryText.includes('senior') || Boolean(client?.isSenior), 72)
   drawCheckboxText(doc, left + 275, top + 40, 'Walk-in', categoryText.includes('walk'), 52)
   drawCheckboxText(doc, left + 330, top + 40, 'Referred', categoryText.includes('referred'), 56)

@@ -28,6 +28,7 @@ export const createCaseSchema = z.object({
   beneficiaryIs4ps: z.boolean().optional().nullable(),
   beneficiaryIsPwd: z.boolean().optional().nullable(),
   beneficiaryIsSenior: z.boolean().optional().nullable(),
+  beneficiaryIsSoloParent: z.boolean().optional().nullable(),
 })
 
 export const updateCaseSchema = z.object({
@@ -57,6 +58,7 @@ export const updateCaseSchema = z.object({
   beneficiaryIs4ps: z.boolean().optional().nullable(),
   beneficiaryIsPwd: z.boolean().optional().nullable(),
   beneficiaryIsSenior: z.boolean().optional().nullable(),
+  beneficiaryIsSoloParent: z.boolean().optional().nullable(),
 })
 
 export const updateStatusSchema = z.object({

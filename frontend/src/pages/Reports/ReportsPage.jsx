@@ -165,11 +165,12 @@ function SummaryTab({ data, onTypeDrilldown, onStatusDrilldown }) {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {[
           { label: '4Ps', value: data.demographics?.is4ps?.count ?? 0, amount: data.demographics?.is4ps?.amount ?? 0, color: 'bg-emerald-100 text-emerald-700' },
           { label: 'PWD', value: data.demographics?.isPwd?.count ?? 0, amount: data.demographics?.isPwd?.amount ?? 0, color: 'bg-blue-100 text-blue-700' },
           { label: 'Senior Citizens', value: data.demographics?.isSenior?.count ?? 0, amount: data.demographics?.isSenior?.amount ?? 0, color: 'bg-amber-100 text-amber-700' },
+          { label: 'Solo Parents', value: data.demographics?.isSoloParent?.count ?? 0, amount: data.demographics?.isSoloParent?.amount ?? 0, color: 'bg-purple-100 text-purple-700' },
         ].map((item) => (
           <div key={item.label} className="card flex items-center justify-between">
             <div>
@@ -386,6 +387,7 @@ function CasesTab({ data, filters, basisLabel, onFilterChange, onResetFilters, p
                         {row.is4ps && <span className="badge badge-green px-1 py-0 text-[9px]">4Ps</span>}
                         {row.isPwd && <span className="badge badge-blue px-1 py-0 text-[9px]">PWD</span>}
                         {row.isSenior && <span className="badge badge-amber px-1 py-0 text-[9px]">SC</span>}
+                        {row.isSoloParent && <span className="badge badge-purple px-1 py-0 text-[9px]">SP</span>}
                       </div>
                     </td>
                     <td className="table-td px-5 py-4 align-top text-xs leading-relaxed text-slate-600">

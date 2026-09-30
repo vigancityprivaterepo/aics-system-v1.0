@@ -33,6 +33,7 @@ const createClientSchema = z.object({
   is4ps: z.boolean().optional(),
   isPwd: z.boolean().optional(),
   isSenior: z.boolean().optional(),
+  isSoloParent: z.boolean().optional(),
   clientCategory: z.enum(['walk-in', 'referred', 'rescued']).optional(),
   referralSource: z.string().optional().nullable(),
   familyComposition: z.array(z.record(z.any())).optional().nullable().transform((members) => (members ? normalizeFamilyCompositionNames(members) : members)),
@@ -78,6 +79,7 @@ type ClientDTO = {
   is4ps: boolean
   isPwd: boolean
   isSenior: boolean
+  isSoloParent: boolean
   clientCategory: ClientCategory
   referralSource: string | null
   familyComposition?: unknown
@@ -108,6 +110,7 @@ function serializeClient(client: ClientDTO) {
     is4ps: client.is4ps,
     isPwd: client.isPwd,
     isSenior: client.isSenior,
+    isSoloParent: client.isSoloParent,
     clientCategory: client.clientCategory.replace('_', '-'),
     referralSource: client.referralSource,
     familyComposition: Array.isArray((client as any).familyComposition) ? (client as any).familyComposition : [],
@@ -262,6 +265,7 @@ router.post('/', asyncHandler(async (req, res) => {
       is4ps: body.is4ps ?? false,
       isPwd: body.isPwd ?? false,
       isSenior: body.isSenior ?? false,
+      isSoloParent: body.isSoloParent ?? false,
       clientCategory: toClientCategory(body.clientCategory),
       referralSource: body.referralSource ?? null,
       familyComposition: body.familyComposition ?? undefined,
@@ -597,6 +601,7 @@ router.put('/:id', requireRole(['admin', 'employee']), asyncHandler(async (req, 
         is4ps: body.is4ps,
         isPwd: body.isPwd,
         isSenior: body.isSenior,
+        isSoloParent: body.isSoloParent,
         clientCategory: body.clientCategory ? toClientCategory(body.clientCategory) : undefined,
         referralSource: body.referralSource,
         familyComposition: body.familyComposition === null ? Prisma.JsonNull : body.familyComposition,

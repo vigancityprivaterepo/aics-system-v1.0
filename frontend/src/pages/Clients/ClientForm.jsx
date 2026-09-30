@@ -68,11 +68,12 @@ export default function ClientForm() {
     const payload = {
       ...rest,
       // Category is a single radio choice in the UI (a client counts toward exactly
-      // one report bucket), decomposed here into the three independent flags the
+      // one report bucket), decomposed here into the independent flags the
       // backend stores.
       is4ps: category === '4ps',
       isPwd: category === 'pwd',
       isSenior: category === 'senior',
+      isSoloParent: category === 'solo',
       familyComposition: cleanFamily(),
     }
     setSaving(true)
@@ -270,6 +271,7 @@ export default function ClientForm() {
               { value: '4ps', label: '4Ps Beneficiary' },
               { value: 'pwd', label: 'Person with Disability (PWD)' },
               { value: 'senior', label: 'Senior Citizen (60+)' },
+              { value: 'solo', label: 'Solo Parent' },
             ].map(({ value, label }) => (
               <label key={value} className="flex items-center gap-2 cursor-pointer">
                 <input type="radio" value={value} {...register('category')} className="h-4 w-4 border-slate-300 text-brand-green focus:ring-brand-green" />

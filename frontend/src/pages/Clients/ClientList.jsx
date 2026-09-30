@@ -117,6 +117,7 @@ export default function ClientList() {
                       {c.is4ps && <span className="inline-flex items-center rounded-md bg-slate-100 px-2.5 py-1 text-[11px] font-semibold tracking-[0.02em] text-slate-600">4Ps</span>}
                       {c.isPwd && <span className="inline-flex items-center rounded-md bg-slate-100 px-2.5 py-1 text-[11px] font-semibold tracking-[0.02em] text-slate-600">PWD</span>}
                       {c.isSenior && <span className="inline-flex items-center rounded-md bg-slate-100 px-2.5 py-1 text-[11px] font-semibold tracking-[0.02em] text-slate-600">Senior Citizen</span>}
+                      {c.isSoloParent && <span className="inline-flex items-center rounded-md bg-slate-100 px-2.5 py-1 text-[11px] font-semibold tracking-[0.02em] text-slate-600">Solo Parent</span>}
                     </div>
                   </td>
                   <td className="table-cell text-right">

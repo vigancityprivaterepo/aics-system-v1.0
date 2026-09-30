@@ -469,6 +469,7 @@ function buildRenderData(caseData: any): Record<string, any> {
   const resolvedBeneficiaryIs4ps = caseData.beneficiaryIs4ps ?? (beneficiaryIsClient && Boolean(c.is4ps))
   const resolvedBeneficiaryIsPwd = caseData.beneficiaryIsPwd ?? (beneficiaryIsClient && Boolean(c.isPwd))
   const resolvedBeneficiaryIsSenior = caseData.beneficiaryIsSenior ?? (beneficiaryIsClient && Boolean(c.isSenior))
+  const resolvedBeneficiaryIsSoloParent = caseData.beneficiaryIsSoloParent ?? (beneficiaryIsClient && Boolean(c.isSoloParent))
   const rawRequirements = caseData.requirements ?? []
   const requirementMap = new Map<string, boolean>()
   if (Array.isArray(rawRequirements)) {
@@ -614,7 +615,7 @@ function buildRenderData(caseData: any): Record<string, any> {
     // These reflect the case's actual beneficiary (who may be a different household
     // member than the registrant client), not the client's own profile flags.
     fourPsCheckBox:      checkbox(resolvedBeneficiaryIs4ps),
-    soloParentCheckBox:  checkbox(hasCategory('solo')),
+    soloParentCheckBox:  checkbox(resolvedBeneficiaryIsSoloParent || hasCategory('solo')),
     seniorCitizenCheckBox: checkbox(resolvedBeneficiaryIsSenior),
     pwdCheckBox:         checkbox(resolvedBeneficiaryIsPwd),
     otherCategoryCheckBox: checkbox(hasOtherBeneficiaryCategory),
@@ -702,6 +703,7 @@ function buildRenderData(caseData: any): Record<string, any> {
     is4ps:               resolvedBeneficiaryIs4ps    ? 'Yes' : 'No',
     isPwd:               resolvedBeneficiaryIsPwd    ? 'Yes' : 'No',
     isSenior:            resolvedBeneficiaryIsSenior ? 'Yes' : 'No',
+    isSoloParent:        resolvedBeneficiaryIsSoloParent ? 'Yes' : 'No',
 
     // Family composition loop
     familyComposition,

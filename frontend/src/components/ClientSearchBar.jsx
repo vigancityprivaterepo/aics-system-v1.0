@@ -152,6 +152,7 @@ export default function ClientSearchBar({ onSelect, onFamilyMatchSelect, placeho
                           {c.is4ps && <span className="badge badge-green text-[9px]">4Ps</span>}
                           {c.isPwd && <span className="badge badge-blue text-[9px] ml-1">PWD</span>}
                           {c.isSenior && <span className="badge badge-amber text-[9px] ml-1">SC</span>}
+                          {c.isSoloParent && <span className="badge badge-purple text-[9px] ml-1">SP</span>}
                         </div>
                       </div>
                     </button>

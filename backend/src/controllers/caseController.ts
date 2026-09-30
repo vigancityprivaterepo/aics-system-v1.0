@@ -355,6 +355,7 @@ export async function createCase(req: Request, res: Response) {
         beneficiaryIs4ps: body.beneficiaryIs4ps ?? null,
         beneficiaryIsPwd: body.beneficiaryIsPwd ?? null,
         beneficiaryIsSenior: body.beneficiaryIsSenior ?? null,
+        beneficiaryIsSoloParent: body.beneficiaryIsSoloParent ?? null,
       },
       include: { client: true },
     })
@@ -473,6 +474,7 @@ export async function updateCase(req: Request, res: Response) {
   const nextBeneficiaryIs4ps = body.beneficiaryIs4ps !== undefined ? body.beneficiaryIs4ps : current.beneficiaryIs4ps
   const nextBeneficiaryIsPwd = body.beneficiaryIsPwd !== undefined ? body.beneficiaryIsPwd : current.beneficiaryIsPwd
   const nextBeneficiaryIsSenior = body.beneficiaryIsSenior !== undefined ? body.beneficiaryIsSenior : current.beneficiaryIsSenior
+  const nextBeneficiaryIsSoloParent = body.beneficiaryIsSoloParent !== undefined ? body.beneficiaryIsSoloParent : current.beneficiaryIsSoloParent
   const nextSocialWorkerName = body.socialWorkerName !== undefined ? body.socialWorkerName : current.socialWorkerName
   const nextSocialWorkerEmpId = body.socialWorkerEmpId !== undefined ? body.socialWorkerEmpId : current.socialWorkerEmpId
   const nextPresentingProblem = body.presentingProblem !== undefined ? body.presentingProblem : current.presentingProblem
@@ -505,6 +507,7 @@ export async function updateCase(req: Request, res: Response) {
   if (body.beneficiaryIs4ps !== undefined && valuesDiffer(current.beneficiaryIs4ps, nextBeneficiaryIs4ps)) changedFields.push('beneficiaryIs4ps')
   if (body.beneficiaryIsPwd !== undefined && valuesDiffer(current.beneficiaryIsPwd, nextBeneficiaryIsPwd)) changedFields.push('beneficiaryIsPwd')
   if (body.beneficiaryIsSenior !== undefined && valuesDiffer(current.beneficiaryIsSenior, nextBeneficiaryIsSenior)) changedFields.push('beneficiaryIsSenior')
+  if (body.beneficiaryIsSoloParent !== undefined && valuesDiffer(current.beneficiaryIsSoloParent, nextBeneficiaryIsSoloParent)) changedFields.push('beneficiaryIsSoloParent')
   if (current.assistanceType === 'medicine') {
     const currentMedicineTemplateType = typeof (current.auditFlags as any)?.medicine_template_type === 'string' && (current.auditFlags as any).medicine_template_type === 'proxy' ? 'proxy' : 'personal'
     const currentMedicineConformeName = typeof (current.auditFlags as any)?.medicine_conforme_name === 'string' ? (current.auditFlags as any).medicine_conforme_name : null
@@ -547,6 +550,7 @@ export async function updateCase(req: Request, res: Response) {
         beneficiaryIs4ps: body.beneficiaryIs4ps,
         beneficiaryIsPwd: body.beneficiaryIsPwd,
         beneficiaryIsSenior: body.beneficiaryIsSenior,
+        beneficiaryIsSoloParent: body.beneficiaryIsSoloParent,
         auditFlags: auditFlags as Prisma.InputJsonValue,
       },
     })

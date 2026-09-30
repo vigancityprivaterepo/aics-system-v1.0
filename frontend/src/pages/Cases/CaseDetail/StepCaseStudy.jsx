@@ -96,14 +96,15 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false, on
   const initialBeneficiaryIs4ps = caseData.beneficiaryIs4ps ?? (initialBeneficiaryIsClient && Boolean(caseData.client?.is4ps))
   const initialBeneficiaryIsPwd = caseData.beneficiaryIsPwd ?? (initialBeneficiaryIsClient && Boolean(caseData.client?.isPwd))
   const initialBeneficiaryIsSenior = caseData.beneficiaryIsSenior ?? (initialBeneficiaryIsClient && Boolean(caseData.client?.isSenior))
+  const initialBeneficiaryIsSoloParent = caseData.beneficiaryIsSoloParent ?? (initialBeneficiaryIsClient && Boolean(caseData.client?.isSoloParent))
   // A beneficiary belongs to exactly one category for reporting purposes. If more
   // than one flag is already true (e.g. inherited independently from the client's
   // own profile), Senior takes priority since it's objectively age-based, then PWD,
-  // then 4Ps — picking one collapses the rest the next time this case is saved.
-  const initialBeneficiaryCategory = initialBeneficiaryIsSenior ? 'senior' : initialBeneficiaryIsPwd ? 'pwd' : initialBeneficiaryIs4ps ? '4ps' : 'none'
+  // then 4Ps, then Solo Parent — picking one collapses the rest the next time this case is saved.
+  const initialBeneficiaryCategory = initialBeneficiaryIsSenior ? 'senior' : initialBeneficiaryIsPwd ? 'pwd' : initialBeneficiaryIs4ps ? '4ps' : initialBeneficiaryIsSoloParent ? 'solo' : 'none'
   // The client's own category, re-derivable on demand for whenever the encoder
   // switches the beneficiary picker back to "self" (see applyBeneficiarySelection).
-  const clientOwnCategory = caseData.client?.isSenior ? 'senior' : caseData.client?.isPwd ? 'pwd' : caseData.client?.is4ps ? '4ps' : 'none'
+  const clientOwnCategory = caseData.client?.isSenior ? 'senior' : caseData.client?.isPwd ? 'pwd' : caseData.client?.is4ps ? '4ps' : caseData.client?.isSoloParent ? 'solo' : 'none'
   const currentUser = useAuthStore((state) => state.user)
   // A case keeps its own copy of the household so it can be edited per case-study
   // report, but it's only seeded from the client's list at case creation and never
@@ -289,11 +290,12 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false, on
       beneficiaryRequestorName: data.beneficiaryRequestorName || null,
       beneficiaryRequestorRelationship: data.beneficiaryRequestorRelationship || null,
       // Category is a single radio choice in the UI (a beneficiary counts toward
-      // exactly one report bucket), decomposed here into the three independent
+      // exactly one report bucket), decomposed here into the independent
       // flags the backend stores.
       beneficiaryIs4ps: sendBeneficiaryCategoryOverride ? data.beneficiaryCategory === '4ps' : null,
       beneficiaryIsPwd: sendBeneficiaryCategoryOverride ? data.beneficiaryCategory === 'pwd' : null,
       beneficiaryIsSenior: sendBeneficiaryCategoryOverride ? data.beneficiaryCategory === 'senior' : null,
+      beneficiaryIsSoloParent: sendBeneficiaryCategoryOverride ? data.beneficiaryCategory === 'solo' : null,
     }
     const burialPayload = isBurial
       ? {
@@ -510,6 +512,7 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false, on
                         <label className="flex items-center gap-2 text-sm text-slate-700"><input type="radio" value="4ps" {...register('beneficiaryCategory')} className="h-4 w-4 border-slate-300" />4Ps Beneficiary</label>
                         <label className="flex items-center gap-2 text-sm text-slate-700"><input type="radio" value="pwd" {...register('beneficiaryCategory')} className="h-4 w-4 border-slate-300" />PWD</label>
                         <label className="flex items-center gap-2 text-sm text-slate-700"><input type="radio" value="senior" {...register('beneficiaryCategory')} className="h-4 w-4 border-slate-300" />Senior Citizen</label>
+                        <label className="flex items-center gap-2 text-sm text-slate-700"><input type="radio" value="solo" {...register('beneficiaryCategory')} className="h-4 w-4 border-slate-300" />Solo Parent</label>
                       </div>
                     </div>
                     <div>

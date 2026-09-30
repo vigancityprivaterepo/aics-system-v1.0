@@ -20,6 +20,7 @@ type FindingsPayload = {
     is4ps?: boolean
     isPwd?: boolean
     isSenior?: boolean
+    isSoloParent?: boolean
   }
   familyComposition: unknown
   portalContext?: Record<string, unknown> | null
@@ -50,6 +51,7 @@ function buildPrompt(payload: FindingsPayload): string {
     fourPs: payload.client.is4ps ? 'Yes' : 'No',
     pwd: payload.client.isPwd ? 'Yes' : 'No',
     seniorCitizen: payload.client.isSenior ? 'Yes' : 'No',
+    soloParent: payload.client.isSoloParent ? 'Yes' : 'No',
   })
 
   const sanitizedFamily = Array.isArray(payload.familyComposition) ? payload.familyComposition : []

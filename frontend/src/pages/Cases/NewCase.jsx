@@ -246,6 +246,7 @@ export default function NewCase() {
                       {selectedClient.is4ps && <span className="inline-flex items-center rounded-md bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-600">4Ps</span>}
                       {selectedClient.isPwd && <span className="inline-flex items-center rounded-md bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-600">PWD</span>}
                       {selectedClient.isSenior && <span className="inline-flex items-center rounded-md bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-600">Senior Citizen</span>}
+                      {selectedClient.isSoloParent && <span className="inline-flex items-center rounded-md bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-600">Solo Parent</span>}
                     </div>
                   </div>
                   <span className="text-xl text-[#047857]">✓</span>

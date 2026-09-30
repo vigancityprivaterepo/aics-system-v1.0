@@ -151,6 +151,7 @@ async function loadCasesForReport(options: {
             is4ps: true,
             isPwd: true,
             isSenior: true,
+            isSoloParent: true,
           },
         },
         burialDetails: { select: { signedGlUrl: true, glUploadedAt: true } },
@@ -180,6 +181,7 @@ async function loadCasesForReport(options: {
             is4ps: true,
             isPwd: true,
             isSenior: true,
+            isSoloParent: true,
           },
         },
         burialDetails: { select: { signedGlUrl: true, glUploadedAt: true } },
@@ -214,6 +216,7 @@ async function loadCasesForReport(options: {
           is4ps: true,
           isPwd: true,
           isSenior: true,
+          isSoloParent: true,
         },
       },
       burialDetails: { select: { signedGlUrl: true, glUploadedAt: true } },
@@ -237,6 +240,7 @@ function resolveBeneficiaryCategory(c: ReportCase) {
     is4ps: c.beneficiaryIs4ps ?? (isClient && c.client.is4ps),
     isPwd: c.beneficiaryIsPwd ?? (isClient && c.client.isPwd),
     isSenior: c.beneficiaryIsSenior ?? (isClient && c.client.isSenior),
+    isSoloParent: c.beneficiaryIsSoloParent ?? (isClient && c.client.isSoloParent),
   }
 }
 
@@ -264,9 +268,11 @@ async function loadSummaryReport(from: string, to: string, basis: ReportBasis) {
   let is4psCount = 0
   let isPwdCount = 0
   let isSeniorCount = 0
+  let isSoloParentCount = 0
   let is4psAmount = 0
   let isPwdAmount = 0
   let isSeniorAmount = 0
+  let isSoloParentAmount = 0
 
   for (const row of REPORT_TYPES) {
     byTypeMap.set(row, { type: row, count: 0, amount: 0 })
@@ -288,6 +294,7 @@ async function loadSummaryReport(from: string, to: string, basis: ReportBasis) {
     if (category.is4ps) { is4psCount += 1; is4psAmount += caseAmount }
     if (category.isPwd) { isPwdCount += 1; isPwdAmount += caseAmount }
     if (category.isSenior) { isSeniorCount += 1; isSeniorAmount += caseAmount }
+    if (category.isSoloParent) { isSoloParentCount += 1; isSoloParentAmount += caseAmount }
   }
 
   return {
@@ -301,6 +308,7 @@ async function loadSummaryReport(from: string, to: string, basis: ReportBasis) {
       is4ps: { count: is4psCount, amount: is4psAmount },
       isPwd: { count: isPwdCount, amount: isPwdAmount },
       isSenior: { count: isSeniorCount, amount: isSeniorAmount },
+      isSoloParent: { count: isSoloParentCount, amount: isSoloParentAmount },
     },
     byType: [...byTypeMap.values()],
     byStatus: Array.from(byStatusMap.entries()).map(([status, count]) => ({ status, count })),
@@ -430,6 +438,7 @@ router.get('/summary/csv', asyncHandler(async (req, res) => {
     ['4Ps Beneficiaries', summary.demographics.is4ps.count, summary.demographics.is4ps.amount],
     ['PWD Beneficiaries', summary.demographics.isPwd.count, summary.demographics.isPwd.amount],
     ['Senior Beneficiaries', summary.demographics.isSenior.count, summary.demographics.isSenior.amount],
+    ['Solo Parent Beneficiaries', summary.demographics.isSoloParent.count, summary.demographics.isSoloParent.amount],
     [],
     ['Assistance Type', 'Cases', 'Amount'],
     ...summary.byType.map((row) => [row.type, row.count, row.amount]),
@@ -491,7 +500,7 @@ router.get('/cases/csv', asyncHandler(async (req, res) => {
   const { cases, eventDateByCaseId } = await loadCasesForReport({ from, to, basis, type, status, barangay, municipality })
 
   sendCsv(res, `report-cases-${basis}-${from}_to_${to}.csv`, [
-    ['Case Number', 'Client ID', 'Client Name', 'Barangay', 'Municipality', 'Assistance Type', 'Current Status', 'Amount', 'Social Worker', basisLabel(basis), 'Assessment Date', 'Created Date', '4Ps', 'PWD', 'Senior'],
+    ['Case Number', 'Client ID', 'Client Name', 'Barangay', 'Municipality', 'Assistance Type', 'Current Status', 'Amount', 'Social Worker', basisLabel(basis), 'Assessment Date', 'Created Date', '4Ps', 'PWD', 'Senior', 'Solo Parent'],
     ...cases.map((c) => {
       const category = resolveBeneficiaryCategory(c)
       return [
@@ -510,6 +519,7 @@ router.get('/cases/csv', asyncHandler(async (req, res) => {
       category.is4ps ? 'Yes' : 'No',
       category.isPwd ? 'Yes' : 'No',
       category.isSenior ? 'Yes' : 'No',
+      category.isSoloParent ? 'Yes' : 'No',
       ]
     }),
   ])

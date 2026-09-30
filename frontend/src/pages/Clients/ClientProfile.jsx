@@ -133,9 +133,9 @@ function toEditForm(client) {
     sex: client.sex ?? '',
     civilStatus: client.civilStatus ?? '',
     clientCategory: client.clientCategory ?? 'walk-in',
-    // Single radio choice decomposed from the three independent is4ps/isPwd/isSenior
+    // Single radio choice decomposed from the independent is4ps/isPwd/isSenior/isSoloParent
     // flags so a client counts toward exactly one report bucket.
-    classification: client.isSenior ? 'senior' : client.isPwd ? 'pwd' : client.is4ps ? '4ps' : 'none',
+    classification: client.isSenior ? 'senior' : client.isPwd ? 'pwd' : client.is4ps ? '4ps' : client.isSoloParent ? 'solo' : 'none',
     barangay: client.barangay ?? '',
     municipality: client.municipality ?? 'Vigan City',
     province: client.province ?? 'Ilocos Sur',
@@ -285,6 +285,7 @@ export default function ClientProfile() {
       is4ps: form.classification === '4ps',
       isPwd: form.classification === 'pwd',
       isSenior: form.classification === 'senior',
+      isSoloParent: form.classification === 'solo',
       barangay: form.barangay || null,
       municipality: form.municipality.trim() || null,
       province: form.province.trim() || null,
@@ -518,7 +519,8 @@ export default function ClientProfile() {
                 {client.is4ps && <span className="badge badge-green">4Ps</span>}
                 {client.isPwd && <span className="badge badge-blue">PWD</span>}
                 {client.isSenior && <span className="badge badge-amber">Senior Citizen</span>}
-                {!client.is4ps && !client.isPwd && !client.isSenior && <span className="text-slate-400 text-xs">None</span>}
+                {client.isSoloParent && <span className="badge badge-purple">Solo Parent</span>}
+                {!client.is4ps && !client.isPwd && !client.isSenior && !client.isSoloParent && <span className="text-slate-400 text-xs">None</span>}
               </div>
             </div>
           ) : (
@@ -622,6 +624,7 @@ export default function ClientProfile() {
                     { value: '4ps', label: '4Ps Beneficiary' },
                     { value: 'pwd', label: 'Person with Disability (PWD)' },
                     { value: 'senior', label: 'Senior Citizen (60+)' },
+                    { value: 'solo', label: 'Solo Parent' },
                   ].map(({ value, label }) => (
                     <label key={value} className="flex items-center gap-2 cursor-pointer text-sm text-slate-700">
                       <input

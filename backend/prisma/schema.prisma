@@ -129,6 +129,7 @@ model Client {
   is4ps          Boolean        @default(false) @map("is_4ps")
   isPwd          Boolean        @default(false) @map("is_pwd")
   isSenior       Boolean        @default(false) @map("is_senior")
+  isSoloParent   Boolean        @default(false) @map("is_solo_parent")
   clientCategory ClientCategory @default(walk_in) @map("client_category")
   referralSource String?        @map("referral_source") @db.VarChar(200)
   familyComposition Json?       @map("family_composition")
@@ -178,12 +179,13 @@ model Case {
   // Category override for the actual case beneficiary, who can differ from the
   // registrant client (e.g. a case filed for the client's senior parent or minor
   // dependent). Null means "same as the client" and is resolved live from
-  // Client.is4ps/isPwd/isSenior only while the beneficiary is still the client;
+  // Client.is4ps/isPwd/isSenior/isSoloParent only while the beneficiary is still the client;
   // once the beneficiary is a different person these must be set explicitly so
   // reports and the generated case study checkboxes describe the real beneficiary.
   beneficiaryIs4ps    Boolean?         @map("beneficiary_is_4ps")
   beneficiaryIsPwd    Boolean?         @map("beneficiary_is_pwd")
   beneficiaryIsSenior Boolean?         @map("beneficiary_is_senior")
+  beneficiaryIsSoloParent Boolean?     @map("beneficiary_is_solo_parent")
   choCertGivenDate   DateTime?         @map("cho_cert_given_date") @db.Date
   auditFlags         Json?             @map("audit_flags")
   isArchived         Boolean           @default(false) @map("is_archived")

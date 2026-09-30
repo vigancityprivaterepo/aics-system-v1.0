@@ -53,7 +53,8 @@ export default function StepClientProfile({ client }) {
             {client.is4ps && <span className="badge badge-green">4Ps</span>}
             {client.isPwd && <span className="badge badge-blue">PWD</span>}
             {client.isSenior && <span className="badge badge-amber">Senior Citizen</span>}
-            {!client.is4ps && !client.isPwd && !client.isSenior && <span className="text-slate-400 text-xs">None</span>}
+            {client.isSoloParent && <span className="badge badge-purple">Solo Parent</span>}
+            {!client.is4ps && !client.isPwd && !client.isSenior && !client.isSoloParent && <span className="text-slate-400 text-xs">None</span>}
           </div>
         </div>
       </div>
