@@ -13,7 +13,9 @@ export default function PresetSelectField({
   const [selection, setSelection] = useState(() => resolvePresetSelection(value, options))
 
   useEffect(() => {
-    setSelection(resolvePresetSelection(value, options))
+    const resolved = resolvePresetSelection(value, options)
+    // Keep "Others" selected while its text input is empty (just picked, or cleared by the user)
+    setSelection((prev) => (prev === OTHER_OPTION_VALUE && resolved === '' ? prev : resolved))
   }, [value, options])
 
   return (
