@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import api from '../../../lib/api'
 import ProtectedImage from '../../../components/shared/ProtectedImage'
+import PresetSelectField from '../../../components/PresetSelectField'
 import {
   ROLES,
   APPROVAL_LEVELS,
@@ -403,19 +404,13 @@ export default function UsersTab({ users, setUsers, loading, currentUser }) {
                   </div>
                   <div>
                     <label className="portal-label">Position / Title</label>
-                    <select
-                      className="portal-input"
+                    <PresetSelectField
                       value={form.position}
-                      onChange={(e) => setForm({ ...form, position: e.target.value })}
-                    >
-                      <option value="">- Select title -</option>
-                      {form.position && !POSITION_OPTIONS.includes(form.position) && (
-                        <option value={form.position}>{form.position}</option>
-                      )}
-                      {POSITION_OPTIONS.map((position) => (
-                        <option key={position} value={position}>{position}</option>
-                      ))}
-                    </select>
+                      onChange={(value) => setForm((prev) => ({ ...prev, position: value }))}
+                      options={POSITION_OPTIONS}
+                      placeholder="- Select title -"
+                      otherPlaceholder="Specify position / title"
+                    />
                   </div>
                   <div>
                     <label className="portal-label">Office / Department</label>

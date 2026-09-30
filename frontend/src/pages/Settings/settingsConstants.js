@@ -29,6 +29,7 @@ export const POSITION_OPTIONS = [
   'Administrative Officer III',
   'Administrative Officer IV',
   'Administrative Officer V',
+  'Social Welfare Aide',
   'Social Welfare Assistant',
   'Social Welfare Officer I',
   'Social Welfare Officer II',
