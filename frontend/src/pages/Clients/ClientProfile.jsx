@@ -9,6 +9,7 @@ import { ChevronLeftIcon, IdCardIcon, EditIcon, TrashIcon, ClipboardIcon, ArrowR
 import StatusBadge from '../../components/ui/StatusBadge'
 import ClientSearchBar from '../../components/ClientSearchBar'
 import DuplicateReviewModal from '../../components/clients/DuplicateReviewModal'
+import PresetSelectField from '../../components/PresetSelectField'
 import { useRfidScanner } from '../../hooks/useRfidScanner'
 
 function normalizeRfidUid(value) {
@@ -119,7 +120,7 @@ function buildCaseDescription(h) {
 
 const defaultFamilyMember = { name: '', dateOfBirth: '', age: '', relationship: '', relationshipOther: '', sex: '', occupation: '' }
 const FAMILY_SEX_OPTIONS = ['Male', 'Female']
-const RELIGION_OPTIONS = ['Roman Catholic', 'Iglesia ni Cristo', 'Islam', 'Born Again Christian', 'Evangelical', 'Protestant', 'Aglipayan', 'Seventh-day Adventist', "Jehovah's Witness", 'Other']
+const RELIGION_OPTIONS = ['Roman Catholic', 'Iglesia ni Cristo', 'Islam', 'Born Again Christian', 'Evangelical', 'Protestant', 'Aglipayan', 'Seventh-day Adventist', "Jehovah's Witness"]
 const STANDARD_RELATIONSHIPS = ['Spouse', 'Son', 'Daughter', 'Father', 'Mother', 'Brother', 'Sister', 'Grandson', 'Granddaughter', 'Grandfather', 'Grandmother', 'Uncle', 'Aunt', 'Nephew', 'Niece', 'Son-in-Law', 'Daughter-in-Law', 'Father-in-Law', 'Mother-in-Law']
 const RELATIONSHIP_OPTIONS = [...STANDARD_RELATIONSHIPS, 'Other']
 
@@ -593,15 +594,13 @@ export default function ClientProfile() {
               </div>
               <div>
                 <label className="portal-label">Religion</label>
-                <select
-                  className="portal-input"
+                <PresetSelectField
                   value={form.religion}
-                  onChange={(e) => setForm((prev) => ({ ...prev, religion: e.target.value }))}
-                >
-                  <option value="">Select religion</option>
-                  {form.religion && !RELIGION_OPTIONS.includes(form.religion) && <option value={form.religion}>{form.religion}</option>}
-                  {RELIGION_OPTIONS.map((religion) => <option key={religion} value={religion}>{religion}</option>)}
-                </select>
+                  onChange={(value) => setForm((prev) => ({ ...prev, religion: value }))}
+                  options={RELIGION_OPTIONS}
+                  placeholder="Select religion"
+                  otherPlaceholder="Specify religion"
+                />
               </div>
               <div>
                 <label className="portal-label">Category</label>

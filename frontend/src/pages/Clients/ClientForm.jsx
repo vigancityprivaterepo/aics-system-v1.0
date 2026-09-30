@@ -8,10 +8,11 @@ import { VIGAN_BARANGAYS } from '../../lib/constants'
 import { calculateAge } from '../../lib/utils'
 import { registerUppercase } from '../../lib/formHelpers'
 import DuplicateReviewModal from '../../components/clients/DuplicateReviewModal'
+import PresetSelectField from '../../components/PresetSelectField'
 
 const defaultFamilyMember = { name: '', dateOfBirth: '', age: '', relationship: '', relationshipOther: '', sex: '', occupation: '' }
 const FAMILY_SEX_OPTIONS = ['Male', 'Female']
-const RELIGION_OPTIONS = ['Roman Catholic', 'Iglesia ni Cristo', 'Islam', 'Born Again Christian', 'Evangelical', 'Protestant', 'Aglipayan', 'Seventh-day Adventist', "Jehovah's Witness", 'Other']
+const RELIGION_OPTIONS = ['Roman Catholic', 'Iglesia ni Cristo', 'Islam', 'Born Again Christian', 'Evangelical', 'Protestant', 'Aglipayan', 'Seventh-day Adventist', "Jehovah's Witness"]
 const STANDARD_RELATIONSHIPS = ['Spouse', 'Son', 'Daughter', 'Father', 'Mother', 'Brother', 'Sister', 'Grandson', 'Granddaughter', 'Grandfather', 'Grandmother', 'Uncle', 'Aunt', 'Nephew', 'Niece', 'Son-in-Law', 'Daughter-in-Law', 'Father-in-Law', 'Mother-in-Law']
 const RELATIONSHIP_OPTIONS = [...STANDARD_RELATIONSHIPS, 'Other']
 
@@ -23,12 +24,12 @@ export default function ClientForm() {
   const [saving, setSaving] = useState(false)
   const [family, setFamily] = useState(prefill?.familyComposition ?? [])
   const [duplicateModal, setDuplicateModal] = useState(null)
-  const { register, handleSubmit } = useForm({
+  const { register, handleSubmit, watch, setValue } = useForm({
     defaultValues: {
       clientCategory: 'walk-in', sex: '', civilStatus: '',
       region: 'Region I', municipality: 'Vigan City', province: 'Ilocos Sur',
       firstName: prefill?.firstName ?? '', lastName: prefill?.lastName ?? '', occupation: prefill?.occupation ?? '',
-      category: 'none',
+      category: 'none', religion: '',
     },
   })
 
@@ -208,10 +209,14 @@ export default function ClientForm() {
             </div>
             <div>
               <label className="portal-label">Religion</label>
-              <select {...register('religion')} className="portal-input">
-                <option value="">Select religion</option>
-                {RELIGION_OPTIONS.map((religion) => <option key={religion} value={religion}>{religion}</option>)}
-              </select>
+              <input type="hidden" {...register('religion')} />
+              <PresetSelectField
+                value={watch('religion') || ''}
+                onChange={(value) => setValue('religion', value, { shouldDirty: true })}
+                options={RELIGION_OPTIONS}
+                placeholder="Select religion"
+                otherPlaceholder="Specify religion"
+              />
             </div>
             <div>
               <label className="portal-label">Client Category</label>
