@@ -5,6 +5,22 @@ import { buildCaseStudyReportSignature } from '../services/reportSignatureServic
 import { assessCaseWorkflow } from '../services/caseWorkflowService.js'
 import { currencyFromDb } from '../utils/currency.js'
 
+function normalizePersonName(value: unknown) {
+  return String(value ?? '').toUpperCase().replace(/[^A-Z0-9Ñ ]/g, ' ').split(/\s+/).filter(Boolean).join(' ')
+}
+
+// Encoders often type the client's own name into the beneficiary field with
+// spacing, casing, middle-initial or dropped-middle-name differences, so an exact
+// compare misreads those cases as a different beneficiary. Same first word of the
+// first name + same trailing last name counts as the client themself.
+function isSameAsClientName(name: string, client: { firstName?: string | null; lastName?: string | null }) {
+  const candidate = normalizePersonName(name)
+  const firstToken = normalizePersonName(client.firstName).split(' ')[0]
+  const lastName = normalizePersonName(client.lastName)
+  if (!candidate || !firstToken || !lastName) return false
+  return candidate.split(' ')[0] === firstToken && (candidate === lastName || candidate.endsWith(` ${lastName}`))
+}
+
 function portalContextFromAuditFlags(auditFlags: unknown): Record<string, unknown> | null {
   if (!auditFlags || typeof auditFlags !== 'object' || Array.isArray(auditFlags)) return null
   const flags = auditFlags as Record<string, unknown>
@@ -220,6 +236,10 @@ export function serializeCase(caseRow: any, assigneesByStage?: ApprovalAssigneeB
     returnedToEncodingAt,
     returnedToEncodingFromStage,
     beneficiaryName,
+    // beneficiaryName above always falls back to the client's name, so consumers
+    // must use this (not a truthy beneficiaryName) to tell whether a different
+    // household member was set as the beneficiary.
+    beneficiaryIsClient: !beneficiaryNameOverride || isSameAsClientName(beneficiaryNameOverride, caseRow.client),
     beneficiaryAddress,
     beneficiaryAge: caseRow.beneficiaryAge ?? null,
     beneficiarySex: caseRow.beneficiarySex ?? null,

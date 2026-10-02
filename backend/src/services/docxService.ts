@@ -465,7 +465,7 @@ function buildRenderData(caseData: any): Record<string, any> {
   // so it's safe to fall back to the client's own category flags; once the
   // beneficiary is a different household member, an unset flag defaults to
   // "no" rather than incorrectly inheriting the client's own designation.
-  const beneficiaryIsClient = !beneficiaryOverrideName
+  const beneficiaryIsClient = typeof caseData.beneficiaryIsClient === 'boolean' ? caseData.beneficiaryIsClient : !beneficiaryOverrideName
   const resolvedBeneficiaryIs4ps = caseData.beneficiaryIs4ps ?? (beneficiaryIsClient && Boolean(c.is4ps))
   const resolvedBeneficiaryIsPwd = caseData.beneficiaryIsPwd ?? (beneficiaryIsClient && Boolean(c.isPwd))
   const resolvedBeneficiaryIsSenior = caseData.beneficiaryIsSenior ?? (beneficiaryIsClient && Boolean(c.isSenior))

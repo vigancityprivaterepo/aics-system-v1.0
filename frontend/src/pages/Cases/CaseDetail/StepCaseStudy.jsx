@@ -18,6 +18,20 @@ import { formatCurrency, calculateAge } from '../../../lib/utils'
 import { useAutosaveDraft, readLocalDraft, clearLocalDraft } from '../../../lib/localDraft'
 import { registerUppercase, registerAmount } from '../../../lib/formHelpers'
 
+function normalizePersonName(value) {
+  return String(value ?? '').toUpperCase().replace(/[^A-Z0-9Ñ ]/g, ' ').split(/\s+/).filter(Boolean).join(' ')
+}
+
+// Mirrors isSameAsClientName in the backend case serializer: tolerate spacing,
+// casing and middle-name differences when the encoder retypes the client's name.
+function isSameAsClientName(name, client) {
+  const candidate = normalizePersonName(name)
+  const firstToken = normalizePersonName(client?.firstName).split(' ')[0]
+  const lastName = normalizePersonName(client?.lastName)
+  if (!candidate || !firstToken || !lastName) return false
+  return candidate.split(' ')[0] === firstToken && (candidate === lastName || candidate.endsWith(` ${lastName}`))
+}
+
 const defaultMember = { name: '', age: '', relationship: '', sex: '', occupation: '', monthlyIncome: '' }
 const CIVIL_STATUS_OPTIONS = ['Single', 'Married', 'Widowed', 'Separated', 'Annulled']
 const SEX_OPTIONS = ['Male', 'Female']
@@ -92,7 +106,9 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false, on
   // A stored beneficiary name means the case is already known to be for someone
   // other than the client, so category checkboxes must not inherit the client's
   // own flags by default — only the still-the-client case may do that.
-  const initialBeneficiaryIsClient = !caseData.beneficiaryName
+  const initialBeneficiaryIsClient = typeof caseData.beneficiaryIsClient === 'boolean'
+    ? caseData.beneficiaryIsClient
+    : !caseData.beneficiaryName || isSameAsClientName(caseData.beneficiaryName, caseData.client)
   const initialBeneficiaryIs4ps = caseData.beneficiaryIs4ps ?? (initialBeneficiaryIsClient && Boolean(caseData.client?.is4ps))
   const initialBeneficiaryIsPwd = caseData.beneficiaryIsPwd ?? (initialBeneficiaryIsClient && Boolean(caseData.client?.isPwd))
   const initialBeneficiaryIsSenior = caseData.beneficiaryIsSenior ?? (initialBeneficiaryIsClient && Boolean(caseData.client?.isSenior))
@@ -265,7 +281,7 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false, on
     setSaving(true)
 
     const trimmedBeneficiaryName = String(data.beneficiaryName || '').trim()
-    const beneficiaryIsStillClient = trimmedBeneficiaryName.toUpperCase() === clientFullName.toUpperCase()
+    const beneficiaryIsStillClient = !trimmedBeneficiaryName || isSameAsClientName(trimmedBeneficiaryName, caseData.client)
     // Burial's beneficiary section isn't rendered (the assistance goes to the client,
     // not the deceased), so its category always tracks the client live, same as when
     // the beneficiary is still the client themself.
