@@ -13,7 +13,7 @@ function normalizePersonName(value: unknown) {
 // spacing, casing, middle-initial or dropped-middle-name differences, so an exact
 // compare misreads those cases as a different beneficiary. Same first word of the
 // first name + same trailing last name counts as the client themself.
-function isSameAsClientName(name: string, client: { firstName?: string | null; lastName?: string | null }) {
+export function isSameAsClientName(name: string, client: { firstName?: string | null; lastName?: string | null }) {
   const candidate = normalizePersonName(name)
   const firstToken = normalizePersonName(client.firstName).split(' ')[0]
   const lastName = normalizePersonName(client.lastName)

@@ -15,6 +15,7 @@ import applicantApplicationsRoutes from './applicantApplications.js'
 import applicantsRoutes from './applicants.js'
 import documentRoutes from './documents.js'
 import vehicleRequestRoutes from './vehicleRequests.js'
+import integrationRoutes from './integration.js'
 import { requireAuth, requireModuleAccess, requireRole } from '../middleware/auth.js'
 import { getReadinessStatus } from '../services/healthService.js'
 
@@ -54,6 +55,9 @@ router.use('/auth', authRoutes)
 router.use('/portal/auth', portalAuthRoutes)
 router.use('/portal/applications', portalApplicationsRoutes)
 router.use('/documents', documentRoutes)
+
+// Other City systems, by integration key (not a staff login)
+router.use('/integration/v1', integrationRoutes)
 
 router.use(requireAuth)
 router.use('/users', userRoutes)
