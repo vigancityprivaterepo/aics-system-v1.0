@@ -331,6 +331,11 @@ async function importDatabase(payload: BackupDbPayload) {
         responseBody: item.responseBody === null ? Prisma.JsonNull : item.responseBody,
       })),
     }), 'public.idempotency_keys')
+  }, {
+    // A full restore rewrites every table in one transaction; Prisma's default
+    // 5s interactive-transaction timeout is far too short once the data grows.
+    maxWait: 30_000,
+    timeout: 10 * 60_000,
   })
 }
 

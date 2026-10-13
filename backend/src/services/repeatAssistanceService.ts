@@ -2,6 +2,7 @@ import { CaseStatus, type AssistanceType } from '@prisma/client'
 import { HttpError } from '../utils/httpError.js'
 import { currencyFromDb } from '../utils/currency.js'
 import { logger } from '../utils/logger.js'
+import { isSameAsClientName } from '../serializers/caseSerializer.js'
 
 const OPEN_CASE_STATUSES: CaseStatus[] = [
   CaseStatus.intake,
@@ -81,9 +82,6 @@ export async function findRepeatAssistanceConflicts(
   const buildWhere = (includeArchiveFilter: boolean) => ({
     clientId: input.clientId,
     assistanceType: { in: conflictingTypes },
-    beneficiaryName: normalizedBeneficiaryName
-      ? { equals: normalizedBeneficiaryName, mode: 'insensitive' as const }
-      : null,
     ...(includeArchiveFilter ? { isArchived: false } : {}),
     ...(input.excludeCaseId ? { id: { not: input.excludeCaseId } } : {}),
     OR: [
@@ -116,6 +114,7 @@ export async function findRepeatAssistanceConflicts(
         amount: true,
         createdAt: true,
         dateOfAssessment: true,
+        beneficiaryName: true,
       },
     })
   } catch (error) {
@@ -136,11 +135,28 @@ export async function findRepeatAssistanceConflicts(
         amount: true,
         createdAt: true,
         dateOfAssessment: true,
+        beneficiaryName: true,
       },
     })
   }
 
+  // Beneficiary matching is done here rather than in the query: encoders often
+  // retype the client's own name into the beneficiary field (different spacing,
+  // casing or middle name), and an exact compare would let those cases slip past
+  // the cooldown as if they were for a different person.
+  const client = await db.client.findUnique({
+    where: { id: input.clientId },
+    select: { firstName: true, lastName: true },
+  })
+  const beneficiaryKey = (name: unknown) => {
+    const trimmed = String(name ?? '').trim()
+    if (!trimmed || (client && isSameAsClientName(trimmed, client))) return ''
+    return trimmed.toUpperCase().replace(/\s+/g, ' ')
+  }
+  const targetBeneficiaryKey = beneficiaryKey(normalizedBeneficiaryName)
+
   const conflicts = rows
+    .filter((row: any) => beneficiaryKey(row.beneficiaryName) === targetBeneficiaryKey)
     .map((row: any) => {
       const referenceDate = caseReferenceDate(row)
       const active = OPEN_CASE_STATUSES.includes(row.status)
