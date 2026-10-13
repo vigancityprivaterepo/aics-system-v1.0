@@ -120,6 +120,7 @@ export const integrationOpenApi = {
                         {
                           "name": "GEOZETTE DELA CRUZ",
                           "age": 40,
+                          "dateOfBirth": "1986-02-14",
                           "relationship": "Daughter",
                           "sex": "Female",
                           "occupation": null
@@ -222,6 +223,7 @@ export const integrationOpenApi = {
                       "beneficiaryIsClient": true,
                       "beneficiaryName": null,
                       "beneficiaryRelationship": null,
+                      "deceased": null,
                       "withdrawn": false,
                       "updatedAt": "2026-10-10T06:05:00.000Z"
                     }
@@ -517,7 +519,7 @@ export const integrationOpenApi = {
       },
       "FamilyMember": {
         "type": "object",
-        "description": "One line of a client's family composition. AICS records an age, not a date of birth, so a family member cannot be matched to the registry as reliably as a client.",
+        "description": "One line of a client's family composition. Not every line has a date of birth; without one a family member cannot be matched to the registry reliably.",
         "required": [
           "name"
         ],
@@ -532,6 +534,13 @@ export const integrationOpenApi = {
             "nullable": true,
             "description": "Age in years when the family composition was last edited.",
             "example": 40
+          },
+          "dateOfBirth": {
+            "type": "string",
+            "format": "date",
+            "nullable": true,
+            "description": "Date of birth (YYYY-MM-DD), or null if not recorded.",
+            "example": "1986-02-14"
           },
           "relationship": {
             "type": "string",
@@ -617,6 +626,40 @@ export const integrationOpenApi = {
             "type": "string",
             "nullable": true,
             "description": "How the client is related to that person."
+          },
+          "deceased": {
+            "type": "object",
+            "nullable": true,
+            "description": "Burial assistance only: the person who died, as the case maker typed it. Null for every other type. AICS records an age, not a date of birth, and does not give out the cause of death.",
+            "required": [
+              "name"
+            ],
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Full name of the deceased as typed in AICS.",
+                "example": "PEDRO R. REYES"
+              },
+              "age": {
+                "type": "integer",
+                "nullable": true,
+                "description": "Age at death, if recorded."
+              },
+              "sex": {
+                "type": "string",
+                "nullable": true
+              },
+              "civilStatus": {
+                "type": "string",
+                "nullable": true
+              },
+              "dateOfDeath": {
+                "type": "string",
+                "format": "date",
+                "nullable": true,
+                "description": "Date of death (YYYY-MM-DD), if recorded."
+              }
+            }
           },
           "withdrawn": {
             "type": "boolean",

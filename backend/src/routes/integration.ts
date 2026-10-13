@@ -132,7 +132,8 @@ const day = (value: Date | null) => (value ? value.toISOString().slice(0, 10) : 
 
 // Family composition is free-form JSON typed by case makers: keep the lines
 // that name someone, and only the fields of the contract (no monthly income,
-// no RFID).
+// no RFID). The date of birth is what lets the caller match a family member
+// to a person it already has.
 function familyMembers(value: unknown) {
   if (!Array.isArray(value)) return []
   return value.flatMap((entry) => {
@@ -141,9 +142,11 @@ function familyMembers(value: unknown) {
     if (!name) return []
     const age = Number.parseInt(String(member.age ?? ''), 10)
     const relationship = text(member.relationship)
+    const born = text(member.dateOfBirth)
     return [{
       name,
       age: Number.isInteger(age) && age >= 0 && age <= 130 ? age : null,
+      dateOfBirth: born && /^\d{4}-\d{2}-\d{2}$/.test(born.slice(0, 10)) && !Number.isNaN(Date.parse(born.slice(0, 10))) ? born.slice(0, 10) : null,
       relationship: relationship?.toLowerCase() === 'others' ? text(member.relationshipOther) ?? relationship : relationship,
       sex: text(member.sex),
       occupation: text(member.occupation),
@@ -242,6 +245,7 @@ router.get('/releases', asyncHandler(async (req, res) => {
         beneficiaryName: true,
         beneficiaryRequestorRelationship: true,
         updatedAt: true,
+        burialDetails: { select: { deceasedName: true, deceasedAge: true, deceasedSex: true, deceasedCivilStatus: true, dateOfDeath: true } },
         client: { select: { firstName: true, lastName: true } },
       },
     }),
@@ -252,6 +256,8 @@ router.get('/releases', asyncHandler(async (req, res) => {
   const items = inOrder(ids, cases).map((row) => {
     const beneficiaryName = text(row.beneficiaryName)
     const beneficiaryIsClient = !beneficiaryName || isSameAsClientName(beneficiaryName, row.client)
+    // Burial only: who died and when, so the caller can record the death. Not the cause.
+    const deceasedName = row.assistanceType === 'burial' ? text(row.burialDetails?.deceasedName) : null
     return {
       id: row.id,
       caseNumber: row.caseNumber,
@@ -262,6 +268,13 @@ router.get('/releases', asyncHandler(async (req, res) => {
       beneficiaryIsClient,
       beneficiaryName: beneficiaryIsClient ? null : beneficiaryName,
       beneficiaryRelationship: beneficiaryIsClient ? null : text(row.beneficiaryRequestorRelationship),
+      deceased: deceasedName ? {
+        name: deceasedName,
+        age: row.burialDetails?.deceasedAge ?? null,
+        sex: text(row.burialDetails?.deceasedSex),
+        civilStatus: text(row.burialDetails?.deceasedCivilStatus),
+        dateOfDeath: day(row.burialDetails?.dateOfDeath ?? null),
+      } : null,
       withdrawn: row.isArchived || row.status !== 'released',
       updatedAt: row.updatedAt.toISOString(),
     }
