@@ -26,6 +26,19 @@ function parseTrustProxy(value: string | undefined): boolean | number | string {
   return normalized
 }
 
+// INTEGRATION_API_KEYS: one "name:sha256-hex-of-the-key" per calling system,
+// comma-separated (scripts/createIntegrationKey.mjs prints the entry). Empty
+// means the Integration API is switched off.
+function parseIntegrationKeys(value: string | undefined) {
+  return parseCsv(value).map((entry) => {
+    const match = /^([a-z0-9_-]{1,40}):([0-9a-f]{64})$/.exec(entry)
+    if (!match) {
+      throw new Error('INTEGRATION_API_KEYS must be a comma-separated list of name:sha256hex entries (see scripts/createIntegrationKey.mjs).')
+    }
+    return { name: match[1] as string, hash: Buffer.from(match[2] as string, 'hex') }
+  })
+}
+
 function isLocalUrl(value: string) {
   try {
     const parsed = new URL(value)
@@ -67,6 +80,7 @@ export const env = {
   portalJwtSecret,
   portalJwtExpiresIn: process.env.PORTAL_JWT_EXPIRES_IN ?? '365d',
   documentVerifySecret,
+  integrationApiKeys: parseIntegrationKeys(process.env.INTEGRATION_API_KEYS),
   libreOfficePath: process.env.LIBREOFFICE_PATH ?? '',
   portalEmailNotificationStatuses: parseCsv(process.env.PORTAL_EMAIL_NOTIFICATION_STATUSES ?? 'approved,released,rejected'),
   smtpHost: process.env.SMTP_HOST ?? '',

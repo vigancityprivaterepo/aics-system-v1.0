@@ -119,6 +119,23 @@ server {
   }
 }
 ```
+## Integration API (optional)
+
+A read-only bridge that lets another City system (first: the Unified Central
+Record Management System) pull clients and released assistance. It is switched
+off until a key is configured, and every call is written to the admin audit log.
+
+1. On any machine with Node, from `backend/`: `node scripts/createIntegrationKey.mjs vucrms`
+2. Give the printed key to the administrator of the calling system. It is shown once.
+3. Put the printed `INTEGRATION_API_KEYS=...` line in `.env.production` and restart the backend.
+4. Check: `http://SERVER:5101/api/integration/v1/docs` opens the contract in Swagger UI;
+   `GET /api/integration/v1/ping` with header `X-Integration-Key: <key>` answers `ok`.
+
+To cut a system off, remove its entry and restart the backend. It gives out identity,
+address, program flags, family composition and released assistance only: no diagnosis,
+medicines, hospital details, case narrative, photos, contact numbers or RFID numbers.
+Keep the backend port reachable only from the calling system's server.
+
 ## 6. Backups
 
 Docker volumes used by production compose:

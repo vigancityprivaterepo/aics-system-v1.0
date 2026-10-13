@@ -25,6 +25,8 @@ declare global {
     interface Request {
       user?: AuthUser
       applicant?: PortalApplicant
+      // Name of the calling system, set by middleware/integrationAuth.ts.
+      integrationKeyName?: string
     }
   }
 }
