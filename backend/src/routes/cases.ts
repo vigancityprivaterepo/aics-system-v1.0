@@ -4,7 +4,7 @@ import multer from 'multer'
 import { asyncHandler } from '../utils/asyncHandler.js'
 import { requireAuth, requireRole } from '../middleware/auth.js'
 import { listCases, getCase, createCase, updateCase, deleteCase, pendingApprovalsByType, reassignCase } from '../controllers/caseController.js'
-import { updateStatus, cancelCase } from '../controllers/caseApprovalController.js'
+import { updateStatus, cancelCase, markReadyForRelease } from '../controllers/caseApprovalController.js'
 import { caseStudyDocx, caseStudyHtml, caseStudyPdf, caseStudyPreviewPdf, guaranteeLetterPdf, guaranteeLetterDocx, endorsementDocx, acknowledgementDocx, choCertificationDocx } from '../controllers/caseDocumentController.js'
 import { getMedicines, saveMedicines, deleteMedicine } from '../controllers/caseMedicineController.js'
 import { getRequirements, updateRequirements, patchRequirement } from '../controllers/caseRequirementController.js'
@@ -28,6 +28,7 @@ const upload = multer({
 router.get('/', asyncHandler(listCases))
 router.post('/', asyncHandler(createCase))
 router.get('/pending-approvals-by-type', requireAuth, asyncHandler(pendingApprovalsByType))
+router.post('/ready-for-release', requireAuth, asyncHandler(markReadyForRelease))
 router.get('/:id', asyncHandler(getCase))
 router.put('/:id', asyncHandler(updateCase))
 router.delete('/:id', asyncHandler(deleteCase))

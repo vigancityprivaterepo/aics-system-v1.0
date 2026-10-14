@@ -4,8 +4,8 @@ import { prisma } from '../utils/prisma.js'
 import { HttpError } from '../utils/httpError.js'
 import { ACTIVE_APPROVAL_STATUSES, APPROVAL_STAGE_META } from '../types/caseTypes.js'
 import { findCaseWithDetails, getApprovalSettings } from '../queries/caseQueries.js'
-import { updateStatusSchema, cancelCaseSchema } from '../schemas/caseSchemas.js'
-import { paramId, assertCaseReadable, assertEditableCase, normalizeWorkflowStatus, caseStatusToStep } from '../services/caseService.js'
+import { updateStatusSchema, cancelCaseSchema, markReadyForReleaseSchema } from '../schemas/caseSchemas.js'
+import { paramId, assertCaseReadable, assertEditableCase, normalizeWorkflowStatus, caseStatusToStep, userCanRelease, allowedCaseTypesForUser } from '../services/caseService.js'
 import {
   resolveApprovalAssignees,
   statusToApprovalStage,
@@ -17,7 +17,7 @@ import {
   normalizeApprovalNotes,
   resolveResubmitStage,
 } from '../services/approvalService.js'
-import { sendPortalStatusNotifications, sendClientReadyForReleaseSms } from '../services/portalStatusNotifications.js'
+import { sendPortalStatusNotifications, sendReadyForReleaseSms } from '../services/portalStatusNotifications.js'
 import { auditLog } from '../utils/auditLog.js'
 import { logAdminAudit } from '../services/adminAuditService.js'
 import { assessCaseWorkflow } from '../services/caseWorkflowService.js'
@@ -236,9 +236,6 @@ export async function updateStatus(req: Request, res: Response) {
     if (linkedApplication) {
       sendPortalStatusNotifications({ ...linkedApplication, status: nextStatus, adminNotes: normalizedNotes }).catch(console.error)
     }
-    if (nextStatus === 'approved' && !linkedApplication?.applicant?.mobileNumber) {
-      sendClientReadyForReleaseSms(caseData.id).catch(console.error)
-    }
   }
 
   res.json({ id: updated.id, status: updated.status })
@@ -307,4 +304,72 @@ export async function cancelCase(req: Request, res: Response) {
   }
 
   res.json({ id: updated.id, status: updated.status, cancelledAt: updated.cancelledAt, cancelReason: updated.cancelReason })
+}
+
+// Bulk "ready for release": approval alone does not mean the assistance can be
+// claimed (medicines may still need purchasing), so a case maker marks approved
+// cases once they are actually available. That is when the client is texted.
+export async function markReadyForRelease(req: Request, res: Response) {
+  if (!req.user) throw new HttpError(401, 'Unauthorized')
+  if (!userCanRelease(req.user)) throw new HttpError(403, 'Marking cases ready for release is not available for your account.')
+
+  const { caseIds } = markReadyForReleaseSchema.parse(req.body)
+  const uniqueIds = [...new Set(caseIds)]
+  const allowedTypes = allowedCaseTypesForUser(req.user)
+  const rows = await prisma.case.findMany({
+    where: { id: { in: uniqueIds } },
+    select: { id: true, caseNumber: true, status: true, assistanceType: true, isArchived: true, readyForReleaseAt: true },
+  })
+  const rowsById = new Map(rows.map((row) => [row.id, row]))
+
+  const results: Array<{ id: string; caseNumber: string | null; outcome: string; sms: string | null }> = []
+  for (const id of uniqueIds) {
+    const row = rowsById.get(id)
+    const base = { id, caseNumber: row?.caseNumber ?? null }
+    if (!row || row.isArchived || (allowedTypes && !allowedTypes.includes(row.assistanceType))) {
+      results.push({ ...base, outcome: 'not_found', sms: null })
+      continue
+    }
+    if (row.status !== 'approved') {
+      results.push({ ...base, outcome: 'not_approved', sms: null })
+      continue
+    }
+    if (row.readyForReleaseAt) {
+      // Already marked: never text the client twice for the same case.
+      results.push({ ...base, outcome: 'already_marked', sms: null })
+      continue
+    }
+
+    // Guarded update so two staff clicking at once cannot both send the text.
+    const updated = await prisma.case.updateMany({
+      where: { id, status: 'approved', readyForReleaseAt: null },
+      data: { readyForReleaseAt: new Date(), readyForReleaseByName: req.user.name ?? null },
+    })
+    if (updated.count === 0) {
+      results.push({ ...base, outcome: 'already_marked', sms: null })
+      continue
+    }
+    const sms = await sendReadyForReleaseSms(id)
+    results.push({ ...base, outcome: 'marked', sms })
+  }
+
+  const marked = results.filter((item) => item.outcome === 'marked')
+  if (marked.length > 0) {
+    await logAdminAudit(prisma, {
+      actorId: req.user.id,
+      action: 'case.ready_for_release',
+      targetType: 'case',
+      targetId: marked[0]!.id,
+      summary: `Marked ${marked.length} case(s) ready for release`,
+      details: { caseNumbers: marked.map((item) => item.caseNumber), smsSent: marked.filter((item) => item.sms === 'sent').length },
+    })
+  }
+
+  res.json({
+    marked: marked.length,
+    smsSent: marked.filter((item) => item.sms === 'sent').length,
+    smsSkipped: marked.filter((item) => item.sms !== 'sent').length,
+    skipped: results.length - marked.length,
+    results,
+  })
 }

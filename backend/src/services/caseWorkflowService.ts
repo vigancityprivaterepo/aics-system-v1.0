@@ -10,6 +10,7 @@ export type WorkflowQueue =
   | 'ready_for_review'
   | 'waiting_for_recommender'
   | 'waiting_for_approver'
+  | 'approved_preparing'
   | 'ready_for_release'
   | 'blocked_incomplete'
   | 'released'
@@ -21,6 +22,8 @@ const QUEUE_SLA_HOURS: Record<WorkflowQueue, number | null> = {
   ready_for_review: 24,
   waiting_for_recommender: 24,
   waiting_for_approver: 24,
+  // No deadline: purchasing or preparing the assistance takes as long as it takes.
+  approved_preparing: null,
   ready_for_release: 48,
   blocked_incomplete: 24,
   released: null,
@@ -147,8 +150,15 @@ export function assessCaseWorkflow(caseRow: any, assigneesByStage?: ApprovalAssi
     ownerUserId = assigneesByStage?.for_approval?.id ?? null
     nextAction = 'Final approver decision is required.'
   } else if (status === 'approved') {
-    queue = 'ready_for_release'
-    nextAction = 'Release the approved case.'
+    // Approved is not yet claimable: the assistance may still need preparing
+    // (e.g. medicines purchased) until a case maker marks it ready for release.
+    if (caseRow.readyForReleaseAt) {
+      queue = 'ready_for_release'
+      nextAction = 'Release the approved case.'
+    } else {
+      queue = 'approved_preparing'
+      nextAction = 'Mark as ready for release once the assistance is available.'
+    }
   } else if (status === 'released') {
     queue = 'released'
     nextAction = 'Case has been released.'

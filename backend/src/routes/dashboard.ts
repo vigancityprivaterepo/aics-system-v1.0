@@ -99,6 +99,7 @@ router.get('/stats', asyncHandler(async (_req, res) => {
     ready_for_review: 0,
     waiting_for_recommender: 0,
     waiting_for_approver: 0,
+    approved_preparing: 0,
     ready_for_release: 0,
     blocked_incomplete: 0,
     cancelled: 0,

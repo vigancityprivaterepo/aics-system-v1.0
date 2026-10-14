@@ -26,6 +26,19 @@ function parseTrustProxy(value: string | undefined): boolean | number | string {
   return normalized
 }
 
+// SMS_RELEASE_NOTICE_CASES_FROM: only cases created on or after this date
+// (YYYY-MM-DD, Philippine time) get the "ready for release" text, so approving
+// older backlog cases does not spend SMS credits.
+const DEFAULT_SMS_RELEASE_NOTICE_CASES_FROM = '2026-10-14'
+function parseSmsCasesFrom(value: string | undefined) {
+  const raw = (value ?? '').trim() || DEFAULT_SMS_RELEASE_NOTICE_CASES_FROM
+  const parsed = /^\d{4}-\d{2}-\d{2}$/.test(raw) ? new Date(`${raw}T00:00:00+08:00`) : new Date(NaN)
+  if (Number.isNaN(parsed.getTime())) {
+    throw new Error('SMS_RELEASE_NOTICE_CASES_FROM must be a date in YYYY-MM-DD format.')
+  }
+  return parsed
+}
+
 // INTEGRATION_API_KEYS: one "name:sha256-hex-of-the-key" per calling system,
 // comma-separated (scripts/createIntegrationKey.mjs prints the entry). Empty
 // means the Integration API is switched off.
@@ -90,6 +103,7 @@ export const env = {
   smtpFrom: process.env.SMTP_FROM ?? 'AICS Vigan City <noreply@vigancity.gov.ph>',
   semaphoreApiKey: process.env.SEMAPHORE_API_KEY ?? '',
   semaphoreSenderId: process.env.SEMAPHORE_SENDER_ID ?? 'AICS',
+  smsReleaseNoticeCasesFrom: parseSmsCasesFrom(process.env.SMS_RELEASE_NOTICE_CASES_FROM),
   trustProxy: parseTrustProxy(process.env.TRUST_PROXY ?? (isProduction ? 'true' : 'false')),
   rateLimitMode: process.env.RATE_LIMIT_MODE ?? 'memory',
   anthropicApiKey: process.env.ANTHROPIC_API_KEY ?? '',

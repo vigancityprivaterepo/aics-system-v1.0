@@ -78,13 +78,8 @@ export async function sendPortalStatusNotifications(application: ApplicationLike
     })())
   }
 
-  const shouldSendSms = applicant.mobileNumber && status === 'approved' && hasLinkedCase
-  if (shouldSendSms) {
-    jobs.push(sendSms(
-      applicant.mobileNumber!,
-      `AICS Vigan: Your application ${referenceNumber} is READY FOR RELEASE. Log in to the portal for the latest case update.`,
-    ))
-  }
+  // No SMS here: approval is not yet "ready to claim". The ready-for-release
+  // text is sent by sendReadyForReleaseSms when a case maker marks the case.
 
   if (jobs.length === 0) return
 
@@ -97,7 +92,7 @@ export async function sendPortalStatusNotifications(application: ApplicationLike
 }
 
 // Philippine mobile numbers only (09XXXXXXXXX / 639XXXXXXXXX / +639XXXXXXXXX);
-// client contact numbers are free text and can hold landlines or notes.
+// contact numbers are free text and can hold landlines or notes.
 function toMobileNumber(value: unknown) {
   const digits = String(value ?? '').replace(/\D/g, '')
   if (/^09\d{9}$/.test(digits)) return digits
@@ -106,22 +101,42 @@ function toMobileNumber(value: unknown) {
   return null
 }
 
-// Walk-in clients have no portal account, so the "ready for release" text goes
-// to the contact number on their client profile instead. Callers skip this when
-// the portal applicant was already texted for the same case.
-export async function sendClientReadyForReleaseSms(caseId: string) {
-  const caseRow = await prisma.case.findUnique({
-    where: { id: caseId },
-    select: { caseNumber: true, client: { select: { contactNumber: true } } },
-  })
-  const mobileNumber = toMobileNumber(caseRow?.client?.contactNumber)
-  if (!caseRow || !mobileNumber) {
-    logger.info('Ready-for-release SMS skipped: client has no valid mobile number', { caseId })
-    return
+export type ReadyForReleaseSmsResult = 'sent' | 'old_case' | 'no_mobile_number' | 'not_configured' | 'failed'
+
+// Texts the person who filed the case that it can now be claimed. Called when a
+// case maker marks the case ready for release, never on approval itself. Portal
+// applicants are texted on their account number; walk-in clients on the contact
+// number in their client profile. Never throws: the result is reported back to
+// the staff member who marked the case.
+export async function sendReadyForReleaseSms(caseId: string): Promise<ReadyForReleaseSmsResult> {
+  try {
+    const caseRow = await prisma.case.findUnique({
+      where: { id: caseId },
+      select: {
+        caseNumber: true,
+        createdAt: true,
+        client: { select: { contactNumber: true } },
+        applicantApplication: { select: { applicant: { select: { mobileNumber: true } } } },
+      },
+    })
+    if (!caseRow) return 'failed'
+    // Cases created before SMS_RELEASE_NOTICE_CASES_FROM are backlog: marking
+    // them must not spend SMS credits.
+    if (caseRow.createdAt.getTime() < env.smsReleaseNoticeCasesFrom.getTime()) return 'old_case'
+
+    const mobileNumber = toMobileNumber(caseRow.applicantApplication?.applicant?.mobileNumber)
+      ?? toMobileNumber(caseRow.client?.contactNumber)
+    if (!mobileNumber) return 'no_mobile_number'
+    if (!env.semaphoreApiKey) return 'not_configured'
+
+    await sendSms(
+      mobileNumber,
+      // Keep under 160 characters with the case number so it costs one SMS credit.
+      `AICS Vigan: Ti request u a tulong ${caseRow.caseNumber ?? ''} ket APPROVED ken READY FOR RELEASE. Mabalin u nga umay i claim dituy Mayor's Office, 2nd floor City Hall.`.replace(/\s+/g, ' ').trim(),
+    )
+    return 'sent'
+  } catch (error) {
+    logger.error('Ready-for-release SMS failed', { caseId, error: error instanceof Error ? error.message : String(error) })
+    return 'failed'
   }
-  await sendSms(
-    mobileNumber,
-    // Keep under 160 characters with the case number so it costs one SMS credit.
-    `AICS Vigan: Ti request u a tulong ${caseRow.caseNumber ?? ''} ket APPROVED ken READY FOR RELEASE. Mabalin u nga umay i claim dituy Mayor's Office, 2nd floor City Hall.`.replace(/\s+/g, ' ').trim(),
-  )
 }

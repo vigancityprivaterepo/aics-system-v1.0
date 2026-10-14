@@ -5,7 +5,7 @@ import api from '../../lib/api'
 import { formatDate, formatClientName } from '../../lib/utils'
 import StatusBadge from '../../components/ui/StatusBadge'
 import { useAuthStore } from '../../store/authStore'
-import { allowedCaseTypesForUser } from '../../utils/accessRules'
+import { allowedCaseTypesForUser, userCanRelease } from '../../utils/accessRules'
 import { PlusIcon, SearchIcon, FolderIcon, EditIcon, TrashIcon, ChevronLeftIcon, ChevronRightIcon, QrCodeIcon } from '../../components/ui/Icons'
 
 const TYPE_LABEL = { medicine: 'Medicine', burial: 'Burial', hospital: 'Hospital', medical: 'Medical', eyeglass: 'Eyeglass', plain: 'Plain AICS' }
@@ -16,10 +16,32 @@ const QUEUE_LABEL = {
   ready_for_review: 'Ready for Review',
   waiting_for_recommender: 'Waiting for Recommender',
   waiting_for_approver: 'Waiting for Approver',
+  approved_preparing: 'Approved - Preparing',
   ready_for_release: 'Ready for Release',
   released: 'Released',
   blocked_incomplete: 'Blocked / Incomplete',
   cancelled: 'Cancelled',
+}
+
+// Shown on the bulk button once approved cases of one type are selected, e.g.
+// after the purchased medicines arrive.
+const READY_BUTTON_LABEL = {
+  medicine: 'Medicines are ready for release',
+  medical: 'Medical cases are ready for release',
+  hospital: 'Hospital cases are ready for release',
+  burial: 'Burial cases are ready for release',
+  eyeglass: 'Eyeglass cases are ready for release',
+  plain: 'Plain AICS cases are ready for release',
+}
+const SMS_RESULT_LABEL = {
+  old_case: 'case is older than the SMS start date',
+  no_mobile_number: 'no valid mobile number',
+  not_configured: 'SMS is not set up on the server',
+  failed: 'SMS failed to send',
+}
+
+function canMarkReady(caseRow) {
+  return caseRow.status === 'approved' && !caseRow.readyForReleaseAt
 }
 
 function workflowApprovalMessages(caseRow) {
@@ -72,7 +94,12 @@ export default function CaseList() {
   const [page, setPage] = useState(1)
   const [total, setTotal] = useState(0)
   const [deletingId, setDeletingId] = useState(null)
-  const LIMIT = 15
+  const [selectedIds, setSelectedIds] = useState([])
+  const [markingReady, setMarkingReady] = useState(false)
+  const canMarkReadyForRelease = userCanRelease(user)
+  // The "Approved - Preparing" queue is where cases are marked in bulk, so show
+  // far more of them per page there.
+  const LIMIT = filterQueue === 'approved_preparing' ? 100 : 15
   const totalPages = Math.max(1, Math.ceil(total / LIMIT))
   const filterType = typeParam || filterTypeInput
 
@@ -130,6 +157,7 @@ export default function CaseList() {
         if (!active) return
         setCases(res.data.cases || [])
         setTotal(res.data.total || 0)
+        setSelectedIds([])
       } catch (err) {
         if (!active) return
         toast.error(err.response?.data?.message ?? 'Failed to load cases')
@@ -140,7 +168,7 @@ export default function CaseList() {
       }
     })()
     return () => { active = false }
-  }, [page, filterType, filterQueue, filterBlocked, filterOverdue, filterOwner, dateFrom, dateTo, debouncedSearch])
+  }, [page, LIMIT, filterType, filterQueue, filterBlocked, filterOverdue, filterOwner, dateFrom, dateTo, debouncedSearch])
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -160,6 +188,41 @@ export default function CaseList() {
       toast.error(err.response?.data?.message ?? 'Failed to delete case')
     } finally {
       setDeletingId(null)
+    }
+  }
+
+  const markableCases = canMarkReadyForRelease ? cases.filter(canMarkReady) : []
+  const selectedCases = markableCases.filter((c) => selectedIds.includes(c.id))
+  const selectedTypes = [...new Set(selectedCases.map((c) => c.assistanceType))]
+  const readyButtonLabel = selectedTypes.length === 1
+    ? READY_BUTTON_LABEL[selectedTypes[0]] ?? 'Mark ready for release'
+    : 'Mark ready for release'
+  const allMarkableSelected = markableCases.length > 0 && selectedCases.length === markableCases.length
+
+  const toggleSelected = (id) => {
+    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]))
+  }
+
+  const handleMarkReady = async () => {
+    if (selectedCases.length === 0) return
+    const count = selectedCases.length
+    if (!window.confirm(`Mark ${count} case${count !== 1 ? 's' : ''} as ready for release?\n\nEach client will be sent a text message that their assistance can now be claimed. This cannot be undone.`)) return
+    setMarkingReady(true)
+    try {
+      const res = await api.post('/cases/ready-for-release', { caseIds: selectedCases.map((c) => c.id) })
+      const { marked = 0, smsSent = 0, results = [] } = res.data
+      toast.success(`${marked} case${marked !== 1 ? 's' : ''} marked ready for release. ${smsSent} text message${smsSent !== 1 ? 's' : ''} sent.`)
+      const notTexted = results.filter((item) => item.outcome === 'marked' && item.sms !== 'sent')
+      if (notTexted.length > 0) {
+        const reasons = [...new Set(notTexted.map((item) => SMS_RESULT_LABEL[item.sms] ?? 'not sent'))].join('; ')
+        toast(`${notTexted.length} client${notTexted.length !== 1 ? 's were' : ' was'} not texted: ${reasons}.`, { duration: 8000 })
+      }
+      setSelectedIds([])
+      await fetchCases()
+    } catch (err) {
+      toast.error(err.response?.data?.message ?? 'Failed to mark cases ready for release')
+    } finally {
+      setMarkingReady(false)
     }
   }
 
@@ -280,6 +343,37 @@ export default function CaseList() {
           </p>
           <p className="text-xs text-slate-400">{total} result{total !== 1 ? 's' : ''}</p>
         </div>
+        {canMarkReadyForRelease && (filterQueue === 'approved_preparing' || markableCases.length > 0) && (
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 bg-emerald-50/50 px-5 py-3">
+            <p className="text-sm text-slate-600">
+              {markableCases.length === 0
+                ? 'No approved cases are waiting to be marked ready for release here.'
+                : selectedCases.length > 0
+                  ? `${selectedCases.length} approved case${selectedCases.length !== 1 ? 's' : ''} selected. Clients are texted when you mark them ready.`
+                  : 'Tick the approved cases whose assistance is now available, then mark them ready for release.'}
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              {filterQueue !== 'approved_preparing' && (
+                <button
+                  type="button"
+                  onClick={() => { setLoading(true); setFilterQueue('approved_preparing'); setPage(1) }}
+                  className="portal-button-secondary"
+                >
+                  Show all approved cases to prepare
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={handleMarkReady}
+                disabled={selectedCases.length === 0 || markingReady}
+                className="portal-button-green disabled:cursor-not-allowed disabled:opacity-50"
+                id="btn-mark-ready-for-release"
+              >
+                {markingReady ? 'Sending...' : `${readyButtonLabel}${selectedCases.length > 0 ? ` (${selectedCases.length})` : ''}`}
+              </button>
+            </div>
+          </div>
+        )}
         {loading ? (
           <div className="flex justify-center py-16">
             <div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-green border-t-transparent" />
@@ -295,6 +389,20 @@ export default function CaseList() {
             <table className="w-full min-w-[720px]">
               <thead>
                 <tr>
+                  {canMarkReadyForRelease && (
+                    <th className="table-header w-10 text-left">
+                      {markableCases.length > 0 && (
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 accent-emerald-600"
+                          checked={allMarkableSelected}
+                          onChange={(e) => setSelectedIds(e.target.checked ? markableCases.map((c) => c.id) : [])}
+                          aria-label="Select all approved cases on this page"
+                          title="Select all approved cases on this page"
+                        />
+                      )}
+                    </th>
+                  )}
                   <th className="table-header text-left">Case ID #</th>
                   <th className="table-header text-left">Client</th>
                   <th className="table-header text-left">Type</th>
@@ -325,6 +433,19 @@ export default function CaseList() {
                   }}
                   title="Open case"
                 >
+                  {canMarkReadyForRelease && (
+                    <td className="table-cell w-10" onClick={(event) => event.stopPropagation()} onKeyDown={(event) => event.stopPropagation()}>
+                      {canMarkReady(c) && (
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 accent-emerald-600"
+                          checked={selectedIds.includes(c.id)}
+                          onChange={() => toggleSelected(c.id)}
+                          aria-label={`Select case ${c.caseNumber ?? ''} to mark ready for release`}
+                        />
+                      )}
+                    </td>
+                  )}
                   <td className="table-cell">
                     <Link to={`/cases/${c.id}`} className="font-mono text-xs font-bold text-brand-primary hover:underline">
                       {c.caseNumber || <span className="font-normal text-slate-400">—</span>}
@@ -360,6 +481,9 @@ export default function CaseList() {
                         {QUEUE_LABEL[c.queue] || c.queue}
                       </span>
                       <p className="text-[11px] text-slate-500">{c.nextAction}</p>
+                      {c.readyForReleaseAt && c.status === 'approved' ? (
+                        <p className="text-[11px] font-medium text-emerald-700">Marked ready for release on {formatDate(c.readyForReleaseAt)}.</p>
+                      ) : null}
                       {approvalMessages.map((summary) => {
                         const verb =
                           summary.action === 'rejected'

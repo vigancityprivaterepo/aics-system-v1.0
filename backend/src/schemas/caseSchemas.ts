@@ -70,6 +70,10 @@ export const updateStatusSchema = z.object({
   preserveApprovals: z.boolean().optional(),
 })
 
+export const markReadyForReleaseSchema = z.object({
+  caseIds: z.array(z.string().uuid()).min(1).max(200),
+})
+
 export const cancelCaseSchema = z.object({
   reason: z.string().trim().min(3, 'A cancellation reason is required'),
 })

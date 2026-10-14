@@ -187,6 +187,10 @@ model Case {
   beneficiaryIsSenior Boolean?         @map("beneficiary_is_senior")
   beneficiaryIsSoloParent Boolean?     @map("beneficiary_is_solo_parent")
   choCertGivenDate   DateTime?         @map("cho_cert_given_date") @db.Date
+  // Set when a case maker marks the approved case as ready to claim (the client
+  // is texted at that moment). Null while the assistance is still being prepared.
+  readyForReleaseAt     DateTime?      @map("ready_for_release_at") @db.Timestamptz(6)
+  readyForReleaseByName String?        @map("ready_for_release_by_name") @db.VarChar(200)
   auditFlags         Json?             @map("audit_flags")
   isArchived         Boolean           @default(false) @map("is_archived")
   archivedAt         DateTime?         @map("archived_at") @db.Timestamptz(6)

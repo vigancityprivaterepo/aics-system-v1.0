@@ -184,6 +184,7 @@ const QUEUE_META = {
   ready_for_review: { label: 'Ready for Review', query: 'queue=ready_for_review', color: 'text-amber-700 bg-amber-50' },
   waiting_for_recommender: { label: 'Waiting for Recommender', query: 'queue=waiting_for_recommender', color: 'text-indigo-700 bg-indigo-50' },
   waiting_for_approver: { label: 'Waiting for Approver', query: 'queue=waiting_for_approver', color: 'text-violet-700 bg-violet-50' },
+  approved_preparing: { label: 'Approved - Preparing', query: 'queue=approved_preparing', color: 'text-teal-700 bg-teal-50' },
   ready_for_release: { label: 'Ready for Release', query: 'queue=ready_for_release', color: 'text-emerald-700 bg-emerald-50' },
 }
 

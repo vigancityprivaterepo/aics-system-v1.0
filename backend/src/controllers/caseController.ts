@@ -216,6 +216,7 @@ export async function listCases(req: Request, res: Response) {
       dateOfAssessment: c.dateOfAssessment?.toISOString().slice(0, 10) ?? null,
       amount: currencyFromDb(c.amount),
       createdAt: c.createdAt,
+      readyForReleaseAt: (c as any).readyForReleaseAt ?? null,
       approvalSummary: {
         latest: latestApprovalSummary,
         for_review: reviewedSummary,
