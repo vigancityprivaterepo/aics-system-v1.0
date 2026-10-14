@@ -20,7 +20,7 @@ import { prisma } from '../utils/prisma.js'
 import { signedReportPublicUrl } from '../services/storageService.js'
 import { APPROVAL_STAGE_META } from '../types/caseTypes.js'
 import { auditLog } from '../utils/auditLog.js'
-import { sendPortalStatusNotifications } from '../services/portalStatusNotifications.js'
+import { sendPortalStatusNotifications, sendClientReadyForReleaseSms } from '../services/portalStatusNotifications.js'
 
 function userCanManageCaseSigning(caseData: { socialWorkerId: string | null }, user: Express.AuthUser | undefined) {
   if (!user) return false
@@ -247,6 +247,9 @@ export async function uploadCaseStudySignedReport(req: Request, res: Response) {
     })
     if (linkedApplication) {
       sendPortalStatusNotifications({ ...linkedApplication, status: nextStatus, adminNotes: null }).catch(console.error)
+    }
+    if (nextStatus === 'approved' && !linkedApplication?.applicant?.mobileNumber) {
+      sendClientReadyForReleaseSms(caseId).catch(console.error)
     }
   }
   res.json({ reportSignature })

@@ -1,6 +1,8 @@
 import { sendMail, statusUpdateEmailHtml, approvedEmailHtml, guaranteeLetterEmailHtml } from './mailer.js'
 import { sendSms } from './sms.js'
 import { env } from '../config/env.js'
+import { prisma } from '../utils/prisma.js'
+import { logger } from '../utils/logger.js'
 import {
   buildGuaranteeLetterAssets,
   generateGuaranteeLetterPdfForCaseWithAssets,
@@ -92,4 +94,34 @@ export async function sendPortalStatusNotifications(application: ApplicationLike
       console.error('[Portal Status Notification]', result.reason)
     }
   }
+}
+
+// Philippine mobile numbers only (09XXXXXXXXX / 639XXXXXXXXX / +639XXXXXXXXX);
+// client contact numbers are free text and can hold landlines or notes.
+function toMobileNumber(value: unknown) {
+  const digits = String(value ?? '').replace(/\D/g, '')
+  if (/^09\d{9}$/.test(digits)) return digits
+  if (/^639\d{9}$/.test(digits)) return `0${digits.slice(2)}`
+  if (/^9\d{9}$/.test(digits)) return `0${digits}`
+  return null
+}
+
+// Walk-in clients have no portal account, so the "ready for release" text goes
+// to the contact number on their client profile instead. Callers skip this when
+// the portal applicant was already texted for the same case.
+export async function sendClientReadyForReleaseSms(caseId: string) {
+  const caseRow = await prisma.case.findUnique({
+    where: { id: caseId },
+    select: { caseNumber: true, client: { select: { contactNumber: true } } },
+  })
+  const mobileNumber = toMobileNumber(caseRow?.client?.contactNumber)
+  if (!caseRow || !mobileNumber) {
+    logger.info('Ready-for-release SMS skipped: client has no valid mobile number', { caseId })
+    return
+  }
+  await sendSms(
+    mobileNumber,
+    // Keep under 160 characters with the case number so it costs one SMS credit.
+    `AICS Vigan: Ti request u a tulong ${caseRow.caseNumber ?? ''} ket APPROVED ken READY FOR RELEASE. Mabalin u nga umay i claim dituy Mayor's Office, 2nd floor City Hall.`.replace(/\s+/g, ' ').trim(),
+  )
 }

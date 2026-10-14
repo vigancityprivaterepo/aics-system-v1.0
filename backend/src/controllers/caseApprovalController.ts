@@ -17,7 +17,7 @@ import {
   normalizeApprovalNotes,
   resolveResubmitStage,
 } from '../services/approvalService.js'
-import { sendPortalStatusNotifications } from '../services/portalStatusNotifications.js'
+import { sendPortalStatusNotifications, sendClientReadyForReleaseSms } from '../services/portalStatusNotifications.js'
 import { auditLog } from '../utils/auditLog.js'
 import { logAdminAudit } from '../services/adminAuditService.js'
 import { assessCaseWorkflow } from '../services/caseWorkflowService.js'
@@ -235,6 +235,9 @@ export async function updateStatus(req: Request, res: Response) {
     })
     if (linkedApplication) {
       sendPortalStatusNotifications({ ...linkedApplication, status: nextStatus, adminNotes: normalizedNotes }).catch(console.error)
+    }
+    if (nextStatus === 'approved' && !linkedApplication?.applicant?.mobileNumber) {
+      sendClientReadyForReleaseSms(caseData.id).catch(console.error)
     }
   }
 
