@@ -2387,7 +2387,23 @@ function formatChoDoctorDisplayName(value: string): string {
   return normalized || 'City Health Officer'
 }
 
-function buildChoCertificationTextboxXml(caseData: any): string {
+// The template's certification text box was drawn for five medicine lines. Up to
+// ten medicines are listed one per line; beyond that they go in two columns so
+// the box stays on the page. The extra rows past five are what the box has to
+// grow by (see rewriteChoCertificationTextboxTemplate).
+const CHO_CERT_TEMPLATE_MEDICINE_ROWS = 5
+const CHO_CERT_SINGLE_COLUMN_MAX = 10
+const CHO_CERT_ROW_HEIGHT_PT = 9.5
+// Rough characters per printed line at 8pt in the full box and in half of it;
+// kept low so long medicine names that wrap still get enough room.
+const CHO_CERT_CHARS_PER_LINE_FULL = 48
+const CHO_CERT_CHARS_PER_LINE_HALF = 22
+
+function printedLineCount(lines: string[], charsPerLine: number) {
+  return lines.reduce((total, line) => total + Math.max(1, Math.ceil(line.length / charsPerLine)), 0)
+}
+
+function buildChoCertificationTextboxXml(caseData: any): { xml: string; medicineRows: number } {
   const certData = buildChoCertData(caseData)
   const sizedTextProps = '<w:rPr><w:sz w:val="16"/><w:szCs w:val="16"/></w:rPr>'
   const boldSizedTextProps = '<w:rPr><w:b/><w:bCs/><w:sz w:val="16"/><w:szCs w:val="16"/></w:rPr>'
@@ -2398,29 +2414,72 @@ function buildChoCertificationTextboxXml(caseData: any): string {
     </w:p>`
 
   if (!certData) {
-    return `<w:txbxContent><w:p/></w:txbxContent>`
+    return { xml: `<w:txbxContent><w:p/></w:txbxContent>`, medicineRows: CHO_CERT_TEMPLATE_MEDICINE_ROWS }
   }
 
   const { unavailableMedicines, givenDayOrdinal, givenMonth, givenYear, choDoctorName } = certData
-  const pad = [...unavailableMedicines]
-  while (pad.length < 5) pad.push({ name: '', date: '', time: '' })
-  const line = (index: number) => pad[index].name ? `${index + 1}. ${pad[index].name}` : ''
+  const lines = unavailableMedicines.filter((medicine) => medicine.name).map((medicine, index) => `${index + 1}. ${medicine.name}`)
 
-  return `<w:txbxContent>
+  let medicinesXml: string
+  let medicineRows: number
+  if (lines.length <= CHO_CERT_SINGLE_COLUMN_MAX) {
+    const padded = [...lines]
+    while (padded.length < CHO_CERT_TEMPLATE_MEDICINE_ROWS) padded.push('')
+    medicinesXml = padded.map((line) => paragraph(line)).join('')
+    medicineRows = Math.max(CHO_CERT_TEMPLATE_MEDICINE_ROWS, printedLineCount(lines, CHO_CERT_CHARS_PER_LINE_FULL))
+  } else {
+    // Column-major so the numbering reads down the left column, then the right.
+    const left = lines.slice(0, Math.ceil(lines.length / 2))
+    const right = lines.slice(left.length)
+    medicineRows = Math.max(
+      CHO_CERT_TEMPLATE_MEDICINE_ROWS,
+      printedLineCount(left, CHO_CERT_CHARS_PER_LINE_HALF),
+      printedLineCount(right, CHO_CERT_CHARS_PER_LINE_HALF),
+    )
+    const cell = (column: string[]) => `
+      <w:tc>
+        <w:tcPr><w:tcW w:w="2500" w:type="pct"/></w:tcPr>
+        ${column.length ? column.map((line) => paragraph(line)).join('') : '<w:p/>'}
+      </w:tc>`
+    medicinesXml = `
+    <w:tbl>
+      <w:tblPr>
+        <w:tblW w:w="5000" w:type="pct"/>
+        <w:tblBorders>
+          <w:top w:val="nil"/><w:left w:val="nil"/><w:bottom w:val="nil"/><w:right w:val="nil"/><w:insideH w:val="nil"/><w:insideV w:val="nil"/>
+        </w:tblBorders>
+        <w:tblLayout w:type="fixed"/>
+        <w:tblCellMar><w:left w:w="0" w:type="dxa"/><w:right w:w="60" w:type="dxa"/></w:tblCellMar>
+      </w:tblPr>
+      <w:tblGrid><w:gridCol/><w:gridCol/></w:tblGrid>
+      <w:tr>${cell(left)}${cell(right)}</w:tr>
+    </w:tbl>`
+  }
+
+  const xml = `<w:txbxContent>
     ${paragraph('CERTIFICATION', { bold: true })}
     <w:p/>
     ${paragraph(`This is to certify that the following medicine/s are not part of the regular procurement of the City Health Office: by ${formatChoDoctorDisplayName(choDoctorName)}, M.D.`)}
     <w:p/>
-    ${paragraph(line(0))}
-    ${paragraph(line(1))}
-    ${paragraph(line(2))}
-    ${paragraph(line(3))}
-    ${paragraph(line(4))}
+    ${medicinesXml}
     <w:p/>
     ${paragraph(`Given this ${givenDayOrdinal} day of ${givenMonth}, ${givenYear}`)}
     <w:p/>
     <w:p/>
   </w:txbxContent>`
+  return { xml, medicineRows }
+}
+
+// Grows the text box drawing (DrawingML extent and the VML fallback height) by the
+// medicine rows beyond the five it was drawn for, so no line is cut off.
+function growChoCertificationTextbox(drawingXml: string, extraRows: number) {
+  if (extraRows <= 0) return drawingXml
+  const extraPt = extraRows * CHO_CERT_ROW_HEIGHT_PT
+  const extraEmu = Math.round(extraPt * 12700)
+  return drawingXml
+    .replace(/(<wp:extent\b[^>]*\bcy=")(\d+)(")/, (_m, a, cy, b) => `${a}${Number(cy) + extraEmu}${b}`)
+    .replace(/(<a:ext\b[^>]*\bcy=")(\d+)(")/, (_m, a, cy, b) => `${a}${Number(cy) + extraEmu}${b}`)
+    .replace(/(\bheight:)([0-9.]+)(pt)/, (_m, a, h, b) => `${a}${(Number(h) + extraPt).toFixed(2)}${b}`)
 }
 
 function rewriteChoCertificationTextboxTemplate(templateContent: string, caseData: any): { templateContent: string; hasTextbox: boolean } {
@@ -2431,12 +2490,25 @@ function rewriteChoCertificationTextboxTemplate(templateContent: string, caseDat
 
     const original = entry.asText()
     const pattern = /<w:txbxContent>[\s\S]*?Certifification[\s\S]*?<\/w:txbxContent>/g
-    const matches = original.match(pattern)
-    if (!matches || matches.length === 0) {
+    const matches = [...original.matchAll(pattern)]
+    if (matches.length === 0) {
       return { templateContent, hasTextbox: false }
     }
 
-    const updated = original.replace(pattern, buildChoCertificationTextboxXml(caseData))
+    const { xml, medicineRows } = buildChoCertificationTextboxXml(caseData)
+    const extraRows = medicineRows - CHO_CERT_TEMPLATE_MEDICINE_ROWS
+    // Work from the last match back so earlier offsets stay valid. Each text box
+    // appears twice (DrawingML and its VML fallback); the size attributes sit in
+    // the drawing markup just before its txbxContent.
+    let updated = original
+    for (const match of matches.reverse()) {
+      const start = match.index ?? 0
+      const drawingStart = Math.max(updated.lastIndexOf('<wp:anchor', start), updated.lastIndexOf('<wp:inline', start), updated.lastIndexOf('<v:shape ', start))
+      const head = drawingStart >= 0 ? updated.slice(drawingStart, start) : ''
+      updated = drawingStart >= 0
+        ? updated.slice(0, drawingStart) + growChoCertificationTextbox(head, extraRows) + xml + updated.slice(start + match[0].length)
+        : updated.slice(0, start) + xml + updated.slice(start + match[0].length)
+    }
     zip.file('word/document.xml', updated)
     return {
       templateContent: zip.generate({ type: 'string', compression: 'DEFLATE' }) as string,
