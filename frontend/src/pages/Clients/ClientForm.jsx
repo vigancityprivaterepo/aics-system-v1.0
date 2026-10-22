@@ -149,7 +149,7 @@ export default function ClientForm() {
   }
 
   return (
-    <div className="animate-fade-in mx-auto max-w-3xl">
+    <div className="animate-fade-in w-full">
       <button onClick={() => navigate('/clients')} className="btn-ghost mb-4 text-sm">
         <ChevronLeftIcon className="h-4 w-4" /> Back to Clients
       </button>
