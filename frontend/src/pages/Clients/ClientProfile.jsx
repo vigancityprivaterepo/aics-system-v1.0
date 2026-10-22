@@ -444,7 +444,7 @@ export default function ClientProfile() {
   }
 
   return (
-    <div className="animate-fade-in mx-auto w-full max-w-[1440px] px-3 sm:px-5 lg:px-8">
+    <div className="animate-fade-in w-full">
       <button onClick={() => navigate('/clients')} className="btn-ghost mb-4 text-sm">
         <ChevronLeftIcon className="h-4 w-4" />
         Back to Clients

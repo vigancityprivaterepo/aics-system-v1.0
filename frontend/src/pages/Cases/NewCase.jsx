@@ -140,7 +140,7 @@ export default function NewCase() {
   const stepNum = step === 'type' ? 1 : (presetType ? 1 : 2)
 
   return (
-    <div className="animate-fade-in mx-auto w-full max-w-[1440px] px-3 sm:px-5 lg:px-8">
+    <div className="animate-fade-in w-full">
       <div className="mb-5 border-b border-slate-200 pb-4">
         <p className="portal-kicker">AICS — Step {stepNum} of {totalSteps}</p>
         <h1 className="portal-page-title">
@@ -197,7 +197,7 @@ export default function NewCase() {
 
       {step === 'client' && (
         <div className="space-y-5">
-          <div className="card mx-auto w-full max-w-6xl">
+          <div className="card w-full">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b-2 border-slate-100 pb-3.5">
               <h2 className="font-display text-base font-bold text-[#0f2d52]">Search Client Profile</h2>
               {!presetType && (
@@ -256,7 +256,7 @@ export default function NewCase() {
           </div>
 
           {!selectedClient && (
-            <div className="card mx-auto w-full max-w-6xl">
+            <div className="card w-full">
               <h2 className="font-display text-[15px] font-bold text-[#0f2d52]">No profile yet?</h2>
               <p className="mt-2 max-w-prose text-[12.5px] leading-relaxed text-gray-500 [text-wrap:pretty]">
                 Register the beneficiary first — the new profile carries over into this {assistanceType ? TYPE_LABEL[assistanceType] : 'AICS'} case automatically.
@@ -272,7 +272,7 @@ export default function NewCase() {
           )}
 
           {selectedClient && (
-            <div className="mx-auto flex w-full max-w-6xl justify-end">
+            <div className="flex w-full justify-end">
               <button onClick={handleCreateCase} disabled={loading} className="portal-button-primary px-8 py-3 text-base">
                 {loading ? 'Creating...' : 'Create Case & Continue'}
                 {!loading && <ArrowRightIcon className="h-5 w-5" />}
