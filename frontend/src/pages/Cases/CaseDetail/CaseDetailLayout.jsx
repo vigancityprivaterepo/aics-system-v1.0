@@ -69,6 +69,7 @@ export default function CaseDetailLayout() {
   const [returnToEncodingOpen, setReturnToEncodingOpen] = useState(false)
   const [reassignOpen, setReassignOpen] = useState(false)
   const [reassignLoading, setReassignLoading] = useState(false)
+  const [syncingPreparer, setSyncingPreparer] = useState(false)
   const [employees, setEmployees] = useState([])
   const [employeesLoading, setEmployeesLoading] = useState(false)
   const permissions = caseData?.permissions ?? {}
@@ -174,6 +175,21 @@ export default function CaseDetailLayout() {
       toast.error(err.response?.data?.message || 'Failed to cancel case')
     } finally {
       setActionLoading(false)
+    }
+  }
+
+  const handleSyncPreparerName = async () => {
+    if (!window.confirm(`Print "${caseData.socialWorkerAccountName}" as the prepared-by name on this case? Use Transfer instead if "${caseData.socialWorkerName}" really prepared it.`)) return
+    setSyncingPreparer(true)
+    try {
+      await api.patch(`/cases/${id}/sync-preparer-name`)
+      const refreshed = await api.get(`/cases/${id}`)
+      setCaseData(refreshed.data)
+      toast.success('Prepared-by name now matches the case maker account.')
+    } catch (err) {
+      toast.error(err.response?.data?.message ?? 'Failed to update the prepared-by name')
+    } finally {
+      setSyncingPreparer(false)
     }
   }
 
@@ -335,6 +351,22 @@ export default function CaseDetailLayout() {
               </span>
             ) : null}
           </div>
+          {permissions.canReassign && caseData.preparerNameMismatch && (
+            <div className="mt-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              <p>
+                <span className="font-semibold">Prepared-by name does not match the case maker account.</span>{' '}
+                Printed name: <span className="font-medium">{caseData.socialWorkerName}</span>. Account (whose signature prints): <span className="font-medium">{caseData.socialWorkerAccountName}</span>.
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <button type="button" onClick={openReassign} className="portal-button-secondary px-3 py-1.5 text-xs">
+                  Transfer to the right person
+                </button>
+                <button type="button" onClick={handleSyncPreparerName} disabled={syncingPreparer} className="portal-button-secondary px-3 py-1.5 text-xs disabled:opacity-50">
+                  {syncingPreparer ? 'Saving...' : `Use ${caseData.socialWorkerAccountName}'s name`}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

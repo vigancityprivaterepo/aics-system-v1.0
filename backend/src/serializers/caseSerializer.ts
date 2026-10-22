@@ -21,6 +21,23 @@ export function isSameAsClientName(name: string, client: { firstName?: string | 
   return candidate.split(' ')[0] === firstToken && (candidate === lastName || candidate.endsWith(` ${lastName}`))
 }
 
+// The printed "prepared by" name is stored on the case, but the signature,
+// ownership and case-maker filter follow the linked account (socialWorkerId).
+// Older cases had the name typed freely, so the two can disagree; flag those
+// for an admin to fix with Transfer or "use account name".
+export function preparerNameMismatch(storedName: unknown, accountName: unknown) {
+  const normalize = (value: unknown) => String(value ?? '').toUpperCase().replace(/[^A-Z0-9\u00D1]+/g, ' ').trim()
+  const stored = normalize(storedName)
+  const account = normalize(accountName)
+  if (!stored || !account || stored === account) return false
+  // Same first and last word = same person written differently (middle initial,
+  // casing, a one-letter spelling slip in the middle name): not a mismatch.
+  const storedWords = stored.split(' ')
+  const accountWords = account.split(' ')
+  const sameEnds = storedWords[0] === accountWords[0] && storedWords[storedWords.length - 1] === accountWords[accountWords.length - 1]
+  return !sameEnds
+}
+
 function portalContextFromAuditFlags(auditFlags: unknown): Record<string, unknown> | null {
   if (!auditFlags || typeof auditFlags !== 'object' || Array.isArray(auditFlags)) return null
   const flags = auditFlags as Record<string, unknown>
@@ -257,6 +274,8 @@ export function serializeCase(caseRow: any, assigneesByStage?: ApprovalAssigneeB
     choCertGivenDate: caseRow.choCertGivenDate?.toISOString().slice(0, 10) ?? null,
     readyForReleaseAt: caseRow.readyForReleaseAt?.toISOString() ?? null,
     readyForReleaseByName: caseRow.readyForReleaseByName ?? null,
+    socialWorkerAccountName: caseRow.socialWorker?.name ?? null,
+    preparerNameMismatch: preparerNameMismatch(caseRow.socialWorkerName, caseRow.socialWorker?.name),
     proxyName,
     proxyRelationship,
     ...workflow,

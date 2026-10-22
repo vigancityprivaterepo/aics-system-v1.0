@@ -11,7 +11,6 @@ import HouseholdMemberQuickFill from '../../../components/HouseholdMemberQuickFi
 import FieldError from '../../../components/ui/FieldError'
 import AmountPreview from '../../../components/ui/AmountPreview'
 import DraftRecoveryBanner from '../../../components/ui/DraftRecoveryBanner'
-import { useAuthStore } from '../../../store/authStore'
 import { OCCUPATION_OPTIONS, RELATIONSHIP_OPTIONS } from '../../../constants/caseFormOptions'
 import { scrollToFirstError } from '../../../lib/formNavigation'
 import { formatCurrency, calculateAge } from '../../../lib/utils'
@@ -121,7 +120,6 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false, on
   // The client's own category, re-derivable on demand for whenever the encoder
   // switches the beneficiary picker back to "self" (see applyBeneficiarySelection).
   const clientOwnCategory = caseData.client?.isSenior ? 'senior' : caseData.client?.isPwd ? 'pwd' : caseData.client?.is4ps ? '4ps' : caseData.client?.isSoloParent ? 'solo' : 'none'
-  const currentUser = useAuthStore((state) => state.user)
   // A case keeps its own copy of the household so it can be edited per case-study
   // report, but it's only seeded from the client's list at case creation and never
   // synced afterward — if the client's household was edited later (e.g. a member
@@ -160,7 +158,8 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false, on
     mode: 'onBlur',
     defaultValues: {
       dateOfAssessment: caseData.dateOfAssessment || new Date().toISOString().slice(0, 10),
-      socialWorkerName: caseData.socialWorkerName || currentUser?.name || '',
+      // Display only: shows the case maker account, never the person viewing.
+      socialWorkerName: caseData.socialWorkerName || caseData.socialWorkerAccountName || '',
       presentingProblem: caseData.presentingProblem || '',
       findings: caseData.assessment || caseData.backgroundOfProblem || '',
       amount: caseData.amount ?? '',
@@ -252,15 +251,6 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false, on
     setMedicines(normalizeMedicineRows(caseData.medicines || []))
   }, [caseData.medicines, isMedicine])
 
-  useEffect(() => {
-    if (caseData.socialWorkerName) return
-    const fallbackWorkerName = String(currentUser?.name ?? '').trim()
-    if (!fallbackWorkerName) return
-    if (!String(getValues('socialWorkerName') ?? '').trim()) {
-      setValue('socialWorkerName', fallbackWorkerName, { shouldDirty: false, shouldTouch: false })
-    }
-  }, [caseData.socialWorkerName, currentUser?.name, getValues, setValue])
-
   const amount = watch('amount')
   const beneficiarySelection = watch('beneficiarySelection')
   const parsedAmount = Number(amount)
@@ -289,7 +279,6 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false, on
 
     const casePayload = {
       dateOfAssessment: data.dateOfAssessment || null,
-      socialWorkerName: data.socialWorkerName,
       presentingProblem: normalizeNarrativeText(data.presentingProblem),
       backgroundOfProblem: normalizeNarrativeText(data.findings),
       assessment: normalizeNarrativeText(data.findings),
@@ -425,9 +414,11 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false, on
                 <FieldError message={errors.dateOfAssessment?.message} />
               </div>
               <div className="sm:col-span-2">
-                <label className="portal-label">Employee Name *</label>
-                <input type="text" {...register('socialWorkerName', { required: 'Employee name is required' })} className="portal-input" placeholder="Full name of assigned social worker" />
-                <FieldError message={errors.socialWorkerName?.message} />
+                <label className="portal-label">Employee Name</label>
+                {/* Read-only: the printed name must match the signature of the case's
+                    account holder. An admin changes it with Transfer on the case header. */}
+                <input type="text" {...register('socialWorkerName')} readOnly className="portal-input cursor-not-allowed bg-slate-50 text-slate-600" title="Set from the case maker's account. Ask an admin to Transfer the case to change it." />
+                <p className="mt-1 text-xs text-slate-500">Set from the case maker&apos;s account. To change it, ask an admin to use Transfer.</p>
               </div>
             </div>
           </section>

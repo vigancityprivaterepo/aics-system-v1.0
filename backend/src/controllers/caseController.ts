@@ -7,7 +7,7 @@ import { currencyFromDb, parseOptionalCurrency } from '../utils/currency.js'
 import { computeMedicineTotal } from '../utils/business.js'
 import { generateCaseCaseNumber } from '../utils/caseNumber.js'
 import { findCaseWithDetails, getApprovalSettings } from '../queries/caseQueries.js'
-import { serializeCase, normalizeWorkflowStatus } from '../serializers/caseSerializer.js'
+import { serializeCase, normalizeWorkflowStatus, preparerNameMismatch } from '../serializers/caseSerializer.js'
 import { resolveApprovalAssignees } from '../services/approvalService.js'
 import { activeReportSignatureStage, userCanUploadReportSignatureStage } from '../services/reportSignatureService.js'
 import { assessCaseWorkflow } from '../services/caseWorkflowService.js'
@@ -110,6 +110,7 @@ export async function listCases(req: Request, res: Response) {
   const owner = req.query.owner ? String(req.query.owner).trim() : undefined
   // Admin-only: narrow the list to one case study maker (the case's social worker).
   const maker = req.user.role === 'admin' && req.query.maker ? String(req.query.maker).trim() : undefined
+  const preparerMismatchOnly = req.user.role === 'admin' && req.query.preparerMismatch === 'true'
   const blocked = req.query.blocked === 'true'
   const overdue = req.query.overdue === 'true'
   const dateFrom = req.query.dateFrom ? String(req.query.dateFrom) : undefined
@@ -186,6 +187,7 @@ export async function listCases(req: Request, res: Response) {
           orderBy: { changedAt: 'desc' },
           take: 1,
         },
+        socialWorker: { select: { name: true } },
       },
       orderBy: { createdAt: 'desc' },
     }),
@@ -220,6 +222,7 @@ export async function listCases(req: Request, res: Response) {
       amount: currencyFromDb(c.amount),
       createdAt: c.createdAt,
       readyForReleaseAt: (c as any).readyForReleaseAt ?? null,
+      preparerNameMismatch: preparerNameMismatch(c.socialWorkerName, (c as any).socialWorker?.name),
       approvalSummary: {
         latest: latestApprovalSummary,
         for_review: reviewedSummary,
@@ -235,6 +238,7 @@ export async function listCases(req: Request, res: Response) {
     if (blocked && !c.isBlocked) return false
     if (overdue && !c.overdue) return false
     if (owner === 'me' && c.ownerUserId !== req.user!.id) return false
+    if (preparerMismatchOnly && !c.preparerNameMismatch) return false
     if (owner && owner !== 'me' && c.ownerUserId !== owner) return false
     return true
   })
@@ -403,6 +407,11 @@ export async function createCase(req: Request, res: Response) {
 export async function updateCase(req: Request, res: Response) {
   const caseId = paramId(req.params.id)
   const body = updateCaseSchema.parse(req.body)
+  // The prepared-by name and employee ID always come from the linked account
+  // (changed only by an admin Transfer), so the printed name can never differ
+  // from the signature. Ignore any value an older client still sends.
+  delete body.socialWorkerName
+  delete body.socialWorkerEmpId
 
   const current = await prisma.case.findUnique({ where: { id: caseId }, include: { medicines: true } })
   if (!current) throw new HttpError(404, 'Case not found')
@@ -632,6 +641,38 @@ export async function reassignCase(req: Request, res: Response) {
     socialWorkerName: updated.socialWorkerName,
     socialWorkerEmpId: updated.socialWorkerEmpId,
   })
+}
+
+// Admin fix for an older case whose typed prepared-by name differs from the
+// linked account: print the account holder's name (the one whose signature is
+// used). If the typed name was the right person, Transfer the case instead.
+export async function syncPreparerName(req: Request, res: Response) {
+  if (req.user?.role !== 'admin') throw new HttpError(403, 'Only administrators can fix the prepared-by name.')
+  const caseId = paramId(req.params.id)
+  const current = await prisma.case.findUnique({
+    where: { id: caseId },
+    include: { socialWorker: { select: { id: true, name: true, employeeId: true } } },
+  })
+  if (!current) throw new HttpError(404, 'Case not found')
+  if (!current.socialWorker) throw new HttpError(400, 'This case has no linked case maker account. Use Transfer to assign one.')
+
+  const updated = await prisma.$transaction(async (tx) => {
+    const next = await tx.case.update({
+      where: { id: current.id },
+      data: { socialWorkerName: current.socialWorker!.name, socialWorkerEmpId: current.socialWorker!.employeeId },
+    })
+    await logAdminAudit(tx, {
+      actorId: req.user?.id,
+      action: 'case.sync_preparer_name',
+      targetType: 'case',
+      targetId: current.id,
+      summary: `Prepared-by name on ${current.caseNumber ?? current.id} set to account holder ${current.socialWorker!.name}`,
+      details: { previousName: current.socialWorkerName, accountName: current.socialWorker!.name },
+    })
+    return next
+  })
+
+  res.json({ id: updated.id, socialWorkerName: updated.socialWorkerName, socialWorkerEmpId: updated.socialWorkerEmpId })
 }
 
 export async function deleteCase(req: Request, res: Response) {

@@ -93,6 +93,7 @@ export default function CaseList() {
   const [filterOverdue, setFilterOverdue] = useState(overdueParam)
   const [filterOwner, setFilterOwner] = useState(ownerParam)
   const [filterMaker, setFilterMaker] = useState(makerParam)
+  const [filterPreparerMismatch, setFilterPreparerMismatch] = useState(searchParams.get('preparerMismatch') === 'true')
   const [caseMakers, setCaseMakers] = useState([])
   const isAdmin = user?.role === 'admin'
   const [dateFrom, setDateFrom] = useState(dateFromParam)
@@ -124,6 +125,7 @@ export default function CaseList() {
       const nextOverdue = overrides.filterOverdue ?? filterOverdue
       const nextOwner = overrides.filterOwner ?? filterOwner
       const nextMaker = overrides.filterMaker ?? filterMaker
+      const nextPreparerMismatch = overrides.filterPreparerMismatch ?? filterPreparerMismatch
       const nextDateFrom = overrides.dateFrom ?? dateFrom
       const nextDateTo = overrides.dateTo ?? dateTo
       const params = new URLSearchParams({ page: String(targetPage), limit: String(LIMIT) })
@@ -134,6 +136,7 @@ export default function CaseList() {
       if (nextOverdue) params.append('overdue', 'true')
       if (nextOwner) params.append('owner', nextOwner)
       if (nextMaker) params.append('maker', nextMaker)
+      if (nextPreparerMismatch) params.append('preparerMismatch', 'true')
       if (nextDateFrom) params.append('dateFrom', nextDateFrom)
       if (nextDateTo) params.append('dateTo', nextDateTo)
       const res = await api.get(`/cases?${params}`)
@@ -160,6 +163,7 @@ export default function CaseList() {
         if (filterOverdue) params.append('overdue', 'true')
         if (filterOwner) params.append('owner', filterOwner)
         if (filterMaker) params.append('maker', filterMaker)
+        if (filterPreparerMismatch) params.append('preparerMismatch', 'true')
         if (dateFrom) params.append('dateFrom', dateFrom)
         if (dateTo) params.append('dateTo', dateTo)
         const res = await api.get(`/cases?${params}`)
@@ -177,7 +181,7 @@ export default function CaseList() {
       }
     })()
     return () => { active = false }
-  }, [page, LIMIT, filterType, filterQueue, filterBlocked, filterOverdue, filterOwner, filterMaker, dateFrom, dateTo, debouncedSearch])
+  }, [page, LIMIT, filterType, filterQueue, filterBlocked, filterOverdue, filterOwner, filterMaker, filterPreparerMismatch, dateFrom, dateTo, debouncedSearch])
 
   useEffect(() => {
     if (!isAdmin) return
@@ -319,6 +323,12 @@ export default function CaseList() {
               <option value="">All Owners</option>
               <option value="me">My Work</option>
             </select>
+            {isAdmin && (
+              <label className="inline-flex items-center gap-2 text-sm text-slate-600 cursor-pointer" title="Cases whose printed prepared-by name differs from the case maker account (whose signature prints)">
+                <input type="checkbox" checked={filterPreparerMismatch} onChange={(e) => { setLoading(true); setFilterPreparerMismatch(e.target.checked); setPage(1) }} className="accent-emerald-600" />
+                Name mismatch only
+              </label>
+            )}
             {isAdmin && (
               <select
                 value={filterMaker}
@@ -538,7 +548,12 @@ export default function CaseList() {
                       </div>
                     </div>
                   </td>
-                  <td className="table-cell text-slate-500 text-xs">{c.socialWorkerName || '—'}</td>
+                  <td className="table-cell text-slate-500 text-xs">
+                    {c.socialWorkerName || '—'}
+                    {isAdmin && c.preparerNameMismatch ? (
+                      <span className="mt-1 block text-[10px] font-medium text-amber-700">Name differs from account</span>
+                    ) : null}
+                  </td>
                   <td className="table-cell text-slate-400 text-xs">{formatDate(c.dateOfAssessment)}</td>
                   <td className="table-cell">
                     <div className="flex items-center gap-1">
