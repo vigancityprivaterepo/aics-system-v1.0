@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import dayjs from 'dayjs'
 import api from '../lib/api'
@@ -28,6 +28,15 @@ function downloadBlob(blob, filename) {
 }
 
 export default function GuaranteeLetterPanel({ caseData, onUploaded }) {
+  // The Reports page GL Tracker links here with #guarantee-letter so the case
+  // maker lands right on the signed-GL upload.
+  const panelRef = useRef(null)
+  useEffect(() => {
+    if (window.location.hash !== '#guarantee-letter') return
+    const timer = setTimeout(() => panelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 150)
+    return () => clearTimeout(timer)
+  }, [])
+
   const [downloadingDocx, setDownloadingDocx] = useState(false)
   const [downloadingPdf, setDownloadingPdf] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -108,7 +117,7 @@ export default function GuaranteeLetterPanel({ caseData, onUploaded }) {
   }
 
   return (
-    <div className="mt-6 overflow-hidden rounded-xl border border-slate-200 bg-white">
+    <div ref={panelRef} id="guarantee-letter" className="mt-6 scroll-mt-24 overflow-hidden rounded-xl border border-slate-200 bg-white">
       <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
         <div>
           <p className="portal-kicker">Guarantee Letter</p>

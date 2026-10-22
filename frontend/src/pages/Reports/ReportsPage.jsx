@@ -584,8 +584,11 @@ function OperationsTab({ data }) {
   )
 }
 
+const GL_PAGE_SIZE = 15
+
 function GuaranteeLettersTab({ data }) {
   const [search, setSearch] = useState('')
+  const [page, setPage] = useState(1)
   if (!data) return <div className="py-8 text-center text-sm text-slate-400">Loading...</div>
 
   const typeLabels = { burial: 'Burial', hospital: 'Hospital', medical: 'Medical' }
@@ -601,6 +604,11 @@ function GuaranteeLettersTab({ data }) {
 
   const signed = filteredItems.filter((item) => item.signedGlUrl).length
   const pending = filteredItems.length - signed
+  // Signed/Pending counts above cover every matching record; only the table is paged.
+  const totalPages = Math.max(1, Math.ceil(filteredItems.length / GL_PAGE_SIZE))
+  const currentPage = Math.min(page, totalPages)
+  const pageStart = (currentPage - 1) * GL_PAGE_SIZE
+  const pageItems = filteredItems.slice(pageStart, pageStart + GL_PAGE_SIZE)
 
   return (
     <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
@@ -622,7 +630,7 @@ function GuaranteeLettersTab({ data }) {
         <input
           type="text"
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => { setSearch(e.target.value); setPage(1) }}
           placeholder="Search by case #, client name, or type"
           className="filter-input md:max-w-md"
         />
@@ -646,14 +654,22 @@ function GuaranteeLettersTab({ data }) {
                   No guarantee letter cases matched your search.
                 </td>
               </tr>
-            ) : filteredItems.map((item) => (
+            ) : pageItems.map((item) => (
               <tr key={item.id} className="hover:bg-slate-50">
                 <td className="table-td px-5 py-4 font-mono text-xs">
-                  <Link to={`/cases/${item.id}/reports`} className="text-brand-green hover:underline">
+                  <Link to={`/cases/${item.id}/reports#guarantee-letter`} className="text-brand-green hover:underline">
                     {item.caseNumber ?? '-'}
                   </Link>
                 </td>
-                <td className="table-td px-5 py-4 font-medium text-slate-800">{item.clientName}</td>
+                <td className="table-td px-5 py-4 font-medium text-slate-800">
+                  <Link
+                    to={`/cases/${item.id}/reports#guarantee-letter`}
+                    className="hover:text-brand-green hover:underline"
+                    title={item.signedGlUrl ? "Open this case's guarantee letter" : 'Open this case to upload the signed guarantee letter'}
+                  >
+                    {item.clientName}
+                  </Link>
+                </td>
                 <td className="table-td px-5 py-4">
                   <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${typeColors[item.assistanceType] ?? 'bg-slate-100 text-slate-600'}`}>
                     {typeLabels[item.assistanceType] ?? item.assistanceType}
@@ -677,9 +693,36 @@ function GuaranteeLettersTab({ data }) {
           </tbody>
         </table>
       </div>
-      <p className="border-t border-slate-100 px-5 py-2.5 text-xs text-slate-400">
-        {filteredItems.length} record{filteredItems.length !== 1 ? 's' : ''}
-      </p>
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 px-5 py-2.5">
+        <p className="text-xs text-slate-400">
+          {filteredItems.length === 0
+            ? '0 records'
+            : `Showing ${pageStart + 1}-${pageStart + pageItems.length} of ${filteredItems.length} record${filteredItems.length !== 1 ? 's' : ''}`}
+        </p>
+        {totalPages > 1 && (
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-slate-500">Page {currentPage} of {totalPages}</span>
+            <button
+              type="button"
+              onClick={() => setPage(Math.max(1, currentPage - 1))}
+              disabled={currentPage <= 1}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-300 text-slate-600 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
+              aria-label="Previous page"
+            >
+              <ChevronLeftIcon className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setPage(Math.min(totalPages, currentPage + 1))}
+              disabled={currentPage >= totalPages}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-300 text-slate-600 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
+              aria-label="Next page"
+            >
+              <ChevronRightIcon className="h-4 w-4" />
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
