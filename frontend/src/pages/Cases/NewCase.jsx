@@ -73,8 +73,20 @@ export default function NewCase() {
     try {
       const { data: sourceClient } = await api.get(`/clients/${match.sourceClientId}`)
       const otherMembers = (sourceClient.familyComposition || []).filter((_, idx) => idx !== match.memberIndex)
+      // The source client joins the beneficiary's household list with their own
+      // profile details. Only the relationship is left for the case maker: it is
+      // the client's relation to the beneficiary, which the profile doesn't record.
+      const sourceClientAge = sourceClient.dateOfBirth ? calculateAge(sourceClient.dateOfBirth) : null
       const familyComposition = [
-        { name: formatClientName(sourceClient), age: '', relationship: '', relationshipOther: '', occupation: sourceClient.occupation || '' },
+        {
+          name: formatClientName(sourceClient),
+          age: sourceClientAge ?? '',
+          dateOfBirth: sourceClient.dateOfBirth || '',
+          relationship: '',
+          relationshipOther: '',
+          sex: sourceClient.sex || '',
+          occupation: sourceClient.occupation || '',
+        },
         ...otherMembers,
       ]
       setSelectedClient(sourceClient)

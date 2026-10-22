@@ -135,7 +135,14 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false, on
       const name = String(m?.name || '').trim().toUpperCase()
       return name && !caseNames.has(name)
     })
-    return [...caseFamily, ...missingFromCase]
+    // Cases filed for a household member list the client as a household row; older
+    // ones were created with that row's age and sex blank. Fill them from the
+    // client's profile (saved with the case on the next save).
+    return [...caseFamily, ...missingFromCase].map((member) => {
+      if (!member?.name || !isSameAsClientName(member.name, caseData.client)) return member
+      const age = member.age === '' || member.age == null ? (clientAge ?? member.age) : member.age
+      return { ...member, age, sex: member.sex || caseData.client?.sex || '' }
+    })
   })
   const [medicines, setMedicines] = useState(normalizeMedicineRows(caseData.medicines || []))
   const [saving, setSaving] = useState(false)
