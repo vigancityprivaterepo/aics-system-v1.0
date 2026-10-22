@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import api from '../../lib/api'
 import { formatClientName, calculateAge } from '../../lib/utils'
+import { effectiveRelationship, inverseRelationship } from '../../lib/relationships'
 import ClientSearchBar from '../../components/ClientSearchBar'
 import { useAuthStore } from '../../store/authStore'
 import { allowedCaseTypesForUser } from '../../utils/accessRules'
@@ -74,15 +75,20 @@ export default function NewCase() {
       const { data: sourceClient } = await api.get(`/clients/${match.sourceClientId}`)
       const otherMembers = (sourceClient.familyComposition || []).filter((_, idx) => idx !== match.memberIndex)
       // The source client joins the beneficiary's household list with their own
-      // profile details. Only the relationship is left for the case maker: it is
-      // the client's relation to the beneficiary, which the profile doesn't record.
+      // profile details. Their relationship is the reverse of the beneficiary's
+      // ("Common Law Wife" -> "Common Law Husband"); blank when it can't be worked
+      // out, for the case maker to pick.
+      const clientRelationship = inverseRelationship(
+        effectiveRelationship(match.relationship, match.relationshipOther),
+        sourceClient.sex,
+      )
       const sourceClientAge = sourceClient.dateOfBirth ? calculateAge(sourceClient.dateOfBirth) : null
       const familyComposition = [
         {
           name: formatClientName(sourceClient),
           age: sourceClientAge ?? '',
           dateOfBirth: sourceClient.dateOfBirth || '',
-          relationship: '',
+          relationship: clientRelationship,
           relationshipOther: '',
           sex: sourceClient.sex || '',
           occupation: sourceClient.occupation || '',

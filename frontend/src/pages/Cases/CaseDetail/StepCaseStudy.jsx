@@ -14,6 +14,7 @@ import DraftRecoveryBanner from '../../../components/ui/DraftRecoveryBanner'
 import { OCCUPATION_OPTIONS, RELATIONSHIP_OPTIONS } from '../../../constants/caseFormOptions'
 import { scrollToFirstError } from '../../../lib/formNavigation'
 import { formatCurrency, calculateAge } from '../../../lib/utils'
+import { effectiveRelationship, inverseRelationship } from '../../../lib/relationships'
 import { useAutosaveDraft, readLocalDraft, clearLocalDraft } from '../../../lib/localDraft'
 import { registerUppercase, registerAmount } from '../../../lib/formHelpers'
 
@@ -29,6 +30,10 @@ function isSameAsClientName(name, client) {
   const lastName = normalizePersonName(client?.lastName)
   if (!candidate || !firstToken || !lastName) return false
   return candidate.split(' ')[0] === firstToken && (candidate === lastName || candidate.endsWith(` ${lastName}`))
+}
+
+function normalizedMemberName(value) {
+  return String(value ?? '').trim().toUpperCase().replace(/\s+/g, ' ')
 }
 
 const defaultMember = { name: '', age: '', relationship: '', sex: '', occupation: '', monthlyIncome: '' }
@@ -136,12 +141,24 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false, on
       return name && !caseNames.has(name)
     })
     // Cases filed for a household member list the client as a household row; older
-    // ones were created with that row's age and sex blank. Fill them from the
-    // client's profile (saved with the case on the next save).
-    return [...caseFamily, ...missingFromCase].map((member) => {
+    // ones were created with that row's age, sex and relationship blank. Fill them
+    // from the client's profile and the beneficiary's own relationship (saved with
+    // the case on the next save). Only empty fields are filled.
+    const merged = [...caseFamily, ...missingFromCase]
+    const beneficiaryKey = String(caseData.beneficiaryName || '').trim().toUpperCase()
+    const beneficiaryRow = beneficiaryKey ? merged.find((m) => String(m?.name || '').trim().toUpperCase() === beneficiaryKey) : null
+    const derivedClientRelationship = beneficiaryRow
+      ? inverseRelationship(effectiveRelationship(beneficiaryRow.relationship, beneficiaryRow.relationshipOther), caseData.client?.sex)
+      : ''
+    return merged.map((member) => {
       if (!member?.name || !isSameAsClientName(member.name, caseData.client)) return member
       const age = member.age === '' || member.age == null ? (clientAge ?? member.age) : member.age
-      return { ...member, age, sex: member.sex || caseData.client?.sex || '' }
+      return {
+        ...member,
+        age,
+        sex: member.sex || caseData.client?.sex || '',
+        relationship: member.relationship || derivedClientRelationship,
+      }
     })
   })
   const [medicines, setMedicines] = useState(normalizeMedicineRows(caseData.medicines || []))
@@ -160,6 +177,7 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false, on
   const normalizedStoredBeneficiaryName = String(caseData.beneficiaryName || '').trim().toUpperCase()
   const matchedFamilyIndex = family.findIndex((m) => String(m?.name || '').trim().toUpperCase() === normalizedStoredBeneficiaryName)
   const initialBeneficiarySelection = !caseData.beneficiaryName ? 'self' : matchedFamilyIndex >= 0 ? String(matchedFamilyIndex) : 'custom'
+  const matchedFamilyMember = matchedFamilyIndex >= 0 ? family[matchedFamilyIndex] : null
 
   const { control, register, handleSubmit, watch, setValue, getValues, reset, formState: { errors } } = useForm({
     mode: 'onBlur',
@@ -177,10 +195,14 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false, on
       deceasedCivilStatus: caseData.burialDetails?.deceasedCivilStatus || '',
       beneficiarySelection: initialBeneficiarySelection,
       beneficiaryName: caseData.beneficiaryName || clientFullName || '',
-      beneficiaryAge: caseData.beneficiaryAge || (clientAge != null ? String(clientAge) : ''),
-      beneficiarySex: caseData.beneficiarySex || clientSex,
-      beneficiaryCivilStatus: caseData.beneficiaryCivilStatus || clientCivilStatus,
-      beneficiaryOccupation: caseData.beneficiaryOccupation || clientOccupation,
+      // A beneficiary who is not the client falls back to their own household row,
+      // never to the client's details (that printed the client's sex for them).
+      beneficiaryAge: caseData.beneficiaryAge || (initialBeneficiaryIsClient
+        ? (clientAge != null ? String(clientAge) : '')
+        : String((matchedFamilyMember?.dateOfBirth ? calculateAge(matchedFamilyMember.dateOfBirth) : null) ?? matchedFamilyMember?.age ?? '')),
+      beneficiarySex: caseData.beneficiarySex || (initialBeneficiaryIsClient ? clientSex : (matchedFamilyMember?.sex || '')),
+      beneficiaryCivilStatus: caseData.beneficiaryCivilStatus || (initialBeneficiaryIsClient ? clientCivilStatus : ''),
+      beneficiaryOccupation: caseData.beneficiaryOccupation || (initialBeneficiaryIsClient ? clientOccupation : (matchedFamilyMember?.occupation || '')),
       beneficiaryRequestorName: caseData.beneficiaryRequestorName || '',
       beneficiaryRequestorRelationship: caseData.beneficiaryRequestorRelationship || '',
       beneficiaryCategory: initialBeneficiaryCategory,
@@ -260,6 +282,15 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false, on
 
   const amount = watch('amount')
   const beneficiarySelection = watch('beneficiarySelection')
+  const watchedBeneficiaryName = watch('beneficiaryName')
+  // The family list doubles as the beneficiary picker's source, so the chosen
+  // household member stays in it, but the household composition is the people
+  // living with the beneficiary: their own row is hidden here and left out when
+  // saving (it reappears if the client is picked as beneficiary again).
+  const hiddenBeneficiaryKey = !isBurial && beneficiarySelection !== 'self' && !isSameAsClientName(watchedBeneficiaryName || '', caseData.client)
+    ? normalizedMemberName(watchedBeneficiaryName)
+    : ''
+  const visibleFamilyCount = family.filter((member) => !hiddenBeneficiaryKey || normalizedMemberName(member?.name) !== hiddenBeneficiaryKey).length
   const parsedAmount = Number(amount)
   const amountCap = resolveAmountCap(caseData.assistanceType)
   const isOverCap = !isMedicine && amountCap != null && Number.isFinite(parsedAmount) && parsedAmount > amountCap
@@ -289,7 +320,9 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false, on
       presentingProblem: normalizeNarrativeText(data.presentingProblem),
       backgroundOfProblem: normalizeNarrativeText(data.findings),
       assessment: normalizeNarrativeText(data.findings),
-      familyComposition: family,
+      familyComposition: !isBurial && !beneficiaryIsStillClient
+        ? family.filter((member) => normalizedMemberName(member?.name) !== normalizedMemberName(trimmedBeneficiaryName))
+        : family,
       amount: isMedicine ? undefined : data.amount,
       // When the beneficiary is still the client (name untouched from its default),
       // clear every override field so the report derives them live from the
@@ -450,8 +483,8 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false, on
                   </tr>
                 </thead>
                 <tbody>
-                  {family.length === 0 && <tr><td colSpan={6} className="px-3 py-4 text-center text-slate-400">No family members added</td></tr>}
-                  {family.map((member, index) => (
+                  {visibleFamilyCount === 0 && <tr><td colSpan={6} className="px-3 py-4 text-center text-slate-400">No family members added</td></tr>}
+                  {family.map((member, index) => (hiddenBeneficiaryKey && normalizedMemberName(member?.name) === hiddenBeneficiaryKey ? null : (
                     <tr key={index} className="border-t border-slate-100">
                       <td className="px-2 py-1.5 align-top"><input type="text" value={member.name || ''} onChange={(e) => updateFamilyMember(index, 'name', e.target.value.toUpperCase())} className="portal-input h-8 w-full py-1 text-xs leading-tight" /></td>
                       <td className="px-2 py-1.5 align-top"><input type="number" value={member.age || ''} onChange={(e) => updateFamilyMember(index, 'age', e.target.value)} className="portal-input h-8 w-full py-1 text-xs leading-tight" /></td>
@@ -460,7 +493,7 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false, on
                       <td className="px-2 py-1.5 align-top"><SearchablePresetInput value={member.occupation || ''} onChange={(value) => updateFamilyMember(index, 'occupation', value)} options={OCCUPATION_OPTIONS} placeholder="Search occupation" className="portal-input h-8 w-full py-1 text-xs leading-tight" listId={`family-occupation-${index}`} /></td>
                       <td className="px-2 py-1.5 text-center align-top"><button type="button" onClick={() => removeFamilyMember(index)} className="text-red-400 hover:text-red-600"><TrashIcon className="h-3.5 w-3.5" /></button></td>
                     </tr>
-                  ))}
+                  )))}
                 </tbody>
               </table>
             </div>

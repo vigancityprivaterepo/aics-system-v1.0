@@ -436,7 +436,16 @@ function buildRenderData(caseData: any): Record<string, any> {
     ?? textOrNull(hospital.diagnosis)
   )
 
-  const familyComposition = (caseData.familyComposition ?? []).map((m: any) => ({
+  // The household is the people living with the beneficiary. When the case is
+  // for a household member, older saved cases still list that member; leave
+  // them out (the case study screen no longer saves them).
+  const householdNameKey = (value: unknown) => String(value ?? '').trim().toUpperCase().replace(/\s+/g, ' ')
+  const excludedHouseholdName = caseData.assistanceType !== 'burial' && caseData.beneficiaryIsClient === false
+    ? householdNameKey(beneficiaryOverrideName)
+    : ''
+  const familyComposition = (caseData.familyComposition ?? [])
+    .filter((m: any) => !excludedHouseholdName || householdNameKey(m?.name) !== excludedHouseholdName)
+    .map((m: any) => ({
     name:         fmt(m.name),
     relationship: fmt(m.relationship),
     age:          m.age != null ? String(m.age) : '-',
