@@ -108,6 +108,8 @@ export async function listCases(req: Request, res: Response) {
   const search = req.query.search ? String(req.query.search).trim() : undefined
   const queue = req.query.queue ? String(req.query.queue).trim() : undefined
   const owner = req.query.owner ? String(req.query.owner).trim() : undefined
+  // Admin-only: narrow the list to one case study maker (the case's social worker).
+  const maker = req.user.role === 'admin' && req.query.maker ? String(req.query.maker).trim() : undefined
   const blocked = req.query.blocked === 'true'
   const overdue = req.query.overdue === 'true'
   const dateFrom = req.query.dateFrom ? String(req.query.dateFrom) : undefined
@@ -122,6 +124,7 @@ export async function listCases(req: Request, res: Response) {
   const allowedAssistanceTypes = allowedCaseTypesForUser(req.user)
 
   const where: Prisma.CaseWhereInput = {
+    ...(maker ? { socialWorkerId: maker } : {}),
     ...(type ? { assistanceType: type as AssistanceType } : allowedAssistanceTypes ? { assistanceType: { in: allowedAssistanceTypes } } : {}),
     ...(status
       ? {
@@ -642,6 +645,24 @@ export async function deleteCase(req: Request, res: Response) {
   // non-cascaded table.
   await prisma.case.delete({ where: { id: caseId } })
   res.status(204).send()
+}
+
+// Case study makers for the admin case-list filter: everyone who has made at
+// least one case, with the name on their most recent case.
+export async function listCaseMakers(req: Request, res: Response) {
+  if (!req.user) throw new HttpError(401, 'Unauthorized')
+  if (req.user.role !== 'admin') throw new HttpError(403, 'Only administrators can filter by case maker.')
+
+  const rows = await prisma.case.findMany({
+    where: { socialWorkerId: { not: null } },
+    distinct: ['socialWorkerId'],
+    orderBy: [{ socialWorkerId: 'asc' }, { createdAt: 'desc' }],
+    select: { socialWorkerId: true, socialWorkerName: true },
+  })
+  const makers = rows
+    .map((row) => ({ id: row.socialWorkerId as string, name: row.socialWorkerName?.trim() || 'Unnamed user' }))
+    .sort((a, b) => a.name.localeCompare(b.name))
+  res.json({ makers })
 }
 
 export async function pendingApprovalsByType(req: Request, res: Response) {
