@@ -2105,6 +2105,39 @@ function normalizeCaseStudyLayoutXml(xml: string): string {
     : serialized
 }
 
+// Checkboxes are the ☐/☑ characters typed into the template text, so they print at
+// the surrounding label size (about 7-8pt), too small to read on paper. Give each box
+// character its own run at CHECKBOX_FONT_HALF_POINTS; the label text keeps its size.
+const CHECKBOX_FONT_HALF_POINTS = 26
+const CHECKBOX_CHARS = /[☐☑☒]/
+
+function withFontSize(rPr: string, halfPoints: number) {
+  const size = `<w:sz w:val="${halfPoints}"/><w:szCs w:val="${halfPoints}"/>`
+  if (!rPr) return `<w:rPr>${size}</w:rPr>`
+  const stripped = rPr.replace(/<w:sz\b[^>]*\/>/g, '').replace(/<w:szCs\b[^>]*\/>/g, '')
+  return stripped.replace('</w:rPr>', `${size}</w:rPr>`)
+}
+
+function enlargeCheckboxGlyphs(xml: string) {
+  if (!CHECKBOX_CHARS.test(xml)) return xml
+  // Only simple runs (optional rPr + one w:t) are split; anything else is left as is.
+  return xml.replace(
+    /<w:r(\s[^>]*)?>(<w:rPr>(?:(?!<\/w:rPr>)[\s\S])*<\/w:rPr>)?<w:t(\s[^>]*)?>([^<]*)<\/w:t><\/w:r>/g,
+    (whole, runAttrs = '', rPr = '', _tAttrs = '', text: string) => {
+      if (!CHECKBOX_CHARS.test(text)) return whole
+      const boxRPr = withFontSize(rPr, CHECKBOX_FONT_HALF_POINTS)
+      return text
+        .split(/([☐☑☒])/)
+        .filter((part) => part.length > 0)
+        .map((part) => {
+          const isBox = CHECKBOX_CHARS.test(part)
+          return `<w:r${runAttrs}>${isBox ? boxRPr : rPr}<w:t xml:space="preserve">${part}</w:t></w:r>`
+        })
+        .join('')
+    },
+  )
+}
+
 function sanitizeGeneratedDocxBuffer(buffer: Buffer): Buffer {
   const zip = new PizZip(buffer)
   let changed = false
@@ -2118,6 +2151,9 @@ function sanitizeGeneratedDocxBuffer(buffer: Buffer): Buffer {
     let cleaned = addMissingXmlNamespaces(original)
     if (filename === 'word/document.xml') {
       cleaned = normalizeCaseStudyLayoutXml(cleaned)
+    }
+    if (filename === 'word/document.xml' || /^word\/(header|footer)\d*\.xml$/.test(filename)) {
+      cleaned = enlargeCheckboxGlyphs(cleaned)
     }
     if (cleaned !== original) {
       zip.file(filename, cleaned)
