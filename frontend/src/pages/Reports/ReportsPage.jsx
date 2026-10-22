@@ -624,7 +624,7 @@ function GuaranteeLettersTab({ data }) {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search by case #, client name, or type"
-          className="portal-input w-full py-2.5 text-sm md:max-w-md"
+          className="filter-input md:max-w-md"
         />
       </div>
       <div className="overflow-x-auto">

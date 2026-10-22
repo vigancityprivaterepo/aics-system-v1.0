@@ -414,7 +414,7 @@ export default function MedicineDatabase() {
               placeholder="Search generic or brand name..."
               value={searchInput}
               onChange={e => setSearchInput(e.target.value)}
-              className="portal-input pl-9"
+              className="filter-input pl-9"
             />
           </div>
           <div className="w-full sm:w-56">
@@ -425,7 +425,7 @@ export default function MedicineDatabase() {
                 setCategory(e.target.value)
                 setPage(1)
               }}
-              className="portal-input"
+              className="filter-input sm:w-auto"
             >
               <option value="All">All Categories</option>
               {categories.map(c => <option key={c} value={c}>{c}</option>)}

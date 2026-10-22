@@ -80,6 +80,11 @@
   .portal-input {
     @apply w-full rounded-lg border-2 border-slate-300 bg-white px-4 py-3 text-base text-slate-800 shadow-sm transition-all duration-150 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/25 placeholder:text-slate-400 leading-snug;
   }
+  /* Search boxes, dropdowns and dates in list-page filter bars: same height as the
+     portal buttons beside them (42px) and smaller text than form fields. */
+  .filter-input {
+    @apply w-full h-[42px] rounded-lg border-2 border-slate-300 bg-white px-3 py-0 text-sm text-slate-800 shadow-sm transition-all duration-150 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/25 placeholder:text-slate-400;
+  }
   .portal-label {
     @apply mb-2 block text-sm font-semibold text-slate-700 tracking-wide;
   }

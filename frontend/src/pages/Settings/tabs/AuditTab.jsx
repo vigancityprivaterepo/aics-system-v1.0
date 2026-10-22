@@ -70,11 +70,11 @@ export default function AuditTab() {
               value={auditSearchInput}
               onChange={(e) => setAuditSearchInput(e.target.value)}
               placeholder="Search by employee ID or name"
-              className="portal-input h-10 md:w-72"
+              className="filter-input md:w-72"
             />
-            <button type="submit" className="portal-button-secondary h-10 px-4">Search</button>
+            <button type="submit" className="portal-button-secondary px-4">Search</button>
             {auditSearch && (
-              <button type="button" onClick={clearAuditSearch} className="portal-button-secondary h-10 px-4">Clear</button>
+              <button type="button" onClick={clearAuditSearch} className="portal-button-secondary px-4">Clear</button>
             )}
           </form>
         </div>

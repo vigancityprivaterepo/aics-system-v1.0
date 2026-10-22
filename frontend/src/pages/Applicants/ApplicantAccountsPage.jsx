@@ -94,7 +94,7 @@ export default function ApplicantAccountsPage() {
               setPage(1)
             }}
             placeholder="Search by email, name, or mobile number"
-            className="portal-input pl-9"
+            className="filter-input pl-9"
           />
         </div>
       </section>

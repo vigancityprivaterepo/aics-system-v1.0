@@ -283,7 +283,7 @@ export default function FuneralHomeDatabase() {
             placeholder="Search funeral home name or address..."
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
-            className="portal-input pl-9"
+            className="filter-input pl-9"
           />
         </div>
       </div>

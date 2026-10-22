@@ -64,7 +64,7 @@ export default function ClientList() {
             placeholder="Search by name, client number, or address..."
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
-            className="portal-input pl-9"
+            className="filter-input pl-9"
             id="client-search-list"
           />
         </div>

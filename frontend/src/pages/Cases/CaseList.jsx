@@ -40,6 +40,8 @@ const SMS_RESULT_LABEL = {
   failed: 'SMS failed to send',
 }
 
+const FILTER_CONTROL = 'filter-input'
+
 function canMarkReady(caseRow) {
   return caseRow.status === 'approved' && !caseRow.readyForReleaseAt
 }
@@ -74,6 +76,7 @@ export default function CaseList() {
   const blockedParam = searchParams.get('blocked') === 'true'
   const overdueParam = searchParams.get('overdue') === 'true'
   const ownerParam = searchParams.get('owner') ?? ''
+  const makerParam = searchParams.get('maker') ?? ''
   const dateFromParam = searchParams.get('dateFrom') ?? ''
   const dateToParam = searchParams.get('dateTo') ?? ''
   const navigate = useNavigate()
@@ -89,6 +92,9 @@ export default function CaseList() {
   const [filterBlocked, setFilterBlocked] = useState(blockedParam)
   const [filterOverdue, setFilterOverdue] = useState(overdueParam)
   const [filterOwner, setFilterOwner] = useState(ownerParam)
+  const [filterMaker, setFilterMaker] = useState(makerParam)
+  const [caseMakers, setCaseMakers] = useState([])
+  const isAdmin = user?.role === 'admin'
   const [dateFrom, setDateFrom] = useState(dateFromParam)
   const [dateTo, setDateTo] = useState(dateToParam)
   const [page, setPage] = useState(1)
@@ -117,6 +123,7 @@ export default function CaseList() {
       const nextBlocked = overrides.filterBlocked ?? filterBlocked
       const nextOverdue = overrides.filterOverdue ?? filterOverdue
       const nextOwner = overrides.filterOwner ?? filterOwner
+      const nextMaker = overrides.filterMaker ?? filterMaker
       const nextDateFrom = overrides.dateFrom ?? dateFrom
       const nextDateTo = overrides.dateTo ?? dateTo
       const params = new URLSearchParams({ page: String(targetPage), limit: String(LIMIT) })
@@ -126,6 +133,7 @@ export default function CaseList() {
       if (nextBlocked) params.append('blocked', 'true')
       if (nextOverdue) params.append('overdue', 'true')
       if (nextOwner) params.append('owner', nextOwner)
+      if (nextMaker) params.append('maker', nextMaker)
       if (nextDateFrom) params.append('dateFrom', nextDateFrom)
       if (nextDateTo) params.append('dateTo', nextDateTo)
       const res = await api.get(`/cases?${params}`)
@@ -151,6 +159,7 @@ export default function CaseList() {
         if (filterBlocked) params.append('blocked', 'true')
         if (filterOverdue) params.append('overdue', 'true')
         if (filterOwner) params.append('owner', filterOwner)
+        if (filterMaker) params.append('maker', filterMaker)
         if (dateFrom) params.append('dateFrom', dateFrom)
         if (dateTo) params.append('dateTo', dateTo)
         const res = await api.get(`/cases?${params}`)
@@ -168,7 +177,16 @@ export default function CaseList() {
       }
     })()
     return () => { active = false }
-  }, [page, LIMIT, filterType, filterQueue, filterBlocked, filterOverdue, filterOwner, dateFrom, dateTo, debouncedSearch])
+  }, [page, LIMIT, filterType, filterQueue, filterBlocked, filterOverdue, filterOwner, filterMaker, dateFrom, dateTo, debouncedSearch])
+
+  useEffect(() => {
+    if (!isAdmin) return
+    let active = true
+    api.get('/cases/makers')
+      .then((res) => { if (active) setCaseMakers(res.data.makers || []) })
+      .catch(() => { if (active) setCaseMakers([]) })
+    return () => { active = false }
+  }, [isAdmin])
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -269,19 +287,19 @@ export default function CaseList() {
                 setSearch(e.target.value)
                 setPage(1)
               }}
-              className="portal-input pl-9"
+              className={`${FILTER_CONTROL} pl-9`}
               id="case-search"
             />
           </div>
           {!typeParam && (
-            <select value={filterTypeInput} onChange={(e) => { setLoading(true); setFilterTypeInput(e.target.value); setPage(1) }} className="portal-input w-40" id="filter-type">
+            <select value={filterTypeInput} onChange={(e) => { setLoading(true); setFilterTypeInput(e.target.value); setPage(1) }} className={`${FILTER_CONTROL} sm:w-40`} id="filter-type">
               <option value="">All Types</option>
               {allowedCaseTypes.map((type) => (
                 <option key={type} value={type}>{TYPE_LABEL[type]}</option>
               ))}
             </select>
           )}
-          <select value={filterQueue} onChange={(e) => { setLoading(true); setFilterQueue(e.target.value); setPage(1) }} className="portal-input w-52" id="filter-queue">
+          <select value={filterQueue} onChange={(e) => { setLoading(true); setFilterQueue(e.target.value); setPage(1) }} className={`${FILTER_CONTROL} sm:w-52`} id="filter-queue">
             <option value="">All Queues</option>
             {Object.entries(QUEUE_LABEL).map(([value, label]) => (
               <option key={value} value={value}>{label}</option>
@@ -297,10 +315,24 @@ export default function CaseList() {
               <input type="checkbox" checked={filterOverdue} onChange={(e) => { setLoading(true); setFilterOverdue(e.target.checked); setPage(1) }} className="accent-emerald-600" />
               Overdue only
             </label>
-            <select value={filterOwner} onChange={(e) => { setLoading(true); setFilterOwner(e.target.value); setPage(1) }} className="portal-input w-40" id="filter-owner">
+            <select value={filterOwner} onChange={(e) => { setLoading(true); setFilterOwner(e.target.value); setPage(1) }} className={`${FILTER_CONTROL} w-auto`} id="filter-owner">
               <option value="">All Owners</option>
               <option value="me">My Work</option>
             </select>
+            {isAdmin && (
+              <select
+                value={filterMaker}
+                onChange={(e) => { setLoading(true); setFilterMaker(e.target.value); setPage(1) }}
+                className={`${FILTER_CONTROL} w-auto max-w-[16rem]`}
+                id="filter-maker"
+                title="Show only cases made by this case study maker"
+              >
+                <option value="">All Case Makers</option>
+                {caseMakers.map((maker) => (
+                  <option key={maker.id} value={maker.id}>{maker.name}</option>
+                ))}
+              </select>
+            )}
             <label className="inline-flex items-center gap-2 text-sm text-slate-600" htmlFor="filter-date-from">
               From
               <input
@@ -309,7 +341,7 @@ export default function CaseList() {
                 value={dateFrom}
                 max={dateTo || undefined}
                 onChange={(e) => { setLoading(true); setDateFrom(e.target.value); setPage(1) }}
-                className="portal-input w-40"
+                className={`${FILTER_CONTROL} w-auto`}
               />
             </label>
             <label className="inline-flex items-center gap-2 text-sm text-slate-600" htmlFor="filter-date-to">
@@ -320,7 +352,7 @@ export default function CaseList() {
                 value={dateTo}
                 min={dateFrom || undefined}
                 onChange={(e) => { setLoading(true); setDateTo(e.target.value); setPage(1) }}
-                className="portal-input w-40"
+                className={`${FILTER_CONTROL} w-auto`}
               />
             </label>
             {(dateFrom || dateTo) && (

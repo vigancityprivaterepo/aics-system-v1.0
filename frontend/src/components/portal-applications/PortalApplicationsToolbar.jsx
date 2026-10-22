@@ -77,10 +77,10 @@ export default function PortalApplicationsToolbar({
               type="text"
               value={search}
               onChange={(event) => onSearchChange(event.target.value)}
-              className="portal-input"
+              className="filter-input"
               placeholder="Search applicant or reference number"
             />
-            <select value={statusFilter} onChange={(event) => onStatusFilterChange(event.target.value)} className="portal-input">
+            <select value={statusFilter} onChange={(event) => onStatusFilterChange(event.target.value)} className="filter-input">
               <option value="">All statuses</option>
               <option value="submitted">Submitted</option>
               <option value="under_review">Under Review</option>

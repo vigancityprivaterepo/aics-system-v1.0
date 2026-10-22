@@ -327,11 +327,11 @@ export default function HospitalDatabase() {
               placeholder="Search facility name, municipality, or address..."
               value={searchInput}
               onChange={e => setSearchInput(e.target.value)}
-              className="portal-input pl-9"
+              className="filter-input pl-9"
             />
           </div>
           <div className="w-full sm:w-52">
-            <select value={filterType} onChange={e => { setLoading(true); setFilterType(e.target.value); setPage(1) }} className="portal-input">
+            <select value={filterType} onChange={e => { setLoading(true); setFilterType(e.target.value); setPage(1) }} className="filter-input sm:w-auto">
               <option value="All">All Types</option>
               {types.map(t => <option key={t} value={t}>{t}</option>)}
             </select>
