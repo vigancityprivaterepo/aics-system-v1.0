@@ -42,6 +42,13 @@ const SMS_RESULT_LABEL = {
 
 const FILTER_CONTROL = 'filter-input'
 
+// Which date the From/To range filters on, per queue (mirrors listCases).
+const DATE_FILTER_BASIS = {
+  released: 'Released',
+  approved_preparing: 'Approved',
+  ready_for_release: 'Marked ready',
+}
+
 function canMarkReady(caseRow) {
   return caseRow.status === 'approved' && !caseRow.readyForReleaseAt
 }
@@ -343,8 +350,8 @@ export default function CaseList() {
                 ))}
               </select>
             )}
-            <label className="inline-flex items-center gap-2 text-sm text-slate-600" htmlFor="filter-date-from">
-              From
+            <label className="inline-flex items-center gap-2 text-sm text-slate-600" htmlFor="filter-date-from" title="Which date the range uses depends on the queue selected">
+              {DATE_FILTER_BASIS[filterQueue] ?? 'Assessed'} from
               <input
                 type="date"
                 id="filter-date-from"

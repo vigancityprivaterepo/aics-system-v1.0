@@ -124,6 +124,26 @@ export async function listCases(req: Request, res: Response) {
 
   const allowedAssistanceTypes = allowedCaseTypesForUser(req.user)
 
+  // The From/To dates follow the queue being viewed, matching the Reports page:
+  // Released filters by the day the case was released, Approved - Preparing by
+  // the day it was approved, Ready for Release by the day it was marked ready.
+  // Every other view filters by date of assessment.
+  const dateRange = dateFrom || dateTo
+    ? {
+        ...(dateFrom ? { gte: dayjs(dateFrom).startOf('day').toDate() } : {}),
+        ...(dateTo ? { lte: dayjs(dateTo).endOf('day').toDate() } : {}),
+      }
+    : null
+  const dateRangeWhere: Prisma.CaseWhereInput = !dateRange
+    ? {}
+    : queue === 'released'
+      ? { statusLogs: { some: { toStatus: 'released', changedAt: dateRange } } }
+      : queue === 'approved_preparing'
+        ? { statusLogs: { some: { toStatus: 'approved', changedAt: dateRange } } }
+        : queue === 'ready_for_release'
+          ? { readyForReleaseAt: dateRange }
+          : { dateOfAssessment: dateRange }
+
   const where: Prisma.CaseWhereInput = {
     ...(maker ? { socialWorkerId: maker } : {}),
     ...(type ? { assistanceType: type as AssistanceType } : allowedAssistanceTypes ? { assistanceType: { in: allowedAssistanceTypes } } : {}),
@@ -146,14 +166,7 @@ export async function listCases(req: Request, res: Response) {
           ],
         }
       : {}),
-    ...(dateFrom || dateTo
-      ? {
-          dateOfAssessment: {
-            ...(dateFrom ? { gte: dayjs(dateFrom).startOf('day').toDate() } : {}),
-            ...(dateTo ? { lte: dayjs(dateTo).endOf('day').toDate() } : {}),
-          },
-        }
-      : {}),
+    ...dateRangeWhere,
   }
 
   const [settings, cases] = await Promise.all([
