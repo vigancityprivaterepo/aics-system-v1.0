@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import { z } from 'zod'
+import type { Prisma } from '@prisma/client'
 import { prisma } from '../utils/prisma.js'
 import { asyncHandler } from '../utils/asyncHandler.js'
 import { HttpError } from '../utils/httpError.js'
@@ -76,19 +77,25 @@ router.get('/pending-count', asyncHandler(async (req, res) => {
 router.get('/', asyncHandler(async (req, res) => {
   const search = typeof req.query.search === 'string' ? req.query.search.trim() : ''
   const status = typeof req.query.status === 'string' && STATUS.includes(req.query.status as any) ? req.query.status : undefined
-  const requests = await prisma.vehicleRequest.findMany({
-    where: {
-      ...(isCho(req) ? { createdById: req.user?.id } : {}),
-      ...(status ? { status } : {}),
-      ...(search ? { OR: [
-        { requestNumber: { contains: search, mode: 'insensitive' } }, { requestedBy: { contains: search, mode: 'insensitive' } },
-        { office: { contains: search, mode: 'insensitive' } }, { destination: { contains: search, mode: 'insensitive' } },
-      ] } : {}),
-    },
-    include: { createdBy: { select: { id: true, name: true } }, choReviewedBy: { select: { id: true, name: true } } },
-    orderBy: { createdAt: 'desc' }, take: 250,
-  })
-  res.json({ requests: requests.map(serialize) })
+  const limit = Math.min(Math.max(Number(req.query.limit) || 15, 1), 100)
+  const page = Math.max(Number(req.query.page) || 1, 1)
+  const where: Prisma.VehicleRequestWhereInput = {
+    ...(isCho(req) ? { createdById: req.user?.id } : {}),
+    ...(status ? { status: status as any } : {}),
+    ...(search ? { OR: [
+      { requestNumber: { contains: search, mode: 'insensitive' } }, { requestedBy: { contains: search, mode: 'insensitive' } },
+      { office: { contains: search, mode: 'insensitive' } }, { destination: { contains: search, mode: 'insensitive' } },
+    ] } : {}),
+  }
+  const [total, requests] = await Promise.all([
+    prisma.vehicleRequest.count({ where }),
+    prisma.vehicleRequest.findMany({
+      where,
+      include: { createdBy: { select: { id: true, name: true } }, choReviewedBy: { select: { id: true, name: true } } },
+      orderBy: { createdAt: 'desc' }, skip: (page - 1) * limit, take: limit,
+    }),
+  ])
+  res.json({ total, page, limit, requests: requests.map(serialize) })
 }))
 
 router.post('/', asyncHandler(async (req, res) => {
