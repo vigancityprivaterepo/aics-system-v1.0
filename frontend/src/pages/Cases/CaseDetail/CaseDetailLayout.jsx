@@ -8,6 +8,7 @@ import StatusBadge from '../../../components/ui/StatusBadge'
 import { ChevronLeftIcon } from '../../../components/ui/Icons'
 import CaseActionBar from './CaseActionBar'
 import ReturnToEncodingModal from './ReturnToEncodingModal'
+import ReviewerNotesCard from './ReviewerNotesCard'
 import ReassignCaseModal from './ReassignCaseModal'
 
 const APPROVAL_NEXT = {
@@ -227,7 +228,10 @@ export default function CaseDetailLayout() {
     if (!caseData) return
     const next = APPROVAL_NEXT[caseData.status]
     if (!next) return
-    await transitionStatus(next)
+    // Cancel aborts the approval; an empty note is allowed.
+    const note = window.prompt('Optional note for the case maker (leave blank to approve without a note):', '')
+    if (note == null) return
+    await transitionStatus(next, note.trim() || undefined)
   }
 
   const handleSubmitForReview = async () => {
@@ -430,6 +434,8 @@ export default function CaseDetailLayout() {
           </div>
         )}
       </div>
+
+      <ReviewerNotesCard caseData={caseData} />
 
       {(canManageWorkflow || permissions.canRelease || caseData?.status === 'released' || caseData?.status === 'cancelled') ? (
         <CaseActionBar

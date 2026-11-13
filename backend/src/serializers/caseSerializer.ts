@@ -5,6 +5,31 @@ import { buildCaseStudyReportSignature } from '../services/reportSignatureServic
 import { assessCaseWorkflow } from '../services/caseWorkflowService.js'
 import { currencyFromDb } from '../utils/currency.js'
 
+const APPROVAL_STAGE_STATUSES = ['for_review', 'recommending_approval', 'for_approval']
+
+const MINOR_FIX_SUFFIX = 'Returned as a minor fix — earlier-stage approvals preserved.'
+const MATERIAL_EDIT_PREFIX = 'Case returned to encoding after material edit'
+
+function humanizeField(field: string) {
+  const words = field.replace(/([a-z0-9])([A-Z])/g, '$1 $2').toLowerCase()
+  return words.charAt(0).toUpperCase() + words.slice(1)
+}
+
+// Status-log notes mix the approver's own words with text the system appends
+// (minor-fix flag, material-edit summary). Keep only what the case maker needs.
+export function cleanReviewerNote(raw: string | null | undefined) {
+  let text = String(raw ?? '').trim()
+  if (text.startsWith(MATERIAL_EDIT_PREFIX)) {
+    const fields = text.match(/Changed fields: (.*?)\./)?.[1]?.split(',').map((f) => humanizeField(f.trim())).filter(Boolean) ?? []
+    const reason = text.match(/Reason: (.*)\.$/)?.[1]?.trim()
+    const edited = fields.length ? `Edited ${fields.join(', ')}.` : 'Edited the case.'
+    return { notes: reason ? `${reason} (${edited})` : edited, edited: true, minorFix: false }
+  }
+  const minorFix = text.includes(MINOR_FIX_SUFFIX)
+  if (minorFix) text = text.replace(MINOR_FIX_SUFFIX, '').trim()
+  return { notes: text || null, edited: false, minorFix }
+}
+
 function normalizePersonName(value: unknown) {
   return String(value ?? '').toUpperCase().replace(/[^A-Z0-9Ñ ]/g, ' ').split(/\s+/).filter(Boolean).join(' ')
 }
@@ -212,17 +237,35 @@ export function serializeCase(caseRow: any, assigneesByStage?: ApprovalAssigneeB
     ? latestStatusLog.changedBy?.name ?? null
     : null
 
-  // Likewise, when a case is currently back in encoding because a reviewer/recommender/
-  // approver kicked it back (rather than it just starting out at encoding), the case
-  // maker needs to see why — surface the reason recorded on that transition.
-  const wasReturnedToEncoding =
-    caseRow.status === 'encoding' &&
-    latestStatusLog?.toStatus === 'encoding' &&
-    ['for_review', 'recommending_approval', 'for_approval'].includes(latestStatusLog?.fromStatus ?? '')
-  const returnedToEncodingNote = wasReturnedToEncoding ? latestStatusLog?.notes ?? null : null
-  const returnedToEncodingByName = wasReturnedToEncoding ? latestStatusLog?.changedBy?.name ?? null : null
-  const returnedToEncodingAt = wasReturnedToEncoding ? latestStatusLog?.changedAt?.toISOString() ?? null : null
-  const returnedToEncodingFromStage = wasReturnedToEncoding ? latestStatusLog?.fromStatus ?? null : null
+  // Every decision a Reviewer, Recommender or Final Approver made on this case
+  // (approve, return to encoding, disapprove), newest first, with the note they
+  // left, so the case maker can see what to fix even after resubmitting.
+  const statusLogs: any[] = Array.isArray(caseRow.statusLogs) ? caseRow.statusLogs : []
+  const reviewerNotes = statusLogs
+    .filter((log) => APPROVAL_STAGE_STATUSES.includes(log?.fromStatus ?? ''))
+    .map((log) => ({
+      id: log.id,
+      fromStage: log.fromStatus,
+      toStatus: log.toStatus,
+      action: log.toStatus === 'encoding' ? 'returned' : log.toStatus === 'rejected' ? 'rejected' : 'approved',
+      ...cleanReviewerNote(log.notes),
+      byName: log.changedBy?.name ?? null,
+      at: log.changedAt?.toISOString() ?? null,
+    }))
+
+  // While a case is back with the maker (encoding, or stepped back to intake)
+  // because an approver kicked it back, surface that return as the active note.
+  // It clears once the case is resubmitted, since the newest approver-stage log
+  // is then no longer a return.
+  const latestReviewerNote = reviewerNotes[0] ?? null
+  const activeReturn =
+    ['encoding', 'intake'].includes(caseRow.status) && latestReviewerNote?.action === 'returned'
+      ? latestReviewerNote
+      : null
+  const returnedToEncodingNote = activeReturn?.notes ?? null
+  const returnedToEncodingByName = activeReturn?.byName ?? null
+  const returnedToEncodingAt = activeReturn?.at ?? null
+  const returnedToEncodingFromStage = activeReturn?.fromStage ?? null
 
   const cancelledByName = caseRow.status === 'cancelled' && latestStatusLog?.toStatus === 'cancelled'
     ? latestStatusLog.changedBy?.name ?? null
@@ -252,6 +295,7 @@ export function serializeCase(caseRow: any, assigneesByStage?: ApprovalAssigneeB
     returnedToEncodingByName,
     returnedToEncodingAt,
     returnedToEncodingFromStage,
+    reviewerNotes,
     beneficiaryName,
     // beneficiaryName above always falls back to the client's name, so consumers
     // must use this (not a truthy beneficiaryName) to tell whether a different

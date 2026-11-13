@@ -778,3 +778,50 @@ export async function pendingApprovalsByType(req: Request, res: Response) {
   return res.json({ byType, total, pendingStatuses, recentCases })
 }
 
+
+// Cases the current user made that a Reviewer, Recommender or Final Approver sent
+// back to encoding and that the maker has not yet resubmitted. Disapproved cases
+// are left out: most are final and would otherwise sit in the bell for good. Backs the "Returned to you" section of the notification bell.
+export async function returnedToMe(req: Request, res: Response) {
+  const { cleanReviewerNote } = await import('../serializers/caseSerializer.js')
+  const approvalStages = ['for_review', 'recommending_approval', 'for_approval'] as const
+  const candidates = await prisma.case.findMany({
+    where: {
+      socialWorkerId: req.user!.id,
+      status: { in: ['intake', 'encoding'] },
+      statusLogs: { some: { fromStatus: { in: [...approvalStages] } } },
+    },
+    include: {
+      client: { select: { firstName: true, lastName: true } },
+      // A case in intake/encoding left the approval stages through its newest
+      // approver-stage log, so that log is the open return.
+      statusLogs: {
+        where: { fromStatus: { in: [...approvalStages] } },
+        orderBy: { changedAt: 'desc' },
+        take: 1,
+        include: { changedBy: { select: { name: true } } },
+      },
+    },
+  })
+
+  const cases = candidates
+    .map((c) => {
+      const log = c.statusLogs[0]
+      if (!log || log.toStatus !== 'encoding') return null
+      return {
+        id: c.id,
+        caseNumber: c.caseNumber ?? null,
+        assistanceType: c.assistanceType,
+        beneficiaryName: (c as any).beneficiaryName ?? null,
+        clientName: `${c.client.lastName}, ${c.client.firstName}`,
+        fromStage: log.fromStatus,
+        notes: cleanReviewerNote(log.notes).notes,
+        byName: log.changedBy?.name ?? null,
+        at: log.changedAt,
+      }
+    })
+    .filter((c): c is NonNullable<typeof c> => c !== null)
+    .sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
+
+  res.json({ total: cases.length, cases })
+}

@@ -148,7 +148,13 @@ const QUEUE_BY_STATUS = {
   for_approval: 'waiting_for_approver',
 }
 
-function NotificationBell({ count, items, viewAllHref, canView }) {
+const RETURNED_BY_STAGE = {
+  for_review: 'Reviewer',
+  recommending_approval: 'Recommender',
+  for_approval: 'Final Approver',
+}
+
+function NotificationBell({ count, items, returnedItems = [], viewAllHref, canView }) {
   const navigate = useNavigate()
   const location = useLocation()
   const containerRef = useRef(null)
@@ -177,6 +183,7 @@ function NotificationBell({ count, items, viewAllHref, canView }) {
   if (!canView) return null
 
   const typeLabel = (type) => CASE_CHILDREN.find((child) => child.type === type)?.label ?? type
+  const totalCount = count + returnedItems.length
 
   return (
     <div className="relative" ref={containerRef}>
@@ -190,10 +197,10 @@ function NotificationBell({ count, items, viewAllHref, canView }) {
         aria-label="Notifications"
       >
         <BellIcon className="h-[17px] w-[17px]" />
-        {count > 0 && (
+        {totalCount > 0 && (
           <span className="absolute -right-[5px] -top-[5px] flex h-[18px] min-w-[18px] items-center justify-center rounded-full
             border-2 border-white bg-[#dc2626] px-1 text-[10px] font-bold leading-none text-white">
-            {count > 99 ? '99+' : count}
+            {totalCount > 99 ? '99+' : totalCount}
           </span>
         )}
       </button>
@@ -202,12 +209,37 @@ function NotificationBell({ count, items, viewAllHref, canView }) {
         <div className="absolute right-0 top-12 z-40 w-80 max-w-[90vw] rounded-xl border border-slate-200 bg-white shadow-xl">
           <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
             <p className="text-sm font-semibold text-slate-800">Notifications</p>
-            {count > 0 && <span className="text-xs text-slate-400">{count} pending</span>}
+            {totalCount > 0 && <span className="text-xs text-slate-400">{totalCount} pending</span>}
           </div>
           <div className="max-h-80 overflow-y-auto">
-            {items.length === 0 ? (
+            {returnedItems.length > 0 && (
+              <>
+                <p className="bg-amber-50 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-amber-700">Returned to you</p>
+                <ul className="divide-y divide-slate-100 border-b border-slate-100">
+                  {returnedItems.map((c) => (
+                    <li key={c.id}>
+                      <button
+                        type="button"
+                        onClick={() => { setOpen(false); navigate(`/cases/${c.id}`) }}
+                        className="w-full px-4 py-3 text-left hover:bg-slate-50 transition-colors"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-mono text-xs font-bold text-brand-primary">{c.caseNumber ?? '—'}</span>
+                          <span className="badge badge-slate text-[10px]">{typeLabel(c.assistanceType)}</span>
+                        </div>
+                        <p className="mt-1 truncate text-sm font-medium text-slate-700">{c.beneficiaryName || c.clientName}</p>
+                        <p className="mt-0.5 text-xs text-amber-700">
+                          By {RETURNED_BY_STAGE[c.fromStage] || 'approver'}{c.notes ? `: ${c.notes}` : ''}
+                        </p>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+            {items.length === 0 && returnedItems.length === 0 ? (
               <p className="px-4 py-6 text-center text-sm text-slate-400">You're all caught up — nothing pending on your queue.</p>
-            ) : (
+            ) : items.length === 0 ? null : (
               <ul className="divide-y divide-slate-100">
                 {items.map((c) => (
                   <li key={c.id}>
@@ -421,6 +453,7 @@ export default function AppLayout() {
   const [pendingTotal, setPendingTotal] = useState(0)
   const [pendingRecentCases, setPendingRecentCases] = useState([])
   const [pendingStatuses, setPendingStatuses] = useState([])
+  const [returnedCases, setReturnedCases] = useState([])
   const [portalSubmittedCount, setPortalSubmittedCount] = useState(0)
   const [vehicleRequestsPendingCount, setVehicleRequestsPendingCount] = useState(0)
   const isCityHealthOffice = user?.role === 'city_health_office'
@@ -456,6 +489,27 @@ export default function AppLayout() {
     }
   }, [canAccessCasesModule, isCityHealthOffice, location.pathname, user?.approvalLevel?.length])
 
+  // Cases this user made that an approver sent back. Every case maker gets this,
+  // not only users with an approval level.
+  useEffect(() => {
+    if (!canAccessCasesModule || isCityHealthOffice) {
+      setReturnedCases([])
+      return
+    }
+    let cancelled = false
+    const fetchReturned = () => {
+      api.get('/cases/returned-to-me')
+        .then((res) => { if (!cancelled) setReturnedCases(res.data.cases ?? []) })
+        .catch(() => {})
+    }
+    fetchReturned()
+    const interval = setInterval(fetchReturned, PENDING_POLL_MS)
+    return () => {
+      cancelled = true
+      clearInterval(interval)
+    }
+  }, [canAccessCasesModule, isCityHealthOffice, location.pathname])
+
   useEffect(() => {
     if (!canAccessPortalApplications || isCityHealthOffice) {
       setPortalSubmittedCount(0)
@@ -478,7 +532,7 @@ export default function AppLayout() {
       .catch(() => {})
   }, [canAccessVehicleRequests, isCityHealthOffice, location.pathname])
 
-  const canViewNotifications = canAccessCasesModule && !isCityHealthOffice && !!user?.approvalLevel?.length
+  const canViewNotifications = canAccessCasesModule && !isCityHealthOffice && (!!user?.approvalLevel?.length || returnedCases.length > 0)
   // A user can hold more than one approval role at once (reviewer + recommender, say);
   // only route to a single filtered queue when there's exactly one in play, otherwise
   // send them to the unfiltered list rather than guessing which queue they meant.
@@ -545,6 +599,7 @@ export default function AppLayout() {
             <NotificationBell
               count={pendingTotal}
               items={pendingRecentCases}
+              returnedItems={returnedCases}
               viewAllHref={pendingViewAllHref}
               canView={canViewNotifications}
             />

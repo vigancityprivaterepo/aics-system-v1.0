@@ -45,9 +45,11 @@ export async function findCaseWithDetails(id: string) {
         },
       },
       socialWorker: { select: { id: true, name: true, eSignatureUrl: true, signatureParam: true, position: true } },
+      // Newest first. [0] drives release/cancel/workflow state; the rest feed the
+      // reviewer-notes trail the case maker reads (see caseSerializer).
       statusLogs: {
         orderBy: { changedAt: 'desc' },
-        take: 1,
+        take: 100,
         include: { changedBy: { select: { name: true } } },
       },
       approvals: {
