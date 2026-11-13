@@ -1,8 +1,8 @@
-import type { PrismaClient } from '@prisma/client'
+import { Prisma, type PrismaClient } from '@prisma/client'
 import { prisma } from './prisma.js'
 import { logger } from './logger.js'
 
-type NumberingClient = Pick<PrismaClient, 'systemSettings' | 'client' | 'case' | '$executeRaw'>
+type NumberingClient = Pick<PrismaClient, 'systemSettings' | 'client' | 'case' | '$executeRaw' | '$queryRaw'>
 
 type NumberingSettings = {
   locationCode: string
@@ -127,13 +127,23 @@ function buildSeriesPrefix(parts: string[], sequenceDigits: number, totalMaxLeng
   return `${compacted.join('-')}-`
 }
 
-function nextSequence(latestNumber: string | null | undefined, prefix: string, startSequence: number) {
-  const sequenceText = latestNumber?.startsWith(prefix)
-    ? latestNumber.slice(prefix.length).match(/^\d+/)?.[0]
-    : latestNumber?.match(/(\d+)$/)?.[1]
-  const latestSequence = sequenceText ? Number(sequenceText) : 0
-  const safeLatestSequence = Number.isFinite(latestSequence) ? latestSequence : 0
-  return Math.max(startSequence, safeLatestSequence + 1)
+// case_number is a string, so ORDER BY case_number DESC is lexical: once a
+// series passes its padding width "CID-VGN-999" sorts above "CID-VGN-1000",
+// the 999 row keeps winning, and every new number collides with the
+// existing 1000. Take the numeric maximum of the suffix instead.
+async function latestSequence(client: NumberingClient, table: 'clients' | 'cases', prefix: string): Promise<number> {
+  // Prefix tokens are normalized to [A-Z0-9-], so no LIKE wildcards to escape.
+  const like = `${prefix}%`
+  const start = prefix.length + 1
+  const tableSql = table === 'clients' ? Prisma.sql`clients` : Prisma.sql`cases`
+  const rows = await client.$queryRaw<Array<{ max: bigint | number | null }>>`
+    SELECT MAX(CAST(SUBSTRING(case_number FROM ${start}::int) AS BIGINT)) AS max
+    FROM ${tableSql}
+    WHERE case_number LIKE ${like}
+      AND SUBSTRING(case_number FROM ${start}::int) ~ '^[0-9]+$'
+  `
+  const value = Number(rows[0]?.max ?? 0)
+  return Number.isFinite(value) ? value : 0
 }
 
 async function acquireSequenceLock(client: NumberingClient, lockKey: number) {
@@ -151,12 +161,8 @@ export async function generateClientCaseNumber(): Promise<string> {
     clientStartSequence: normalizeStartSequence(rawSettings.clientStartSequence, DEFAULT_NUMBERING_SETTINGS.clientStartSequence),
   }
   const prefix = buildSeriesPrefix([s.clientPrefix, s.locationCode], s.sequenceDigits, 20)
-  const latest = await prisma.client.findFirst({
-    where: { caseNumber: { startsWith: prefix } },
-    orderBy: { caseNumber: 'desc' },
-    select: { caseNumber: true },
-  })
-  const nextSeq = nextSequence(latest?.caseNumber, prefix, s.clientStartSequence)
+  const latest = await latestSequence(prisma, 'clients', prefix)
+  const nextSeq = Math.max(s.clientStartSequence, latest + 1)
   return `${prefix}${String(nextSeq).padStart(s.sequenceDigits, '0')}`
 }
 
@@ -198,12 +204,8 @@ export async function generateCaseCaseNumber(
     : assistanceType === 'plain' ? s.plainStartSequence
     : s.burialStartSequence
   const prefix = buildSeriesPrefix([typePrefix, s.agencyCode, s.locationCode], s.sequenceDigits, 20)
-  const latest = await client.case.findFirst({
-    where: { caseNumber: { startsWith: prefix } },
-    orderBy: { caseNumber: 'desc' },
-    select: { caseNumber: true },
-  })
-  const nextSeq = nextSequence(latest?.caseNumber, prefix, startSequence)
+  const latest = await latestSequence(client, 'cases', prefix)
+  const nextSeq = Math.max(startSequence, latest + 1)
   return `${prefix}${String(nextSeq).padStart(s.sequenceDigits, '0')}`
 }
 
