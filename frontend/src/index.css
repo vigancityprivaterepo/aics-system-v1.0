@@ -285,3 +285,91 @@
   body { background: white; }
 }
 
+
+/* === Module launch (dashboard card -> page), driven by src/lib/moduleLaunch.js ===
+   Transform and opacity only, so it stays on the compositor on low-end phones. */
+[data-launch-card] {
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 120ms cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 200ms ease, border-color 200ms ease;
+}
+[data-launch-card]:active { transform: scale(0.97); }
+
+[data-launch-tab] { -webkit-tap-highlight-color: transparent; }
+[data-launch-tab]:active { transform: scale(0.95); }
+[data-launch-row] {
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 120ms cubic-bezier(0.2, 0.8, 0.2, 1), background-color 150ms ease;
+}
+[data-launch-row]:active { transform: scale(0.99); }
+
+[data-launch-page].is-leaving {
+  pointer-events: none;
+  animation: launch-recede 200ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+.module-back { animation: module-back 360ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+[data-launch-root].is-launching { pointer-events: none; }
+[data-launch-card].is-launching {
+  position: relative;
+  z-index: 2;
+  animation: launch-pop 340ms cubic-bezier(0.3, 0.7, 0.2, 1) forwards;
+}
+[data-launch-root].is-launching [data-launch-card]:not(.is-launching),
+[data-launch-root].is-launching [data-launch-fade] {
+  animation: launch-recede 260ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.module-enter { animation: module-enter 400ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+[data-launch-root].is-returning { animation: none; }
+[data-launch-card].is-returning {
+  position: relative;
+  z-index: 2;
+  animation: return-settle 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+[data-launch-root].is-returning [data-launch-card]:not(.is-returning),
+[data-launch-root].is-returning [data-launch-fade] {
+  animation: return-rise 360ms cubic-bezier(0.16, 1, 0.3, 1) 60ms both;
+}
+
+@keyframes launch-pop {
+  0% { transform: scale(0.97); opacity: 1; }
+  60% { transform: scale(1.05); opacity: 1; }
+  100% { transform: scale(1.08); opacity: 0; }
+}
+@keyframes launch-recede {
+  to { transform: translateY(10px) scale(0.98); opacity: 0; }
+}
+@keyframes module-enter {
+  from { transform: scale(0.92); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+@keyframes return-settle {
+  from { transform: scale(1.08); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+@keyframes return-rise {
+  from { transform: translateY(10px) scale(0.98); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+@keyframes module-back {
+  from { transform: scale(1.03); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+@keyframes launch-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes launch-fade-out { to { opacity: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  [data-launch-card]:active,
+  [data-launch-tab]:active,
+  [data-launch-row]:active { transform: none; }
+  [data-launch-root].is-launching,
+  [data-launch-page].is-leaving { animation: launch-fade-out 150ms linear forwards; }
+  [data-launch-root].is-launching [data-launch-card],
+  [data-launch-root].is-launching [data-launch-fade],
+  [data-launch-root].is-returning [data-launch-card],
+  [data-launch-root].is-returning [data-launch-fade] { animation: none; }
+  [data-launch-root].is-returning,
+  .module-enter,
+  .module-back { animation: launch-fade-in 150ms linear both; }
+}

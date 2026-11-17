@@ -1,11 +1,12 @@
-import { useState, useEffect, useMemo } from 'react'
-import { Link } from 'react-router-dom'
+import { useState, useEffect, useMemo, useRef } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer,
 } from 'recharts'
 import api from '../lib/api'
 import { formatDate } from '../lib/utils'
+import { launchModule, openCase, useModuleReturn } from '../lib/moduleLaunch'
 import { useAuthStore } from '../store/authStore'
 import StatusBadge from '../components/ui/StatusBadge'
 import {
@@ -196,6 +197,10 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [trendPeriod, setTrendPeriod] = useState('month')
   const [trendType, setTrendType] = useState('all')
+  const navigate = useNavigate()
+  const launchRootRef = useRef(null)
+  // Reverses the card launch on browser Back, once the data has loaded.
+  useModuleReturn(launchRootRef, !loading)
 
   useEffect(() => {
     Promise.all([
@@ -294,8 +299,8 @@ export default function Dashboard() {
   const pendingIntakeCount = Number(stats?.pendingRequirements ?? 0)
 
   return (
-    <div className="animate-fade-in">
-      <div className="mb-5 border-b border-slate-200 pb-4">
+    <div ref={launchRootRef} data-launch-root className="animate-fade-in">
+      <div data-launch-fade className="mb-5 border-b border-slate-200 pb-4">
         <p className="portal-kicker">Case Management</p>
         <h1 className="portal-page-title">Case Overview</h1>
         <p className="portal-page-subtitle">Overview of assistance cases and client activity</p>
@@ -304,7 +309,7 @@ export default function Dashboard() {
       {/* Hero + stat tiles (V.1.2 design) */}
       <div className="mb-6 grid grid-cols-1 gap-5 lg:grid-cols-[minmax(280px,1fr)_2fr]">
         {/* Greeting hero panel */}
-        <div className="relative flex min-h-[210px] min-w-0 flex-col justify-between overflow-hidden rounded-2xl bg-gradient-to-br from-[#064e3b] via-[#065f46] to-[#059669] p-[26px] shadow-[0_10px_28px_rgba(15,45,82,0.18)]">
+        <div data-launch-fade className="relative flex min-h-[210px] min-w-0 flex-col justify-between overflow-hidden rounded-2xl bg-gradient-to-br from-[#064e3b] via-[#065f46] to-[#059669] p-[26px] shadow-[0_10px_28px_rgba(15,45,82,0.18)]">
           <div className="absolute -right-10 -top-10 h-[180px] w-[180px] rounded-full bg-emerald-400/[0.18]" aria-hidden="true" />
           <div className="absolute -bottom-[60px] right-[30px] h-[140px] w-[140px] rounded-full bg-white/[0.06]" aria-hidden="true" />
           <div className="relative">
@@ -341,7 +346,7 @@ export default function Dashboard() {
             return (
               <Tag
                 key={s.label}
-                {...(s.to ? { to: s.to } : {})}
+                {...(s.to ? { to: s.to, 'data-launch-card': `tile:${s.label}`, onClick: (event) => launchModule(event, navigate, s.to) } : {})}
                 className={`flex flex-col gap-2.5 rounded-[14px] border border-slate-300/80 bg-white p-4 shadow-[0_1px_3px_rgba(15,45,82,0.06)] ${s.to ? 'transition-colors hover:border-emerald-300 hover:shadow-md' : ''}`}
               >
                 <span className={`inline-flex h-[42px] w-[42px] items-center justify-center rounded-full ${s.tint}`}>
@@ -362,7 +367,7 @@ export default function Dashboard() {
       </div>
 
       {/* Cases by assistance type */}
-      <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-6">
+      <div data-launch-fade className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-6">
         {typeTiles.map((s) => (
           <div key={s.label} className="flex min-w-0 items-center gap-3 rounded-[14px] border border-slate-300/80 bg-white p-3.5 shadow-[0_1px_3px_rgba(15,45,82,0.06)]">
             <span className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${s.tint}`}>
@@ -384,6 +389,8 @@ export default function Dashboard() {
           <Link
             key={queue.key}
             to={`/cases?${queue.query}`}
+            data-launch-card={`queue:${queue.key}`}
+            onClick={(event) => launchModule(event, navigate, `/cases?${queue.query}`)}
             className="queue-card group"
           >
             <div>
@@ -399,7 +406,7 @@ export default function Dashboard() {
         ))}
       </div>
 
-      <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
+      <div data-launch-fade className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="card lg:col-span-2">
           <div className="mb-4 flex items-start justify-between gap-3">
             <div>
@@ -524,7 +531,7 @@ export default function Dashboard() {
       </div>
 
       {/* Recent Cases */}
-      <div className="card">
+      <div data-launch-fade className="card">
         <div className="mb-5 flex items-center justify-between">
           <div>
             <h3 className="font-display text-base font-bold text-slate-800">Recent Cases</h3>
@@ -551,7 +558,7 @@ export default function Dashboard() {
                 return (
                   <tr key={c.id} className="table-row">
                     <td className="table-cell">
-                      <Link to={`/cases/${c.id}`} className="font-mono text-xs font-semibold text-brand-primary hover:underline">
+                      <Link to={`/cases/${c.id}`} data-launch-row onClick={(event) => openCase(event, navigate, c.id)} className="font-mono text-xs font-semibold text-brand-primary hover:underline">
                         {c.caseNumber}
                       </Link>
                     </td>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { openCase } from '../../lib/moduleLaunch'
 import toast from 'react-hot-toast'
 import api from '../../lib/api'
 import { formatDate, formatClientName } from '../../lib/utils'
@@ -473,7 +474,8 @@ export default function CaseList() {
                   className="table-row cursor-pointer focus-within:bg-slate-50 hover:bg-slate-50"
                   role="button"
                   tabIndex={0}
-                  onClick={() => navigate(`/cases/${c.id}`)}
+                  data-launch-row
+                  onClick={(event) => openCase(event, navigate, c.id)}
                   onKeyDown={(event) => {
                     if (event.key === 'Enter' || event.key === ' ') {
                       event.preventDefault()
@@ -496,7 +498,7 @@ export default function CaseList() {
                     </td>
                   )}
                   <td className="table-cell">
-                    <Link to={`/cases/${c.id}`} className="font-mono text-xs font-bold text-brand-primary hover:underline">
+                    <Link to={`/cases/${c.id}`} onClick={(event) => { event.stopPropagation(); openCase(event, navigate, c.id) }} className="font-mono text-xs font-bold text-brand-primary hover:underline">
                       {c.caseNumber || <span className="font-normal text-slate-400">—</span>}
                     </Link>
                   </td>
@@ -567,7 +569,7 @@ export default function CaseList() {
                       <button
                         onClick={(event) => {
                           event.stopPropagation()
-                          navigate(`/cases/${c.id}`)
+                          openCase(event, navigate, c.id)
                         }}
                         title={canEdit ? 'Open case' : 'View reports'}
                         className="rounded p-2 text-slate-400 hover:bg-blue-50 hover:text-blue-600 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"

@@ -15,6 +15,7 @@ import {
 import MyProfileModal from '../shared/MyProfileModal'
 import { allowedCaseTypesForUser, canAccessAllCases } from '../../utils/accessRules'
 import { canAccessModule } from '../../utils/moduleAccess'
+import { launchFromNav, openCase, useModuleEnter } from '../../lib/moduleLaunch'
 
 // How often the notification bell's badge count re-checks for newly-queued cases
 const PENDING_POLL_MS = 45000
@@ -45,10 +46,13 @@ function TabBadge({ count, tone = 'rose', pulse = false }) {
 }
 
 function ModuleTab({ to, Icon, label, badge = 0, badgeTone = 'rose', end = false }) {
+  const navigate = useNavigate()
   return (
     <NavLink
       to={to}
       end={end}
+      data-launch-tab
+      onClick={(event) => launchFromNav(event, navigate, to)}
       className={({ isActive }) => `${TAB_BASE} ${isActive ? TAB_ACTIVE : TAB_IDLE}`}
     >
       {Icon && <Icon className="h-[15px] w-[15px] shrink-0" />}
@@ -62,6 +66,7 @@ function ModuleTab({ to, Icon, label, badge = 0, badgeTone = 'rose', end = false
 function DropdownTab({ label, Icon, active, badge = 0, badgeTone = 'rose', badgePulse = false, items }) {
   const containerRef = useRef(null)
   const location = useLocation()
+  const navigate = useNavigate()
   const [open, setOpen] = useState(false)
   const [anchor, setAnchor] = useState({ left: 0, top: 0 })
 
@@ -117,6 +122,8 @@ function DropdownTab({ label, Icon, active, badge = 0, badgeTone = 'rose', badge
               key={item.to}
               to={item.to}
               title={item.title}
+              data-launch-tab
+              onClick={(event) => launchFromNav(event, navigate, item.to)}
               className={`flex items-center gap-2.5 px-4 py-2.5 text-[13px] font-medium transition-colors ${
                 item.active ? 'bg-[#ecfdf5] text-[#065f46]' : 'text-slate-600 hover:bg-slate-50 hover:text-[#0f2d52]'
               }`}
@@ -220,7 +227,7 @@ function NotificationBell({ count, items, returnedItems = [], viewAllHref, canVi
                     <li key={c.id}>
                       <button
                         type="button"
-                        onClick={() => { setOpen(false); navigate(`/cases/${c.id}`) }}
+                        onClick={(event) => { setOpen(false); openCase(event, navigate, c.id) }}
                         className="w-full px-4 py-3 text-left hover:bg-slate-50 transition-colors"
                       >
                         <div className="flex items-center justify-between gap-2">
@@ -245,7 +252,7 @@ function NotificationBell({ count, items, returnedItems = [], viewAllHref, canVi
                   <li key={c.id}>
                     <button
                       type="button"
-                      onClick={() => { setOpen(false); navigate(`/cases/${c.id}`) }}
+                      onClick={(event) => { setOpen(false); openCase(event, navigate, c.id) }}
                       className="w-full px-4 py-3 text-left hover:bg-slate-50 transition-colors"
                     >
                       <div className="flex items-center justify-between gap-2">
@@ -448,6 +455,8 @@ export default function AppLayout() {
   const { user, logout } = useAuthStore()
   const navigate = useNavigate()
   const location = useLocation()
+  const pageRef = useRef(null)
+  useModuleEnter(pageRef)
   const [profileOpen, setProfileOpen] = useState(false)
   const [pendingByType, setPendingByType] = useState({})
   const [pendingTotal, setPendingTotal] = useState(0)
@@ -642,7 +651,9 @@ export default function AppLayout() {
 
       {/* ── Page content ── */}
       <main className="mx-auto min-w-0 w-full max-w-[1560px] overflow-x-hidden px-4 py-5 sm:px-6">
-        <Outlet />
+        <div ref={pageRef} data-launch-page>
+          <Outlet />
+        </div>
       </main>
     </div>
   )

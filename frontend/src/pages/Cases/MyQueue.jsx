@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { openCase } from '../../lib/moduleLaunch'
 import toast from 'react-hot-toast'
 import api from '../../lib/api'
 import { formatCurrency, formatClientName } from '../../lib/utils'
@@ -37,9 +38,12 @@ function sortByUrgency(cases) {
 }
 
 function CaseRow({ c }) {
+  const navigate = useNavigate()
   return (
     <Link
       to={`/cases/${c.id}`}
+      data-launch-row
+      onClick={(event) => openCase(event, navigate, c.id)}
       className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-[18px] py-[13px] last:border-b-0 transition-colors hover:bg-slate-50"
     >
       <div className="min-w-0 flex-[1_1_260px]">

@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { openCase } from '../../lib/moduleLaunch'
 import toast from 'react-hot-toast'
 import api from '../../lib/api'
 import { formatDate, calculateAge, formatClientName } from '../../lib/utils'
@@ -968,8 +969,9 @@ export default function ClientProfile() {
                     return (
                       <li
                         key={h.id}
+                        data-launch-row
                         className="flex items-center gap-4 px-4 py-3 cursor-pointer hover:bg-slate-50 transition-colors"
-                        onClick={() => navigate(`/cases/${h.id}`)}
+                        onClick={(event) => openCase(event, navigate, h.id)}
                       >
                         <div className="flex-1 min-w-0">
                           <div className="flex flex-wrap items-center gap-2">
