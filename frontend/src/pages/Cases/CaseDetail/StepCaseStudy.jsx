@@ -179,10 +179,15 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false, on
   const initialBeneficiarySelection = !caseData.beneficiaryName ? 'self' : matchedFamilyIndex >= 0 ? String(matchedFamilyIndex) : 'custom'
   const matchedFamilyMember = matchedFamilyIndex >= 0 ? family[matchedFamilyIndex] : null
 
+  // Day the case was created, in Manila; default for both the assessment date
+  // and the CHO certification date so the two documents match.
+  const createdDay = new Date(caseData.createdAt || Date.now()).toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' })
+  const initialAssessmentDate = caseData.dateOfAssessment || createdDay
+
   const { control, register, handleSubmit, watch, setValue, getValues, reset, formState: { errors } } = useForm({
     mode: 'onBlur',
     defaultValues: {
-      dateOfAssessment: caseData.dateOfAssessment || new Date().toISOString().slice(0, 10),
+      dateOfAssessment: initialAssessmentDate,
       // Display only: shows the case maker account, never the person viewing.
       socialWorkerName: caseData.socialWorkerName || caseData.socialWorkerAccountName || '',
       presentingProblem: caseData.presentingProblem || '',
@@ -206,7 +211,7 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false, on
       beneficiaryRequestorName: caseData.beneficiaryRequestorName || '',
       beneficiaryRequestorRelationship: caseData.beneficiaryRequestorRelationship || '',
       beneficiaryCategory: initialBeneficiaryCategory,
-      choCertGivenDate: caseData.choCertGivenDate || '',
+      choCertGivenDate: caseData.choCertGivenDate || initialAssessmentDate,
     },
   })
 
@@ -281,6 +286,18 @@ export default function StepCaseStudy({ caseData, onUpdate, readOnly = false, on
   }, [caseData.medicines, isMedicine])
 
   const amount = watch('amount')
+
+  // Keep the CHO certification date on the assessment date while they match;
+  // once staff set a different CHO date, leave it alone.
+  const assessmentDate = watch('dateOfAssessment')
+  const previousAssessmentDate = useRef(assessmentDate)
+  useEffect(() => {
+    const previous = previousAssessmentDate.current
+    previousAssessmentDate.current = assessmentDate
+    if (previous === assessmentDate) return
+    const choDate = getValues('choCertGivenDate')
+    if (!choDate || choDate === previous) setValue('choCertGivenDate', assessmentDate || '')
+  }, [assessmentDate, getValues, setValue])
   const beneficiarySelection = watch('beneficiarySelection')
   const watchedBeneficiaryName = watch('beneficiaryName')
   // The family list doubles as the beneficiary picker's source, so the chosen

@@ -2981,11 +2981,11 @@ function buildChoCertData(caseData: any): {
   })
 
   // Staff can set the date the medicine will actually be given (encoded on the case ahead of
-  // pickup, which is often days after the certification is printed); fall back to today when
-  // no date has been set yet. The override is a plain YYYY-MM-DD date with no time/timezone
+  // pickup, which is often days after the certification is printed); fall back to the
+  // assessment date, then today, when no date has been set yet. The override is a plain YYYY-MM-DD date with no time/timezone
   // component, so its parts are read directly rather than round-tripped through Date/getDate()
   // (which would follow the server's local timezone and could shift the calendar day).
-  const rawGivenOverride = String((caseData as any).choCertGivenDate ?? '')
+  const rawGivenOverride = String((caseData as any).choCertGivenDate ?? (caseData as any).dateOfAssessment ?? '')
   const overrideMatch = /^(\d{4})-(\d{2})-(\d{2})/.exec(rawGivenOverride)
 
   const now = new Date()

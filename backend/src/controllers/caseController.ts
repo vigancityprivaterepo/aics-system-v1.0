@@ -100,6 +100,11 @@ async function loadRepeatAssistanceCooldownDays() {
   }
 }
 
+function manilaToday() {
+  // en-CA formats as YYYY-MM-DD.
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' })
+}
+
 export async function listCases(req: Request, res: Response) {
   if (!req.user) throw new HttpError(401, 'Unauthorized')
 
@@ -358,7 +363,10 @@ export async function createCase(req: Request, res: Response) {
         socialWorkerId: req.user?.id,
         socialWorkerName: req.user?.name,
         socialWorkerEmpId: req.user?.employeeId,
-        dateOfAssessment: body.dateOfAssessment ? new Date(body.dateOfAssessment) : null,
+        // Both default to the day the case is created (Manila), so the assessment
+        // and the CHO certification print the same date unless staff change them.
+        dateOfAssessment: new Date(body.dateOfAssessment || manilaToday()),
+        ...(assistanceType === 'medicine' ? { choCertGivenDate: new Date(body.dateOfAssessment || manilaToday()) } : {}),
         presentingProblem: body.presentingProblem ?? null,
         familyComposition: body.familyComposition ?? (Array.isArray((client as any).familyComposition) ? (client as any).familyComposition as any : undefined),
         backgroundOfProblem: body.backgroundOfProblem ?? null,

@@ -316,6 +316,7 @@ export function serializeCase(caseRow: any, assigneesByStage?: ApprovalAssigneeB
     beneficiaryIsSenior: caseRow.beneficiaryIsSenior,
     beneficiaryIsSoloParent: caseRow.beneficiaryIsSoloParent,
     choCertGivenDate: caseRow.choCertGivenDate?.toISOString().slice(0, 10) ?? null,
+    createdAt: caseRow.createdAt?.toISOString() ?? null,
     readyForReleaseAt: caseRow.readyForReleaseAt?.toISOString() ?? null,
     readyForReleaseByName: caseRow.readyForReleaseByName ?? null,
     socialWorkerAccountName: caseRow.socialWorker?.name ?? null,
