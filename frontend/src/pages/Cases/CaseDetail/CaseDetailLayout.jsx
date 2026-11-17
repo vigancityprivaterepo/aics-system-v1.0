@@ -228,10 +228,7 @@ export default function CaseDetailLayout() {
     if (!caseData) return
     const next = APPROVAL_NEXT[caseData.status]
     if (!next) return
-    // Cancel aborts the approval; an empty note is allowed.
-    const note = window.prompt('Optional note for the case maker (leave blank to approve without a note):', '')
-    if (note == null) return
-    await transitionStatus(next, note.trim() || undefined)
+    await transitionStatus(next)
   }
 
   const handleSubmitForReview = async () => {
