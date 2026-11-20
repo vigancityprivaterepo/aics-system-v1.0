@@ -122,6 +122,8 @@ export async function listCases(req: Request, res: Response) {
   const dateTo = req.query.dateTo ? String(req.query.dateTo) : undefined
   const limit = Math.min(Number(req.query.limit ?? 15), 100)
   const page = Math.max(Number(req.query.page ?? 1), 1)
+  // Date created; newest first unless the caller asks for oldest first.
+  const sortDirection: 'asc' | 'desc' = req.query.sort === 'oldest' ? 'asc' : 'desc'
 
   if (type) {
     assertAllowedCaseTypeForUser(type as AssistanceType, req.user, 'Case list')
@@ -207,7 +209,8 @@ export async function listCases(req: Request, res: Response) {
         },
         socialWorker: { select: { name: true } },
       },
-      orderBy: { createdAt: 'desc' },
+      // id breaks ties so rows created in the same instant never shift between pages.
+      orderBy: [{ createdAt: sortDirection }, { id: sortDirection }],
     }),
   ])
   const assigneesByStage = await resolveApprovalAssignees(settings)

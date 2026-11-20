@@ -77,6 +77,26 @@ function workflowApprovalMessages(caseRow) {
   return []
 }
 
+// Case list sort (by date created). Oldest first by default; the choice is kept
+// per browser so it survives leaving the page.
+const SORT_STORAGE_KEY = 'aics.caseListSort'
+
+function readSavedSort() {
+  try {
+    return localStorage.getItem(SORT_STORAGE_KEY) === 'newest' ? 'newest' : 'oldest'
+  } catch {
+    return 'oldest'
+  }
+}
+
+function saveSort(value) {
+  try {
+    localStorage.setItem(SORT_STORAGE_KEY, value)
+  } catch {
+    // Storage blocked: the sort still applies for this visit.
+  }
+}
+
 export default function CaseList() {
   const [searchParams] = useSearchParams()
   const typeParam = searchParams.get('type') ?? ''
@@ -106,6 +126,7 @@ export default function CaseList() {
   const isAdmin = user?.role === 'admin'
   const [dateFrom, setDateFrom] = useState(dateFromParam)
   const [dateTo, setDateTo] = useState(dateToParam)
+  const [sortOrder, setSortOrder] = useState(readSavedSort)
   const [page, setPage] = useState(1)
   const [total, setTotal] = useState(0)
   const [deletingId, setDeletingId] = useState(null)
@@ -136,7 +157,7 @@ export default function CaseList() {
       const nextPreparerMismatch = overrides.filterPreparerMismatch ?? filterPreparerMismatch
       const nextDateFrom = overrides.dateFrom ?? dateFrom
       const nextDateTo = overrides.dateTo ?? dateTo
-      const params = new URLSearchParams({ page: String(targetPage), limit: String(LIMIT) })
+      const params = new URLSearchParams({ page: String(targetPage), limit: String(LIMIT), sort: sortOrder })
       if (nextSearch) params.append('search', nextSearch)
       if (nextType) params.append('type', nextType)
       if (nextQueue) params.append('queue', nextQueue)
@@ -163,7 +184,7 @@ export default function CaseList() {
     let active = true
     ;(async () => {
       try {
-        const params = new URLSearchParams({ page: String(page), limit: String(LIMIT) })
+        const params = new URLSearchParams({ page: String(page), limit: String(LIMIT), sort: sortOrder })
         if (debouncedSearch) params.append('search', debouncedSearch)
         if (filterType) params.append('type', filterType)
         if (filterQueue) params.append('queue', filterQueue)
@@ -189,7 +210,7 @@ export default function CaseList() {
       }
     })()
     return () => { active = false }
-  }, [page, LIMIT, filterType, filterQueue, filterBlocked, filterOverdue, filterOwner, filterMaker, filterPreparerMismatch, dateFrom, dateTo, debouncedSearch])
+  }, [page, LIMIT, sortOrder, filterType, filterQueue, filterBlocked, filterOverdue, filterOwner, filterMaker, filterPreparerMismatch, dateFrom, dateTo, debouncedSearch])
 
   useEffect(() => {
     if (!isAdmin) return
@@ -316,6 +337,21 @@ export default function CaseList() {
             {Object.entries(QUEUE_LABEL).map(([value, label]) => (
               <option key={value} value={value}>{label}</option>
             ))}
+          </select>
+          <select
+            value={sortOrder}
+            onChange={(e) => {
+              setLoading(true)
+              setSortOrder(e.target.value)
+              saveSort(e.target.value)
+              setPage(1)
+            }}
+            className={`${FILTER_CONTROL} sm:w-48`}
+            id="case-sort"
+            aria-label="Sort cases"
+          >
+            <option value="oldest">Oldest to Newest</option>
+            <option value="newest">Newest to Oldest</option>
           </select>
           </div>
           <div className="flex flex-wrap items-center gap-3 pt-1 border-t border-slate-100 mt-1">
