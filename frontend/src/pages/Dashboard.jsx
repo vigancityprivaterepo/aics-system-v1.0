@@ -182,7 +182,7 @@ const PERIOD_KICKER = {
 const QUEUE_META = {
   needs_intake: { label: 'Needs Intake', query: 'queue=needs_intake', color: 'text-slate-700 bg-slate-50' },
   needs_encoding: { label: 'Needs Encoding', query: 'queue=needs_encoding', color: 'text-blue-700 bg-blue-50' },
-  ready_for_review: { label: 'Ready for Review', query: 'queue=ready_for_review', color: 'text-amber-700 bg-amber-50' },
+  ready_for_review: { label: 'Ready for Review', query: 'queue=ready_for_review', color: 'text-[#0f2d52] bg-slate-100' },
   waiting_for_recommender: { label: 'Waiting for Recommender', query: 'queue=waiting_for_recommender', color: 'text-indigo-700 bg-indigo-50' },
   waiting_for_approver: { label: 'Waiting for Approver', query: 'queue=waiting_for_approver', color: 'text-violet-700 bg-violet-50' },
   approved_preparing: { label: 'Approved - Preparing', query: 'queue=approved_preparing', color: 'text-teal-700 bg-teal-50' },
@@ -253,7 +253,7 @@ export default function Dashboard() {
     { label: 'This Month', value: stats?.monthCases ?? '—', Icon: FolderIcon, tint: 'bg-[#f0fdfa] text-[#0d9488]' },
     { label: 'Pending Review', value: pendingReviewCount, Icon: ClockIcon, tint: 'bg-[#fef2f2] text-[#dc2626]', alert: pendingReviewCount > 0 },
     { label: 'Beneficiaries', value: stats?.totalCases ?? '—', Icon: UsersIcon, tint: 'bg-[#f5f3ff] text-[#7c3aed]' },
-    { label: 'Released', value: stats?.byStatus?.released ?? '—', Icon: FileTextIcon, tint: 'bg-[#fffbeb] text-[#b45309]' },
+    { label: 'Released', value: stats?.byStatus?.released ?? '—', Icon: FileTextIcon, tint: 'bg-[#ecfdf5] text-[#047857]' },
     ...(user?.role === 'admin'
       ? [{
           label: 'Cancelled',
@@ -282,7 +282,7 @@ export default function Dashboard() {
         tint: tintMap[type] || 'bg-slate-100 text-slate-600',
       }
     }),
-    { label: 'Pending Intake', value: stats?.pendingRequirements ?? '—', Icon: FolderIcon, tint: 'bg-[#fffbeb] text-[#b45309]' },
+    { label: 'Pending Intake', value: stats?.pendingRequirements ?? '—', Icon: FolderIcon, tint: 'bg-slate-100 text-slate-600' },
   ]
 
   if (loading) {

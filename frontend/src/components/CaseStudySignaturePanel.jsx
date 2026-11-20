@@ -142,7 +142,7 @@ export default function CaseStudySignaturePanel({ caseData, onUpdated }) {
                 type="button"
                 onClick={() => replacementInputRef.current?.click()}
                 disabled={replacing}
-                className="inline-flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-800 transition-colors hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <RefreshIcon className="h-4 w-4" />
                 {replacing ? 'Replacing...' : 'Replace Latest Upload'}

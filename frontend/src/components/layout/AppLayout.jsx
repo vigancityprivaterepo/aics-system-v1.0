@@ -221,7 +221,7 @@ function NotificationBell({ count, items, returnedItems = [], viewAllHref, canVi
           <div className="max-h-80 overflow-y-auto">
             {returnedItems.length > 0 && (
               <>
-                <p className="bg-amber-50 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-amber-700">Returned to you</p>
+                <p className="bg-slate-50 px-4 py-1.5 text-[11px] font-semibold text-slate-600">Returned to you</p>
                 <ul className="divide-y divide-slate-100 border-b border-slate-100">
                   {returnedItems.map((c) => (
                     <li key={c.id}>
@@ -235,7 +235,7 @@ function NotificationBell({ count, items, returnedItems = [], viewAllHref, canVi
                           <span className="badge badge-slate text-[10px]">{typeLabel(c.assistanceType)}</span>
                         </div>
                         <p className="mt-1 truncate text-sm font-medium text-slate-700">{c.beneficiaryName || c.clientName}</p>
-                        <p className="mt-0.5 text-xs text-amber-700">
+                        <p className="mt-0.5 text-xs text-slate-600">
                           By {RETURNED_BY_STAGE[c.fromStage] || 'approver'}{c.notes ? `: ${c.notes}` : ''}
                         </p>
                       </button>
@@ -260,7 +260,7 @@ function NotificationBell({ count, items, returnedItems = [], viewAllHref, canVi
                         <span className="badge badge-slate text-[10px]">{typeLabel(c.assistanceType)}</span>
                       </div>
                       <p className="mt-1 truncate text-sm font-medium text-slate-700">{c.beneficiaryName || c.clientName}</p>
-                      <p className="mt-0.5 text-xs text-amber-600">{NOTIFICATION_QUEUE_LABEL[c.queue] || 'Pending your action'}</p>
+                      <p className="mt-0.5 text-xs text-slate-500">{NOTIFICATION_QUEUE_LABEL[c.queue] || 'Pending your action'}</p>
                     </button>
                   </li>
                 ))}

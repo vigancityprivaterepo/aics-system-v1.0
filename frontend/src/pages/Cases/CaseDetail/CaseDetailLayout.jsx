@@ -326,9 +326,9 @@ export default function CaseDetailLayout() {
             </div>
           )}
           {caseData.assistanceType !== 'burial' && caseData.beneficiaryName && (
-            <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm">
-              <p className="font-semibold text-amber-900">Beneficiary: {caseData.beneficiaryName}</p>
-              <p className="mt-1 text-amber-700">
+            <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm">
+              <p className="font-semibold text-slate-800">Beneficiary: {caseData.beneficiaryName}</p>
+              <p className="mt-1 text-slate-500">
                 Filed under {formatClientName(caseData.client)}'s profile
                 {caseData.beneficiaryRequestorName ? ` by ${caseData.beneficiaryRequestorName}` : ''}
                 {caseData.beneficiaryRequestorRelationship ? ` (${caseData.beneficiaryRequestorRelationship})` : ''}
@@ -347,7 +347,7 @@ export default function CaseDetailLayout() {
               </button>
             )}
             {readOnlyAccess ? (
-              <span className="inline-flex items-center rounded border border-amber-300 bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-700">
+              <span className="inline-flex items-center rounded border border-slate-300 bg-slate-50 px-2.5 py-0.5 text-xs font-medium text-slate-600">
                 Read-only access
               </span>
             ) : null}

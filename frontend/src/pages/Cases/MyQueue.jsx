@@ -19,8 +19,8 @@ const TYPE_CHIP = {
 // says exactly what's being asked of the viewer.
 const GROUPS = [
   { key: 'rejected', title: 'Disapproved — Needs Rework', statuses: ['rejected'], pill: 'bg-[#dc2626]' },
-  { key: 'blocked', title: 'Needs Encoding — Blockers to Resolve', statuses: ['encoding'], onlyBlocked: true, pill: 'bg-[#f59e0b]' },
-  { key: 'ready_to_submit', title: 'Ready to Submit for Review', statuses: ['encoding'], onlyBlocked: false, pill: 'bg-[#f59e0b]' },
+  { key: 'blocked', title: 'Needs Encoding — Blockers to Resolve', statuses: ['encoding'], onlyBlocked: true, pill: 'bg-[#0f2d52]' },
+  { key: 'ready_to_submit', title: 'Ready to Submit for Review', statuses: ['encoding'], onlyBlocked: false, pill: 'bg-[#0f2d52]' },
   { key: 'intake', title: 'Needs Intake', statuses: ['intake'], pill: 'bg-[#64748b]' },
   { key: 'for_review', title: 'Awaiting Your Review', statuses: ['for_review'], pill: 'bg-[#9333ea]' },
   { key: 'recommending_approval', title: 'Awaiting Your Recommendation', statuses: ['recommending_approval'], pill: 'bg-[#4f46e5]' },

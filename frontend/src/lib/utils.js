@@ -72,7 +72,7 @@ export function generateCaseNumber(year, month, seq) {
 
 export function getStatusColor(status) {
   const map = {
-    pending: 'badge-amber',
+    pending: 'badge-slate',
     intake: 'badge-slate',
     encoding: 'badge-blue',
     for_review: 'badge-purple',

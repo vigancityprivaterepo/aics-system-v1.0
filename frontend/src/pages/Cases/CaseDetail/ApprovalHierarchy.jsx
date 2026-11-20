@@ -17,11 +17,11 @@ export default function ApprovalHierarchy({ reviewFlow }) {
             : isRejected
             ? 'bg-red-500 text-white'
             : isCurrent
-            ? 'bg-amber-400 text-white ring-4 ring-amber-100 animate-pulse'
+            ? 'bg-[#0f2d52] text-white ring-4 ring-[#0f2d52]/10'
             : 'border-2 border-slate-300 bg-white text-slate-400'
 
           const lineClass  = isDone ? 'bg-emerald-300' : 'bg-slate-200'
-          const badgeClass = isDone ? 'badge-green' : isRejected ? 'badge-red' : isCurrent ? 'badge-amber' : 'badge-slate'
+          const badgeClass = isDone ? 'badge-green' : isRejected ? 'badge-red' : isCurrent ? 'badge-blue' : 'badge-slate'
           const badgeLabel = isDone ? 'Approved'    : isRejected ? 'Disapproved' : isCurrent ? 'Current'     : 'Pending'
           const actionDateLabel = isRejected ? 'Disapproved on' : 'Approved on'
 

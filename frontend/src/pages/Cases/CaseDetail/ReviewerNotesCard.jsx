@@ -8,7 +8,7 @@ const STAGE_LABEL = {
 
 const ACTION = {
   approved: { label: 'Approved', className: 'border-emerald-200 bg-emerald-50 text-emerald-700' },
-  returned: { label: 'Returned', className: 'border-amber-200 bg-amber-50 text-amber-700' },
+  returned: { label: 'Returned', className: 'border-[#0f2d52]/20 bg-[#0f2d52]/5 text-[#0f2d52]' },
   edited: { label: 'Edited', className: 'border-slate-200 bg-slate-50 text-slate-700' },
   rejected: { label: 'Disapproved', className: 'border-red-200 bg-red-50 text-red-700' },
 }
@@ -34,12 +34,12 @@ export default function ReviewerNotesCard({ caseData }) {
       <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Reviewer Notes</p>
 
       {active && (
-        <div className="mt-2 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm">
-          <p className="text-xs text-amber-700">
+        <div className="mt-2 rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm">
+          <p className="text-xs text-slate-500">
             {active.edited ? 'Edited and returned' : 'Returned'} by {meta(active)}
             {active.minorFix ? ' · Minor fix' : ''}
           </p>
-          <p className="mt-1 whitespace-pre-wrap font-medium text-amber-900">{active.notes || 'No reason given.'}</p>
+          <p className="mt-1 whitespace-pre-wrap font-medium text-slate-900">{active.notes || 'No reason given.'}</p>
         </div>
       )}
 

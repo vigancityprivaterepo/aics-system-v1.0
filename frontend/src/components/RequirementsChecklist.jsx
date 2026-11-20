@@ -160,7 +160,7 @@ export default function RequirementsChecklist({ assistanceType, requirements = {
                 </tr>
               ))}
               {assistanceType === 'plain' && (
-                <tr className="bg-amber-600/80 text-white">
+                <tr className="bg-slate-700 text-white">
                   <td className="border border-slate-800 px-2 py-3 text-center font-semibold">•</td>
                   <td colSpan={CGV_TYPES.length * 2 - 1} className="border border-slate-800 px-3 py-3 text-left font-medium">
                     {PLAIN_ONLY_REQUIREMENT.label} <span className="font-normal text-white/80">(required for Plain AICS)</span>
@@ -243,7 +243,6 @@ export default function RequirementsChecklist({ assistanceType, requirements = {
 
       {!allComplete && !readOnly && (
         <div className="mt-3 flex items-start gap-2 rounded-lg bg-amber-50 border border-amber-200 px-4 py-3">
-          <span className="text-amber-600 mt-0.5">⚠️</span>
           <p className="text-xs text-amber-700">
             All documents must be received before proceeding to case study encoding.
           </p>

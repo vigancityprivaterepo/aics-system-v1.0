@@ -280,7 +280,7 @@ export default function UsersTab({ users, setUsers, loading, currentUser }) {
                         {u.id !== currentUser?.id && (
                           <div className="grid gap-4 md:grid-cols-2">
                             <button onClick={() => toggleActive(u)}
-                              className={`rounded-md border px-3 py-1.5 text-xs font-medium transition-colors ${u.isActive ? 'border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100' : 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'}`}>
+                              className={`rounded-md border px-3 py-1.5 text-xs font-medium transition-colors ${u.isActive ? 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50' : 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'}`}>
                               {u.isActive ? 'Deactivate' : 'Activate'}
                             </button>
                             <button onClick={() => openDelete(u)}

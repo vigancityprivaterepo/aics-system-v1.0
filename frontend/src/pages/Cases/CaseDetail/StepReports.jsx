@@ -110,7 +110,7 @@ export default function StepReports({ caseData, onUpdate }) {
                     onClick={() => { handleDownload('pdf'); setOpen(false) }}
                     className="w-full flex items-start gap-3 px-4 py-3 text-left text-sm hover:bg-slate-50 transition-colors border-b border-slate-100"
                   >
-                    <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-sky-100 text-sky-700">
+                    <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
                       <DownloadIcon className="h-3.5 w-3.5" />
                     </div>
                     <div>
@@ -122,7 +122,7 @@ export default function StepReports({ caseData, onUpdate }) {
                     onClick={() => { handleDownload('docx'); setOpen(false) }}
                     className="w-full flex items-start gap-3 px-4 py-3 text-left text-sm hover:bg-slate-50 transition-colors"
                   >
-                    <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700">
+                    <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
                       <DownloadIcon className="h-3.5 w-3.5" />
                     </div>
                     <div>
@@ -137,7 +137,7 @@ export default function StepReports({ caseData, onUpdate }) {
                     onClick={() => { handleDownload('pdf'); setOpen(false) }}
                     className="w-full flex items-start gap-3 px-4 py-3 text-left text-sm hover:bg-slate-50 transition-colors border-b border-slate-100"
                   >
-                    <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-sky-100 text-sky-700">
+                    <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
                       <DownloadIcon className="h-3.5 w-3.5" />
                     </div>
                     <div>
@@ -149,7 +149,7 @@ export default function StepReports({ caseData, onUpdate }) {
                     onClick={() => { handleDownload('docx'); setOpen(false) }}
                     className="w-full flex items-start gap-3 px-4 py-3 text-left text-sm hover:bg-slate-50 transition-colors border-b border-slate-100"
                   >
-                    <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700">
+                    <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
                       <DownloadIcon className="h-3.5 w-3.5" />
                     </div>
                     <div>
@@ -164,7 +164,7 @@ export default function StepReports({ caseData, onUpdate }) {
                     onClick={() => { handleDownload('endorsement-docx'); setOpen(false) }}
                     className="w-full flex items-start gap-3 px-4 py-3 text-left text-sm hover:bg-slate-50 transition-colors border-b border-slate-100"
                   >
-                    <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-700">
+                    <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
                       <DownloadIcon className="h-3.5 w-3.5" />
                     </div>
                     <div>
@@ -176,7 +176,7 @@ export default function StepReports({ caseData, onUpdate }) {
                     onClick={() => { handleDownload('acknowledgement-docx'); setOpen(false) }}
                     className="w-full flex items-start gap-3 px-4 py-3 text-left text-sm hover:bg-slate-50 transition-colors"
                   >
-                    <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-blue-700">
+                    <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
                       <DownloadIcon className="h-3.5 w-3.5" />
                     </div>
                     <div>
@@ -191,7 +191,7 @@ export default function StepReports({ caseData, onUpdate }) {
                     onClick={() => { handleDownload('pdf'); setOpen(false) }}
                     className={`w-full flex items-start gap-3 px-4 py-3 text-left text-sm hover:bg-slate-50 transition-colors ${hasGuaranteeLetter ? 'border-b border-slate-100' : ''}`}
                   >
-                    <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-sky-100 text-sky-700">
+                    <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
                       <DownloadIcon className="h-3.5 w-3.5" />
                     </div>
                     <div>
@@ -205,7 +205,7 @@ export default function StepReports({ caseData, onUpdate }) {
                     onClick={() => { handleDownload('docx'); setOpen(false) }}
                     className={`w-full flex items-start gap-3 px-4 py-3 text-left text-sm hover:bg-slate-50 transition-colors ${hasGuaranteeLetter ? 'border-b border-slate-100' : ''}`}
                   >
-                    <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700">
+                    <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
                       <DownloadIcon className="h-3.5 w-3.5" />
                     </div>
                     <div>
@@ -225,7 +225,7 @@ export default function StepReports({ caseData, onUpdate }) {
                       onClick={() => { handleDownload('gl-pdf'); setOpen(false) }}
                       className="w-full flex items-start gap-3 px-4 py-3 text-left text-sm hover:bg-slate-50 transition-colors border-b border-slate-100"
                     >
-                      <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-rose-100 text-rose-700">
+                      <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
                         <DownloadIcon className="h-3.5 w-3.5" />
                       </div>
                       <div>
@@ -239,7 +239,7 @@ export default function StepReports({ caseData, onUpdate }) {
                       onClick={() => { handleDownload('gl-docx'); setOpen(false) }}
                       className="w-full flex items-start gap-3 px-4 py-3 text-left text-sm hover:bg-slate-50 transition-colors"
                     >
-                      <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-700">
+                      <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
                         <DownloadIcon className="h-3.5 w-3.5" />
                       </div>
                       <div>
@@ -253,7 +253,7 @@ export default function StepReports({ caseData, onUpdate }) {
                       onClick={() => { handleDownload('acknowledgement-docx'); setOpen(false) }}
                       className="w-full flex items-start gap-3 px-4 py-3 text-left text-sm hover:bg-slate-50 transition-colors border-t border-slate-100"
                     >
-                      <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-blue-700">
+                      <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
                         <DownloadIcon className="h-3.5 w-3.5" />
                       </div>
                       <div>
