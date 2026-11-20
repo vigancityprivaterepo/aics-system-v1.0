@@ -37,6 +37,20 @@ function isCho(req: any) {
   return req.user?.role === 'city_health_office'
 }
 
+// Approve, disapprove, delete and the DOCX download belong to the Mayor and
+// administrators. There is no Mayor role, so the Mayor is recognised by position
+// (matching how mayorSignatureUrl finds the Mayor's signature).
+function canManageVehicleRequests(user: { role?: string; position?: string | null } | undefined) {
+  if (!user) return false
+  if (user.role === 'admin') return true
+  const position = String(user.position ?? '').toLowerCase()
+  return position.includes('mayor') && !position.includes('vice')
+}
+
+function assertCanManage(req: any, action: string) {
+  if (!canManageVehicleRequests(req.user)) throw new HttpError(403, `Only the Mayor or an administrator can ${action} vehicle requests.`)
+}
+
 function assertChoCanView(req: any, row: any) {
   if (isCho(req) && row.vehicleType !== 'ambulance') throw new HttpError(403, 'City Health Office can only access ambulance requests.')
 }
@@ -95,7 +109,7 @@ router.get('/', asyncHandler(async (req, res) => {
       orderBy: { createdAt: 'desc' }, skip: (page - 1) * limit, take: limit,
     }),
   ])
-  res.json({ total, page, limit, requests: requests.map(serialize) })
+  res.json({ total, page, limit, canManage: canManageVehicleRequests(req.user), requests: requests.map(serialize) })
 }))
 
 router.post('/', asyncHandler(async (req, res) => {
@@ -112,7 +126,8 @@ router.post('/', asyncHandler(async (req, res) => {
 }))
 
 router.patch('/:id/approve', asyncHandler(async (req, res) => {
-  if (!req.user || isCho(req)) throw new HttpError(403, 'Only administrative employees can approve CHO vehicle requests.')
+  if (!req.user) throw new HttpError(401, 'Unauthorized')
+  assertCanManage(req, 'approve')
   const current = await prisma.vehicleRequest.findUnique({ where: { id: String(req.params.id) } })
   if (!current) throw new HttpError(404, 'Vehicle request not found.')
   if (current.status === 'approved') throw new HttpError(400, 'Vehicle request is already approved.')
@@ -131,13 +146,14 @@ router.patch('/:id/approve', asyncHandler(async (req, res) => {
     action: 'vehicle_request.approve',
     targetType: 'vehicle_request',
     targetId: updated.id,
-    summary: `Administrative employee approved ${updated.requestNumber}`,
+    summary: `${req.user.name} approved ${updated.requestNumber}`,
   })
   res.json(serialize(updated))
 }))
 
 router.patch('/:id/disapprove', asyncHandler(async (req, res) => {
-  if (!req.user || isCho(req)) throw new HttpError(403, 'Only administrative employees can disapprove CHO vehicle requests.')
+  if (!req.user) throw new HttpError(401, 'Unauthorized')
+  assertCanManage(req, 'disapprove')
   const { reason } = z.object({ reason: z.string().trim().max(2000).optional() }).parse(req.body ?? {})
   const current = await prisma.vehicleRequest.findUnique({ where: { id: String(req.params.id) } })
   if (!current) throw new HttpError(404, 'Vehicle request not found.')
@@ -159,7 +175,7 @@ router.patch('/:id/disapprove', asyncHandler(async (req, res) => {
     action: 'vehicle_request.disapprove',
     targetType: 'vehicle_request',
     targetId: updated.id,
-    summary: `Administrative employee disapproved ${updated.requestNumber}${reason ? ` — ${reason}` : ''}`,
+    summary: `${req.user.name} disapproved ${updated.requestNumber}${reason ? ` — ${reason}` : ''}`,
   })
   res.json(serialize(updated))
 }))
@@ -187,15 +203,16 @@ router.put('/:id', asyncHandler(async (req, res) => {
 }))
 
 router.delete('/:id', asyncHandler(async (req, res) => {
-  if (!isCho(req)) throw new HttpError(403, 'Only the CHO request maker can delete a pending request.')
+  assertCanManage(req, 'delete')
   const existing = await prisma.vehicleRequest.findUnique({ where: { id: String(req.params.id) } })
-  if (!existing || existing.createdById !== req.user?.id || existing.status === 'approved') throw new HttpError(403, 'Only your own pending CHO request can be deleted.')
+  if (!existing) throw new HttpError(404, 'Vehicle request not found.')
   const removed = await prisma.vehicleRequest.delete({ where: { id: String(req.params.id) } })
   await logAdminAudit(prisma, { actorId: req.user?.id, action: 'vehicle_request.delete', targetType: 'vehicle_request', targetId: removed.id, summary: `Deleted vehicle request ${removed.requestNumber}` })
   res.status(204).send()
 }))
 
 router.get('/:id/document', asyncHandler(async (req, res) => {
+  assertCanManage(req, 'download')
   const row = await prisma.vehicleRequest.findUnique({ where: { id: String(req.params.id) } })
   if (!row) throw new HttpError(404, 'Vehicle request not found.')
   assertChoCanView(req, row)

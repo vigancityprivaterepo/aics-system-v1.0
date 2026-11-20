@@ -17,7 +17,7 @@ const RENDER_OPTIONS = {
   useBase64URL: true,
 }
 
-export default function VehicleRequestPreview({ request, onClose }) {
+export default function VehicleRequestPreview({ request, canDownload = false, onClose }) {
   const [state, setState] = useState({ loading: true, error: false, message: '', html: '' })
   const bufferRef = useRef(null)
   const containerRef = useRef(null)
@@ -37,6 +37,16 @@ export default function VehicleRequestPreview({ request, onClose }) {
     let cancelled = false
     setState({ loading: true, error: false, message: '', html: '' })
     bufferRef.current = null
+
+    // The DOCX itself is only served to the Mayor and administrators; everyone
+    // else previews the server-rendered HTML copy.
+    if (!canDownload) {
+      loadHtmlFallback().catch((error) => {
+        if (cancelled) return
+        setState({ loading: false, error: true, message: error.response?.data?.message || error.message || 'Unable to preview request.', html: '' })
+      })
+      return () => { cancelled = true }
+    }
 
     api.get(`/vehicle-requests/${request.id}/document`, { responseType: 'arraybuffer' })
       .then(async (res) => {
@@ -72,7 +82,7 @@ export default function VehicleRequestPreview({ request, onClose }) {
       })
 
     return () => { cancelled = true }
-  }, [loadHtmlFallback, renderDocx, request.id])
+  }, [canDownload, loadHtmlFallback, renderDocx, request.id])
 
   const handleDownload = async () => {
     const mime = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
@@ -103,10 +113,12 @@ export default function VehicleRequestPreview({ request, onClose }) {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={handleDownload} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-800">
-              <DownloadIcon className="h-3.5 w-3.5" />
-              Download
-            </button>
+            {canDownload && (
+              <button onClick={handleDownload} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-800">
+                <DownloadIcon className="h-3.5 w-3.5" />
+                Download
+              </button>
+            )}
             <button onClick={onClose} className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-500 hover:bg-slate-50" title="Close preview">
               <XIcon className="h-4 w-4" />
             </button>
