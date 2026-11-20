@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, createContext, useContext } from 'react'
 import { Outlet, NavLink, Link, useNavigate, useLocation } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { Ambulance } from 'lucide-react'
@@ -10,7 +10,7 @@ import {
   LogoutIcon, DocumentIcon, FileTextIcon,
   CrossIcon, HospitalIcon, GlassesIcon, HeadstonIcon,
   ClipboardIcon, QrCodeIcon, DatabaseIcon, ChevronDownIcon,
-  BellIcon, InboxIcon,
+  BellIcon, InboxIcon, MenuIcon, XIcon,
 } from '../ui/Icons'
 import MyProfileModal from '../shared/MyProfileModal'
 import { allowedCaseTypesForUser, canAccessAllCases } from '../../utils/accessRules'
@@ -35,6 +35,10 @@ const TAB_BASE = 'inline-flex shrink-0 items-center gap-[6px] rounded-[8px] px-[
 const TAB_ACTIVE = 'bg-[#ecfdf5] text-[#065f46] font-semibold'
 const TAB_IDLE = 'text-slate-600 font-medium hover:bg-slate-100 hover:text-[#0f2d52]'
 
+// Below lg the tabs live in the hamburger panel as a vertical list.
+const MOBILE_BASE = 'flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-left transition-colors outline-none focus-visible:ring-2 focus-visible:ring-emerald-400'
+const MobileNavContext = createContext(false)
+
 function TabBadge({ count, tone = 'rose', pulse = false }) {
   if (!count) return null
   const bg = tone === 'red' ? 'bg-[#dc2626]' : tone === 'emerald' ? 'bg-[#059669]' : 'bg-[#f43f5e]'
@@ -47,17 +51,18 @@ function TabBadge({ count, tone = 'rose', pulse = false }) {
 
 function ModuleTab({ to, Icon, label, badge = 0, badgeTone = 'rose', end = false }) {
   const navigate = useNavigate()
+  const mobile = useContext(MobileNavContext)
   return (
     <NavLink
       to={to}
       end={end}
       data-launch-tab
       onClick={(event) => launchFromNav(event, navigate, to)}
-      className={({ isActive }) => `${TAB_BASE} ${isActive ? TAB_ACTIVE : TAB_IDLE}`}
+      className={({ isActive }) => `${mobile ? MOBILE_BASE : TAB_BASE} ${isActive ? TAB_ACTIVE : TAB_IDLE}`}
     >
-      {Icon && <Icon className="h-[15px] w-[15px] shrink-0" />}
+      {Icon && <Icon className={`${mobile ? 'h-[18px] w-[18px]' : 'h-[15px] w-[15px]'} shrink-0`} />}
       {label}
-      <TabBadge count={badge} tone={badgeTone} />
+      {mobile ? <span className="ml-auto"><TabBadge count={badge} tone={badgeTone} /></span> : <TabBadge count={badge} tone={badgeTone} />}
     </NavLink>
   )
 }
@@ -67,7 +72,9 @@ function DropdownTab({ label, Icon, active, badge = 0, badgeTone = 'rose', badge
   const containerRef = useRef(null)
   const location = useLocation()
   const navigate = useNavigate()
-  const [open, setOpen] = useState(false)
+  const mobile = useContext(MobileNavContext)
+  // In the mobile panel the group holding the current page starts expanded.
+  const [open, setOpen] = useState(() => mobile && active)
   const [anchor, setAnchor] = useState({ left: 0, top: 0 })
 
   const toggle = () => {
@@ -78,10 +85,10 @@ function DropdownTab({ label, Icon, active, badge = 0, badgeTone = 'rose', badge
     setOpen((v) => !v)
   }
 
-  useEffect(() => { setOpen(false) }, [location.pathname, location.search])
+  useEffect(() => { if (!mobile) setOpen(false) }, [mobile, location.pathname, location.search])
 
   useEffect(() => {
-    if (!open) return
+    if (!open || mobile) return
     const handleClickOutside = (event) => {
       if (containerRef.current && !containerRef.current.contains(event.target)) setOpen(false)
     }
@@ -97,7 +104,45 @@ function DropdownTab({ label, Icon, active, badge = 0, badgeTone = 'rose', badge
       window.removeEventListener('resize', handleScrollOrResize)
       window.removeEventListener('scroll', handleScrollOrResize, true)
     }
-  }, [open])
+  }, [open, mobile])
+
+  if (mobile) {
+    const expanded = open
+    return (
+      <div>
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          aria-expanded={expanded}
+          className={`${MOBILE_BASE} ${active ? TAB_ACTIVE : TAB_IDLE}`}
+        >
+          {Icon && <Icon className="h-[18px] w-[18px] shrink-0" />}
+          {label}
+          <span className="ml-auto flex items-center gap-2">
+            <TabBadge count={badge} tone={badgeTone} pulse={badgePulse} />
+            <ChevronDownIcon className={`h-4 w-4 shrink-0 transition-transform ${expanded ? 'rotate-180' : ''}`} />
+          </span>
+        </button>
+        {expanded && (
+          <div className="ml-[22px] mt-0.5 space-y-0.5 border-l border-slate-200 pl-3">
+            {items.map((item) => (
+              <Link
+                key={item.to}
+                to={item.to}
+                data-launch-tab
+                onClick={(event) => launchFromNav(event, navigate, item.to)}
+                className={`${MOBILE_BASE} py-2 ${item.active ? TAB_ACTIVE : TAB_IDLE}`}
+              >
+                {item.Icon && <item.Icon className="h-4 w-4 shrink-0" />}
+                {item.label}
+                {(item.badge ?? 0) > 0 && <span className="ml-auto"><TabBadge count={item.badge} /></span>}
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
+    )
+  }
 
   return (
     <div className="relative shrink-0" ref={containerRef}>
@@ -465,6 +510,7 @@ export default function AppLayout() {
   const [returnedCases, setReturnedCases] = useState([])
   const [portalSubmittedCount, setPortalSubmittedCount] = useState(0)
   const [vehicleRequestsPendingCount, setVehicleRequestsPendingCount] = useState(0)
+  const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const isCityHealthOffice = user?.role === 'city_health_office'
   const canAccessCasesModule = canAccessModule(user, 'cases')
   const canAccessPortalApplications = canAccessModule(user, 'portal_applications')
@@ -541,6 +587,22 @@ export default function AppLayout() {
       .catch(() => {})
   }, [canAccessVehicleRequests, isCityHealthOffice, location.pathname])
 
+  useEffect(() => { setMobileNavOpen(false) }, [location.pathname, location.search])
+
+  useEffect(() => {
+    if (!mobileNavOpen) return
+    const handleEscape = (event) => { if (event.key === 'Escape') setMobileNavOpen(false) }
+    // Widening past lg brings the tab row back, so the panel has nothing left to do.
+    const desktop = window.matchMedia('(min-width: 1024px)')
+    const handleDesktop = (event) => { if (event.matches) setMobileNavOpen(false) }
+    document.addEventListener('keydown', handleEscape)
+    desktop.addEventListener('change', handleDesktop)
+    return () => {
+      document.removeEventListener('keydown', handleEscape)
+      desktop.removeEventListener('change', handleDesktop)
+    }
+  }, [mobileNavOpen])
+
   const canViewNotifications = canAccessCasesModule && !isCityHealthOffice && (!!user?.approvalLevel?.length || returnedCases.length > 0)
   // A user can hold more than one approval role at once (reviewer + recommender, say);
   // only route to a single filtered queue when there's exactly one in play, otherwise
@@ -569,6 +631,16 @@ export default function AppLayout() {
 
   const showNewCase = canAccessCasesModule && !isCityHealthOffice
 
+  const moduleNavProps = {
+    user,
+    isAdmin: user?.role === 'admin',
+    isCityHealthOffice,
+    pendingByType,
+    pendingStatuses,
+    portalSubmittedCount,
+    vehicleRequestsPendingCount,
+  }
+
   return (
     // No overflow-x-hidden on this wrapper: an overflow clip here would become the
     // header's scroll container and break position:sticky. <main> guards width instead.
@@ -584,13 +656,25 @@ export default function AppLayout() {
       <header className="sticky top-0 z-30 border-b border-slate-200 bg-white">
         {/* Row 1: brand + utility cluster */}
         <div className="mx-auto flex h-16 w-full max-w-[1560px] items-center justify-between gap-3 px-4 sm:px-6">
-          <Link to="/" className="flex shrink-0 items-center gap-2.5 py-1.5">
+          <div className="flex min-w-0 items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => setMobileNavOpen((v) => !v)}
+            aria-expanded={mobileNavOpen}
+            aria-controls="mobile-module-nav"
+            aria-label={mobileNavOpen ? 'Close menu' : 'Open menu'}
+            className="relative -ml-1.5 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-slate-600 transition-colors hover:bg-slate-100 hover:text-[#0f2d52] outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 lg:hidden"
+          >
+            {mobileNavOpen ? <XIcon className="h-5 w-5" /> : <MenuIcon className="h-5 w-5" />}
+          </button>
+          <Link to="/" className="flex min-w-0 items-center gap-2.5 py-1.5">
             <img src={logo} alt="City of Vigan seal" className="h-9 w-9 shrink-0 object-contain" />
             <span className="flex flex-col leading-tight">
               <span className="whitespace-nowrap font-display text-[15px] font-black tracking-[-0.01em] text-[#065f46]">Vigan AICS</span>
-              <span className="whitespace-nowrap text-[10.5px] font-medium text-gray-500">Case Management System</span>
+              <span className="hidden whitespace-nowrap text-[10.5px] font-medium text-gray-500 min-[400px]:inline">Case Management System</span>
             </span>
           </Link>
+          </div>
 
           <div className="flex shrink-0 items-center gap-2">
             {showNewCase && (
@@ -612,7 +696,7 @@ export default function AppLayout() {
               viewAllHref={pendingViewAllHref}
               canView={canViewNotifications}
             />
-            <div className="mx-0.5 h-8 w-px bg-slate-200" />
+            <div className="mx-0.5 hidden h-8 w-px bg-slate-200 sm:block" />
             <UserMenu
               user={user}
               roleLabel={roleLabel}
@@ -633,18 +717,26 @@ export default function AppLayout() {
             on the left instead. */}
         <nav
           aria-label="Primary modules"
-          className={`mx-auto flex w-full max-w-[1560px] flex-wrap items-center ${isCityHealthOffice ? 'justify-start' : 'justify-between'} gap-1 border-t border-slate-100 px-4 py-1.5 sm:px-6`}
+          className={`mx-auto hidden w-full max-w-[1560px] flex-wrap items-center ${isCityHealthOffice ? 'justify-start' : 'justify-between'} gap-1 border-t border-slate-100 px-4 py-1.5 sm:px-6 lg:flex`}
         >
-          <ModuleNav
-            user={user}
-            isAdmin={user?.role === 'admin'}
-            isCityHealthOffice={isCityHealthOffice}
-            pendingByType={pendingByType}
-            pendingStatuses={pendingStatuses}
-            portalSubmittedCount={portalSubmittedCount}
-            vehicleRequestsPendingCount={vehicleRequestsPendingCount}
-          />
+          <ModuleNav {...moduleNavProps} />
         </nav>
+
+        {/* Below lg: the same modules as a vertical list under the top bar. */}
+        {mobileNavOpen && (
+          <>
+            <div className="fixed inset-x-0 bottom-0 top-16 z-[-1] bg-slate-900/30 lg:hidden" onClick={() => setMobileNavOpen(false)} aria-hidden="true" />
+            <nav
+              id="mobile-module-nav"
+              aria-label="Primary modules"
+              className="absolute inset-x-0 top-full max-h-[calc(100dvh-4rem)] space-y-0.5 overflow-y-auto border-b border-slate-200 bg-white px-3 py-2 shadow-lg lg:hidden"
+            >
+              <MobileNavContext.Provider value={true}>
+                <ModuleNav {...moduleNavProps} />
+              </MobileNavContext.Provider>
+            </nav>
+          </>
+        )}
       </header>
 
       <MyProfileModal isOpen={profileOpen} onClose={() => setProfileOpen(false)} />
