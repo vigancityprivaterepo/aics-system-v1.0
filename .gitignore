@@ -39,3 +39,7 @@ tmp/
 backend/tmp-*.mjs
 tmp-*.docx
 skills-lock.json
+
+# Internal TLS: generated on the server by deploy/make-certs.sh. Never commit keys.
+deploy/ca/
+deploy/certs/

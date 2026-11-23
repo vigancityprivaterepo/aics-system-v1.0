@@ -3,7 +3,7 @@ setlocal EnableExtensions
 color 0A
 title AICS RFID Reader Setup
 
-set "SERVER_URL=http://172.22.50.12:8081"
+set "SERVER_URL=https://aics.vigan.internal"
 set "INSTALL_DIR=%ProgramData%\AICS-RFID-Bridge"
 
 net session >nul 2>&1

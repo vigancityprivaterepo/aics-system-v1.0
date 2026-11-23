@@ -5,7 +5,7 @@ AICS RFID Reader Setup
 3. Wait for the SUCCESS message.
 4. Connect the ACS reader, open AICS, click RFID Scan, and tap a card.
 
-This installer downloads the bridge from http://172.22.50.12:8081 and installs it to:
+This installer downloads the bridge from https://aics.vigan.internal and installs it to:
 C:\ProgramData\AICS-RFID-Bridge
 
 It also creates the scheduled task: AICS ACS RFID Bridge

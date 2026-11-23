@@ -52,6 +52,23 @@ services:
     ports:
       - "${PORTAL_BIND_HOST:-127.0.0.1}:${PORTAL_PORT:-8082}:80"
 
+  # HTTPS entry point: https://aics.vigan.internal and https://portal.aics.vigan.internal,
+  # plus the server IPs (staff on 443, portal on 8443).
+  # Needs deploy/certs from deploy/make-certs.sh. HTTP on port 80 redirects to HTTPS.
+  proxy:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    depends_on:
+      - frontend
+      - portal
+    volumes:
+      - ./deploy/nginx:/etc/nginx/conf.d:ro
+      - ./deploy/certs:/etc/nginx/certs:ro
+    ports:
+      - "${PROXY_BIND_HOST:-0.0.0.0}:${HTTP_PORT:-80}:80"
+      - "${PROXY_BIND_HOST:-0.0.0.0}:${HTTPS_PORT:-443}:443"
+      - "${PROXY_BIND_HOST:-0.0.0.0}:${PORTAL_HTTPS_PORT:-8443}:8443"
+
 volumes:
   aics_pg_data:
   aics_uploads:
