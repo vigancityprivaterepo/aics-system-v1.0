@@ -77,7 +77,7 @@ function decodeCursor(cursor: string | undefined): { ts: string; id: string } | 
   if (!cursor) return null
   try {
     const parsed: unknown = JSON.parse(Buffer.from(cursor, 'base64url').toString('utf8'))
-    if (Array.isArray(parsed) && typeof parsed[0] === 'string' && z.string().uuid().safeParse(parsed[1]).success && !Number.isNaN(Date.parse(parsed[0]))) {
+    if (Array.isArray(parsed) && typeof parsed[0] === 'string' && z.guid().safeParse(parsed[1]).success && !Number.isNaN(Date.parse(parsed[0]))) {
       return { ts: parsed[0], id: parsed[1] as string }
     }
   } catch {
@@ -216,7 +216,7 @@ router.get('/clients', asyncHandler(async (req, res) => {
 }))
 
 router.get('/clients/:clientId', asyncHandler(async (req, res) => {
-  const clientId = z.string().uuid().safeParse(req.params.clientId)
+  const clientId = z.guid().safeParse(req.params.clientId)
   const client = clientId.success ? await prisma.client.findUnique({ where: { id: clientId.data }, select: clientSelect }) : null
   if (!client) throw new HttpError(404, 'Client not found')
   await recordCall(req, 'client', 1)

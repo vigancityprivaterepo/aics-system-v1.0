@@ -11,7 +11,7 @@ export function normalizeNameOrNullish<T extends string | null | undefined>(valu
 // Uppercases the `name` field of each entry in a familyComposition-shaped
 // array (Client.familyComposition / Case.familyComposition), leaving any
 // other fields on each member untouched. `Record<string, any>` (not
-// `unknown`) matches zod's z.record(z.any()) inference so the result stays
+// `unknown`) matches zod's z.record(z.string(), z.any()) inference so the result stays
 // structurally assignable to Prisma's InputJsonObject. Takes a definite
 // array (call this with `members ? normalizeFamilyCompositionNames(members) : members`
 // at each call site) so callers keep their own null/undefined shape exactly.

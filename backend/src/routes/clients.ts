@@ -36,16 +36,16 @@ const createClientSchema = z.object({
   isSoloParent: z.boolean().optional(),
   clientCategory: z.enum(['walk-in', 'referred', 'rescued']).optional(),
   referralSource: z.string().optional().nullable(),
-  familyComposition: z.array(z.record(z.any())).optional().nullable().transform((members) => (members ? normalizeFamilyCompositionNames(members) : members)),
+  familyComposition: z.array(z.record(z.string(), z.any())).optional().nullable().transform((members) => (members ? normalizeFamilyCompositionNames(members) : members)),
   photoUrl: z.string().optional().nullable(),
-  reuseClientId: z.string().uuid().optional().nullable(),
+  reuseClientId: z.guid().optional().nullable(),
   overrideDuplicateReason: z.string().trim().min(3).max(500).optional().nullable(),
 })
 
 const updateClientSchema = createClientSchema.partial()
 const duplicateCheckSchema = createClientSchema.omit({ reuseClientId: true, overrideDuplicateReason: true })
 const mergeClientSchema = z.object({
-  targetClientId: z.string().uuid(),
+  targetClientId: z.guid(),
   notes: z.string().trim().min(3).max(500).optional().nullable(),
 })
 

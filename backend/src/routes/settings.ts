@@ -133,9 +133,9 @@ const updateSchema = z.object({
   medicalStartSequence: z.number().int().min(1).max(999999),
   eyeglassStartSequence: z.number().int().min(1).max(999999),
   plainStartSequence: z.number().int().min(1).max(999999),
-  reviewedByUserId: z.string().uuid().nullable().optional(),
-  recommendingUserId: z.string().uuid().nullable().optional(),
-  approvedByUserId: z.string().uuid().nullable().optional(),
+  reviewedByUserId: z.guid().nullable().optional(),
+  recommendingUserId: z.guid().nullable().optional(),
+  approvedByUserId: z.guid().nullable().optional(),
   moduleAccessConfig: z.unknown().optional(),
 })
 
@@ -215,7 +215,7 @@ router.patch('/module-access', adminOnly, asyncHandler(async (req, res) => {
 }))
 
 router.patch('/module-access/employees/:userId', adminOnly, asyncHandler(async (req, res) => {
-  const userId = z.string().uuid().parse(paramValue(req.params.userId))
+  const userId = z.guid().parse(paramValue(req.params.userId))
   const body = employeeModuleAccessUpdateSchema.parse(req.body)
   const existingUser = await prisma.user.findUnique({
     where: { id: userId },

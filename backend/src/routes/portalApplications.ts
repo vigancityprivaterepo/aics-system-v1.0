@@ -44,13 +44,13 @@ const applicationSchema = z.object({
     age: z.union([z.number(), z.string()]).optional().nullable(),
     occupation: z.string().optional().nullable(),
   })).optional().default([]),
-  metadata: z.record(z.any()).optional().default({}),
+  metadata: z.record(z.string(), z.any()).optional().default({}),
 })
 
 const notificationsReadSchema = z.object({
   notifications: z.array(z.object({
     id: z.string().min(1),
-    applicationId: z.string().uuid(),
+    applicationId: z.guid(),
   })).min(1),
   read: z.boolean().default(true),
 })

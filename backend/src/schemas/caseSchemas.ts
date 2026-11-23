@@ -2,11 +2,11 @@ import { z } from 'zod'
 import { normalizeNameOrNullish, normalizeFamilyCompositionNames } from '../utils/normalizeName.js'
 
 export const createCaseSchema = z.object({
-  clientId: z.string().uuid(),
+  clientId: z.guid(),
   assistanceType: z.enum(['medicine', 'burial', 'hospital', 'medical', 'eyeglass', 'plain']),
   dateOfAssessment: z.string().optional().nullable(),
   presentingProblem: z.string().optional().nullable(),
-  familyComposition: z.array(z.record(z.any())).optional().nullable().transform((members) => (members ? normalizeFamilyCompositionNames(members) : members)),
+  familyComposition: z.array(z.record(z.string(), z.any())).optional().nullable().transform((members) => (members ? normalizeFamilyCompositionNames(members) : members)),
   backgroundOfProblem: z.string().optional().nullable(),
   assessment: z.string().optional().nullable(),
   recommendation: z.string().optional().nullable(),
@@ -36,7 +36,7 @@ export const updateCaseSchema = z.object({
   socialWorkerName: z.string().optional().nullable(),
   socialWorkerEmpId: z.string().optional().nullable(),
   presentingProblem: z.string().optional().nullable(),
-  familyComposition: z.array(z.record(z.any())).optional().transform((members) => (members ? normalizeFamilyCompositionNames(members) : members)),
+  familyComposition: z.array(z.record(z.string(), z.any())).optional().transform((members) => (members ? normalizeFamilyCompositionNames(members) : members)),
   backgroundOfProblem: z.string().optional().nullable(),
   assessment: z.string().optional().nullable(),
   recommendation: z.string().optional().nullable(),
@@ -71,7 +71,7 @@ export const updateStatusSchema = z.object({
 })
 
 export const markReadyForReleaseSchema = z.object({
-  caseIds: z.array(z.string().uuid()).min(1).max(200),
+  caseIds: z.array(z.guid()).min(1).max(200),
 })
 
 export const cancelCaseSchema = z.object({
@@ -79,11 +79,11 @@ export const cancelCaseSchema = z.object({
 })
 
 export const reassignCaseSchema = z.object({
-  socialWorkerId: z.string().uuid(),
+  socialWorkerId: z.guid(),
 })
 
 export const updateRequirementsSchema = z.object({
-  requirements: z.record(z.boolean()),
+  requirements: z.record(z.string(), z.boolean()),
 })
 
 export const updateBurialSchema = z.object({
@@ -158,7 +158,7 @@ export const saveMedicinesSchema = z.object({
   amount: z.union([z.number(), z.string()]).optional().nullable(),
   choCertGivenDate: z.string().optional().nullable(),
   medicines: z.array(z.object({
-    medicineId: z.preprocess((val) => (val === '' ? null : val), z.string().uuid().optional().nullable()),
+    medicineId: z.preprocess((val) => (val === '' ? null : val), z.guid().optional().nullable()),
     medicineName: z.string().min(1),
     quantity: z.union([z.number(), z.string()]),
     unit: z.string().optional().nullable(),

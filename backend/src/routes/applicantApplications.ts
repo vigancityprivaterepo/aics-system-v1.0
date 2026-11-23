@@ -21,12 +21,12 @@ const updateStatusSchema = z.object({
   status: z.enum(['submitted', 'under_review', 'resubmission_required', 'approved', 'disapproved', 'released']),
   adminNotes: z.string().optional().nullable(),
   createCase: z.boolean().optional().default(false),
-  reuseClientId: z.string().uuid().optional().nullable(),
+  reuseClientId: z.guid().optional().nullable(),
   overrideDuplicateReason: z.string().trim().min(3).max(500).optional().nullable(),
 })
 
 const bulkDeleteSchema = z.object({
-  ids: z.array(z.string().uuid()).min(1, 'Select at least one portal application to delete'),
+  ids: z.array(z.guid()).min(1, 'Select at least one portal application to delete'),
 })
 
 
