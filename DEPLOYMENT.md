@@ -160,7 +160,7 @@ The backend container runs Prisma migrations automatically before starting.
 ## Production notes
 
 - Do not deploy using `docker-compose.yml`; that file is for local/dev defaults.
-- If another app already uses a port, change `BACKEND_PORT`, `FRONTEND_PORT`, or `PORTAL_PORT` in `.env.production` before running compose.
+- If another app already uses a port, change `BACKEND_PORT`, `STAFF_IP_PORT`, `PORTAL_IP_PORT`, `HTTP_PORT` or `HTTPS_PORT` in `.env.production` before running compose.
 - Use `docker-compose.production.yml` with `.env.production`.
 - Do not commit `.env.production`.
 - Do not run multiple backend containers while `RATE_LIMIT_MODE=memory`.
@@ -182,10 +182,8 @@ certificate comes from our own root CA rather than a public one.
 3. `.env.production`:
    ```
    PROXY_BIND_HOST=0.0.0.0
-   FRONTEND_BIND_HOST=127.0.0.1
-   PORTAL_BIND_HOST=127.0.0.1
    API_BASE_URL=https://aics.vigan.internal
-   CORS_ORIGIN=https://aics.vigan.internal,https://portal.aics.vigan.internal,https://103.72.59.246,https://103.72.59.246:8443,https://172.22.50.12,https://172.22.50.12:8443
+   CORS_ORIGIN=https://aics.vigan.internal,https://portal.aics.vigan.internal,https://103.72.59.246:8081,https://103.72.59.246:8082,https://172.22.50.12:8081,https://172.22.50.12:8082
    PORTAL_URL=https://portal.aics.vigan.internal
    ```
 4. Start: `sudo docker compose --env-file .env.production -f docker-compose.production.yml up -d --build`
@@ -195,8 +193,9 @@ certificate comes from our own root CA rather than a public one.
 
 ### Outside access by public IP
 
-Outside users open `https://103.72.59.246` (staff) and `https://103.72.59.246:8443` (portal).
-The router forwards public TCP 80, 443 and 8443 to `172.22.50.12`. The certificate includes
-the IPs, but each outside device must install the AICS root CA first
-(`http://103.72.59.246/aics-root-ca.crt`). Members of the public cannot be asked to do that,
-so a public applicant portal needs a real public domain with a publicly trusted certificate.
+Outside users open `https://103.72.59.246:8081` (staff) and `https://103.72.59.246:8082` (portal),
+the same ports the firewall already forwards. Old `http://...:8081` links redirect to https.
+The certificate includes the IPs, but each outside device must install the AICS root CA first
+(`https://103.72.59.246:8081/aics-root-ca.crt`; accept the one-time warning to download it).
+Members of the public cannot be asked to do that, so a public applicant portal needs a real
+public domain with a publicly trusted certificate.

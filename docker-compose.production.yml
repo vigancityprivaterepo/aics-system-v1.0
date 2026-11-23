@@ -37,8 +37,7 @@ services:
     depends_on:
       backend:
         condition: service_healthy
-    ports:
-      - "${FRONTEND_BIND_HOST:-127.0.0.1}:${FRONTEND_PORT:-8081}:80"
+    # No host port: reached only through the proxy, which owns 8081.
 
   portal:
     build:
@@ -49,11 +48,12 @@ services:
     depends_on:
       backend:
         condition: service_healthy
-    ports:
-      - "${PORTAL_BIND_HOST:-127.0.0.1}:${PORTAL_PORT:-8082}:80"
+    # No host port: reached only through the proxy, which owns 8082.
 
-  # HTTPS entry point: https://aics.vigan.internal and https://portal.aics.vigan.internal,
-  # plus the server IPs (staff on 443, portal on 8443).
+  # HTTPS entry point.
+  #   443:  https://aics.vigan.internal and https://portal.aics.vigan.internal
+  #   8081: staff app by IP (https://103.72.59.246:8081)  -> proxy 443
+  #   8082: portal by IP    (https://103.72.59.246:8082)  -> proxy 8443
   # Needs deploy/certs from deploy/make-certs.sh. HTTP on port 80 redirects to HTTPS.
   proxy:
     image: nginx:1.27-alpine
@@ -67,7 +67,8 @@ services:
     ports:
       - "${PROXY_BIND_HOST:-0.0.0.0}:${HTTP_PORT:-80}:80"
       - "${PROXY_BIND_HOST:-0.0.0.0}:${HTTPS_PORT:-443}:443"
-      - "${PROXY_BIND_HOST:-0.0.0.0}:${PORTAL_HTTPS_PORT:-8443}:8443"
+      - "${PROXY_BIND_HOST:-0.0.0.0}:${STAFF_IP_PORT:-8081}:443"
+      - "${PROXY_BIND_HOST:-0.0.0.0}:${PORTAL_IP_PORT:-8082}:8443"
 
 volumes:
   aics_pg_data:
