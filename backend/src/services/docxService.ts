@@ -2283,6 +2283,86 @@ function rewriteParagraphText(xml: string, transform: (text: string) => string):
     : serialized
 }
 
+// Evaluation/Recommendation: "...recommends that the beneficiary avail of..." names
+// the person instead, in bold, so the budget officer can match it at a glance.
+// Runs last: the clause rewrites above flatten a paragraph's runs, which would
+// drop the bold.
+const RECOMMENDATION_SUBJECT = /(recommends that )(the beneficiary)( avail of)/i
+
+function recommendationSubjectName(caseData: any): string | null {
+  if (caseData?.assistanceType === 'burial') {
+    // The burial beneficiary is the deceased; the claimant is who avails.
+    const client = caseData.client ?? {}
+    const claimant = [client.firstName, client.middleName, client.lastName].filter(Boolean).join(' ').trim()
+    return claimant || null
+  }
+  const name = String(buildRenderData(caseData).beneficiaryName ?? '').trim()
+  return name && name !== '-' ? name : null
+}
+
+function boldRecommendationSubject(buffer: Buffer, caseData: any): Buffer {
+  try {
+    const name = recommendationSubjectName(caseData)
+    if (!name) return buffer
+    const zip = new PizZip(buffer)
+    const entry = zip.file('word/document.xml')
+    if (!entry) return buffer
+    const xml = entry.asText()
+    const doc = new DOMParser().parseFromString(xml, 'application/xml')
+    let changed = false
+
+    // Only the run holding the phrase is split; the paragraph's other runs (the
+    // bold provider name and amount in the templates) keep their formatting.
+    for (const textNode of Array.from(doc.getElementsByTagName('w:t'))) {
+      const text = textNode.textContent ?? ''
+      const match = RECOMMENDATION_SUBJECT.exec(text)
+      if (!match) continue
+      const firstRun = textNode.parentNode as Element | null
+      if (!firstRun || firstRun.nodeName !== 'w:r') continue
+
+      const start = match.index + match[1].length
+      const before = text.slice(0, start)
+      const after = text.slice(start + match[2].length)
+
+      textNode.textContent = before
+      textNode.setAttribute('xml:space', 'preserve')
+
+      const nameRun = cloneRunWithText(doc, firstRun, name)
+      let rPr = Array.from(nameRun.childNodes).find((child) => child.nodeName === 'w:rPr') as Element | undefined
+      if (!rPr) {
+        rPr = doc.createElement('w:rPr')
+        nameRun.insertBefore(rPr, nameRun.firstChild)
+      }
+      // Word's schema order inside w:rPr is rStyle, rFonts, b, bCs, then the rest.
+      for (const tag of ['w:b', 'w:bCs']) {
+        const existing = rPr.getElementsByTagName(tag)[0]
+        if (existing) existing.parentNode?.removeChild(existing)
+      }
+      const anchor = Array.from(rPr.childNodes).find((child) => !['w:rStyle', 'w:rFonts'].includes(child.nodeName)) ?? null
+      rPr.insertBefore(doc.createElement('w:b'), anchor)
+      rPr.insertBefore(doc.createElement('w:bCs'), anchor)
+      const afterRun = cloneRunWithText(doc, firstRun, after)
+      afterRun.getElementsByTagName('w:t')[0]?.setAttribute('xml:space', 'preserve')
+
+      firstRun.parentNode?.insertBefore(afterRun, firstRun.nextSibling)
+      firstRun.parentNode?.insertBefore(nameRun, afterRun)
+      changed = true
+      break
+    }
+
+    if (!changed) return buffer
+    const serialized = new XMLSerializer().serializeToString(doc)
+    const xmlDeclMatch = xml.match(/^\s*<\?xml[\s\S]*?\?>/)
+    zip.file('word/document.xml', xmlDeclMatch
+      ? `${xmlDeclMatch[0]}${serialized.replace(/^\s*<\?xml[\s\S]*?\?>\s*/, '')}`
+      : serialized)
+    return zip.generate({ type: 'nodebuffer', compression: 'DEFLATE' }) as Buffer
+  } catch (err) {
+    console.warn('[boldRecommendationSubject] failed:', err)
+    return buffer
+  }
+}
+
 function removeMedicineGuaranteeLetterClause(buffer: Buffer): Buffer {
   try {
     const zip = new PizZip(buffer)
@@ -2834,7 +2914,7 @@ function renderDoc(templateContent: string, data: Record<string, any>, preferred
 
 export async function generateBurialCaseStudyDocx(caseData: any): Promise<Buffer> {
   const template = loadFirstAvailableTemplate(CASE_STUDY_CANDIDATES)
-  return renderDoc(template, buildRenderData(caseData))
+  return boldRecommendationSubject(renderDoc(template, buildRenderData(caseData)), caseData)
 }
 
 export async function generateGuaranteeLetterDocx(caseData: any): Promise<Buffer> {
@@ -2845,13 +2925,13 @@ export async function generateGuaranteeLetterDocx(caseData: any): Promise<Buffer
 // Legacy: combined template (kept for backwards compatibility)
 export async function generateBurialDocx(caseData: any): Promise<Buffer> {
   const template = loadFirstAvailableTemplate([...CASE_STUDY_CANDIDATES, ...GL_CANDIDATES, ...COMBINED_CANDIDATES])
-  return renderDoc(template, buildRenderData(caseData))
+  return boldRecommendationSubject(renderDoc(template, buildRenderData(caseData)), caseData)
 }
 
 export async function generateHospitalCaseStudyDocx(caseData: any, templateType: 'personal' | 'proxy' = 'personal'): Promise<Buffer> {
   const candidates = templateType === 'proxy' ? HOSPITAL_PROXY_CANDIDATES : HOSPITAL_PERSONAL_CANDIDATES
   const template = loadFirstAvailableTemplate(candidates)
-  return renderDoc(template, buildRenderData(caseData))
+  return boldRecommendationSubject(renderDoc(template, buildRenderData(caseData)), caseData)
 }
 
 export async function generateHospitalGuaranteeLetterDocx(caseData: any): Promise<Buffer> {
@@ -2869,7 +2949,7 @@ export async function generateMedicineCaseStudyDocx(
   const template = loadFirstAvailableTemplate(candidates)
   const { templateContent, hasTextbox } = rewriteChoCertificationTextboxTemplate(template, caseData)
   const rendered = removeMedicineGuaranteeLetterClause(renderDoc(templateContent, buildRenderData(caseData)))
-  return hasTextbox ? rendered : appendChoCertificationToDocx(rendered, caseData)
+  return boldRecommendationSubject(hasTextbox ? rendered : appendChoCertificationToDocx(rendered, caseData), caseData)
 }
 
 export async function generateMedicineGuaranteeLetterDocx(caseData: any): Promise<Buffer> {
@@ -2885,7 +2965,7 @@ export async function generateMedicalCaseStudyDocx(
     ? [...MEDICAL_PROXY_CANDIDATES, ...MEDICAL_PERSONAL_CANDIDATES]
     : MEDICAL_PERSONAL_CANDIDATES
   const template = loadFirstAvailableTemplate(candidates)
-  return renderDoc(template, buildRenderData(caseData))
+  return boldRecommendationSubject(renderDoc(template, buildRenderData(caseData)), caseData)
 }
 
 export async function generateMedicalGuaranteeLetterDocx(caseData: any): Promise<Buffer> {
@@ -2901,7 +2981,7 @@ export async function generateEyeglassCaseStudyDocx(
     ? [...EYEGLASS_PROXY_CANDIDATES, ...EYEGLASS_PERSONAL_CANDIDATES]
     : EYEGLASS_PERSONAL_CANDIDATES
   const template = loadFirstAvailableTemplate(candidates)
-  return renderDoc(template, buildRenderData(caseData))
+  return boldRecommendationSubject(renderDoc(template, buildRenderData(caseData)), caseData)
 }
 
 export async function generateEyeglassEndorsementDocx(caseData: any): Promise<Buffer> {
@@ -2937,9 +3017,9 @@ export async function generateMedicineAcknowledgementDocx(caseData: any): Promis
 
 export async function generatePlainCaseStudyDocx(caseData: any): Promise<Buffer> {
   const template = loadFirstAvailableTemplate(PLAIN_CASE_STUDY_CANDIDATES)
-  return rewritePlainAicsPresentingProblemClause(
+  return boldRecommendationSubject(rewritePlainAicsPresentingProblemClause(
     rewritePlainAicsRecommendationClause(renderDoc(template, buildRenderData(caseData)))
-  )
+  ), caseData)
 }
 
 // ── CHO Certification for Unavailable Medicines ───────────────────────────────
