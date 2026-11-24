@@ -7,7 +7,7 @@ import { formatDate, formatClientName } from '../../lib/utils'
 import StatusBadge from '../../components/ui/StatusBadge'
 import { useAuthStore } from '../../store/authStore'
 import { allowedCaseTypesForUser, userCanRelease } from '../../utils/accessRules'
-import { PlusIcon, SearchIcon, FolderIcon, EditIcon, TrashIcon, ChevronLeftIcon, ChevronRightIcon, QrCodeIcon } from '../../components/ui/Icons'
+import { PlusIcon, SearchIcon, FolderIcon, EditIcon, TrashIcon, ChevronLeftIcon, ChevronRightIcon, QrCodeIcon, CheckIcon, XIcon } from '../../components/ui/Icons'
 
 const TYPE_LABEL = { medicine: 'Medicine', burial: 'Burial', hospital: 'Hospital', medical: 'Medical', eyeglass: 'Eyeglass', plain: 'Plain AICS' }
 const ALL_CASE_TYPES = ['medicine', 'medical', 'hospital', 'burial', 'eyeglass', 'plain']
@@ -95,6 +95,64 @@ function saveSort(value) {
   } catch {
     // Storage blocked: the sort still applies for this visit.
   }
+}
+
+// Approval trail in the list: one dot per signing stage (review, recommend,
+// approve) plus the latest step. Names live in each dot's tooltip; the same few
+// people sign every case, so printing them on every row only adds noise.
+const APPROVAL_STAGES = [
+  { stage: 'for_review', label: 'Reviewed', pending: 'Review pending' },
+  { stage: 'recommending_approval', label: 'Recommended', pending: 'Recommendation pending' },
+  { stage: 'for_approval', label: 'Approved', pending: 'Final approval pending' },
+]
+
+function shortDate(value) {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+  const sameYear = date.getFullYear() === new Date().getFullYear()
+  return date.toLocaleDateString('en-US', sameYear ? { month: 'short', day: 'numeric' } : { month: 'short', day: 'numeric', year: 'numeric' })
+}
+
+function ApprovalStepper({ caseId, steps }) {
+  if (!steps.length) return null
+  const byStage = new Map(steps.map((step) => [step.stage, step]))
+  let latest = null
+  for (const { stage, label } of APPROVAL_STAGES) {
+    const step = byStage.get(stage)
+    if (step) latest = { ...step, label: step.action === 'rejected' ? 'Disapproved' : label }
+  }
+
+  return (
+    <div className="flex items-center gap-2 whitespace-nowrap">
+      <div className="flex items-center" aria-label="Approval progress">
+        {APPROVAL_STAGES.map(({ stage, label, pending }, index) => {
+          const step = byStage.get(stage)
+          const rejected = step?.action === 'rejected'
+          const title = step
+            ? `${rejected ? 'Disapproved' : label} by ${step.actorName} on ${formatDate(step.actedAt)}`
+            : pending
+          return (
+            <span key={`${caseId}-${stage}`} className="flex items-center">
+              {index > 0 && <span className={`h-px w-2.5 ${step ? 'bg-emerald-400' : 'bg-slate-200'}`} />}
+              <span
+                title={title}
+                className={`flex h-4 w-4 items-center justify-center rounded-full ${
+                  rejected ? 'bg-red-600 text-white' : step ? 'bg-emerald-600 text-white' : 'border border-slate-300 bg-white'
+                }`}
+              >
+                {rejected ? <XIcon className="h-2.5 w-2.5" /> : step ? <CheckIcon className="h-2.5 w-2.5" /> : null}
+              </span>
+            </span>
+          )
+        })}
+      </div>
+      {latest && (
+        <span className={`text-[11px] font-medium ${latest.action === 'rejected' ? 'text-red-700' : 'text-slate-600'}`}>
+          {latest.label} {shortDate(latest.actedAt)}
+        </span>
+      )}
+    </div>
+  )
 }
 
 export default function CaseList() {
@@ -571,22 +629,7 @@ export default function CaseList() {
                       {c.readyForReleaseAt && c.status === 'approved' ? (
                         <p className="text-[11px] font-medium text-emerald-700">Marked ready for release on {formatDate(c.readyForReleaseAt)}.</p>
                       ) : null}
-                      {approvalMessages.map((summary) => {
-                        const verb =
-                          summary.action === 'rejected'
-                            ? 'disapproved'
-                            : summary.stage === 'for_review'
-                              ? 'reviewed'
-                              : summary.stage === 'recommending_approval'
-                                ? 'recommended'
-                                : 'approved'
-
-                        return (
-                          <p key={`${c.id}-${summary.stage}`} className="text-[11px] text-slate-600">
-                            {summary.actorName} {verb} this application on {formatDate(summary.actedAt)}.
-                          </p>
-                        )
-                      })}
+                      <ApprovalStepper caseId={c.id} steps={approvalMessages} />
                       <div className="flex flex-wrap items-center gap-2 text-[10px]">
                         {c.isBlocked ? <span className="text-red-600 font-medium">{c.blockers?.length || 0} blocker(s)</span> : null}
                         {c.overdue ? <span className="text-amber-600 font-medium">Overdue</span> : null}
