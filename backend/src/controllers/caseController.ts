@@ -11,7 +11,7 @@ import { serializeCase, normalizeWorkflowStatus, preparerNameMismatch } from '..
 import { resolveApprovalAssignees } from '../services/approvalService.js'
 import { activeReportSignatureStage, userCanUploadReportSignatureStage } from '../services/reportSignatureService.js'
 import { assessCaseWorkflow } from '../services/caseWorkflowService.js'
-import { allowedCaseTypesForUser, assertAllowedCaseTypeForUser, assertCaseReadable, assertEditableCase, casePermissions, ensureRequirementRows, paramId } from '../services/caseService.js'
+import { allowedCaseTypesForUser, assertAllowedCaseTypeForUser, assertCaseReadable, assertEditableCase, canDeleteCase, casePermissions, ensureRequirementRows, paramId } from '../services/caseService.js'
 import { APPROVAL_STAGE_META, APPROVAL_STAGE_ORDER } from '../types/caseTypes.js'
 import { updateCaseSchema, reassignCaseSchema } from '../schemas/caseSchemas.js'
 import { statusToApprovalStage } from '../services/approvalService.js'
@@ -701,14 +701,41 @@ export async function syncPreparerName(req: Request, res: Response) {
 
 export async function deleteCase(req: Request, res: Response) {
   const caseId = paramId(req.params.id)
-  const caseData = await prisma.case.findUnique({ where: { id: caseId } })
+  const caseData = await findCaseWithDetails(caseId)
   if (!caseData) throw new HttpError(404, 'Case not found')
   assertCaseReadable(caseData, req.user, 'Case delete')
+  if (!canDeleteCase(caseData, req.user)) {
+    throw new HttpError(403, ['approved', 'released'].includes(caseData.status)
+      ? 'Approved and released cases cannot be deleted. An administrator can cancel the case instead.'
+      : 'Only an administrator, or the case maker before the case is submitted for review, can delete this case.')
+  }
 
-  // NOTE: CaseStatusLog has onDelete: Cascade, so audit entries are deleted
-  // along with the case. Permanent delete auditing would require a separate
-  // non-cascaded table.
-  await prisma.case.delete({ where: { id: caseId } })
+  // The delete cascades to the case's details, approvals and status history, so
+  // keep a full copy first: who deleted it and when, and enough to rebuild it.
+  const clientName = [caseData.client?.firstName, caseData.client?.middleName, caseData.client?.lastName].filter(Boolean).join(' ')
+  await prisma.$transaction(async (tx) => {
+    await tx.deletedCase.create({
+      data: {
+        caseId: caseData.id,
+        caseNumber: caseData.caseNumber,
+        assistanceType: caseData.assistanceType,
+        status: caseData.status,
+        clientName: clientName || null,
+        socialWorkerName: caseData.socialWorkerName ?? null,
+        deletedById: req.user?.id ?? null,
+        deletedByName: req.user?.name ?? null,
+        snapshot: JSON.parse(JSON.stringify(caseData)),
+      },
+    })
+    await logAdminAudit(tx, {
+      actorId: req.user?.id ?? null,
+      action: 'case.delete',
+      targetType: 'case',
+      targetId: caseData.id,
+      summary: `Deleted case ${caseData.caseNumber ?? caseData.id} (${caseData.status}) for ${clientName || 'unknown client'}`.slice(0, 255),
+    })
+    await tx.case.delete({ where: { id: caseId } })
+  })
   res.status(204).send()
 }
 

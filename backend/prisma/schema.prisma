@@ -676,6 +676,26 @@ model ClientDedupEvent {
   @@map("client_dedup_events")
 }
 
+// Full copy of a case taken just before it is deleted, so a deletion can be
+// traced (who, when) and the case rebuilt if it was a mistake.
+model DeletedCase {
+  id               String   @id @default(uuid()) @db.Uuid
+  caseId           String   @map("case_id") @db.Uuid
+  caseNumber       String?  @map("case_number") @db.VarChar(20)
+  assistanceType   String   @map("assistance_type") @db.VarChar(20)
+  status           String   @db.VarChar(40)
+  clientName       String?  @map("client_name") @db.VarChar(300)
+  socialWorkerName String?  @map("social_worker_name") @db.VarChar(200)
+  deletedById      String?  @map("deleted_by_id") @db.Uuid
+  deletedByName    String?  @map("deleted_by_name") @db.VarChar(200)
+  deletedAt        DateTime @default(now()) @map("deleted_at") @db.Timestamptz(6)
+  snapshot         Json
+
+  @@index([caseNumber])
+  @@index([deletedAt])
+  @@map("deleted_cases")
+}
+
 model AdminAuditLog {
   id         String   @id @default(uuid()) @db.Uuid
   actorId    String?  @map("actor_id") @db.Uuid

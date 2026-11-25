@@ -123,6 +123,22 @@ export function userCanRelease(user: Express.AuthUser | undefined): boolean {
   return normalizeDepartment(user.department) !== 'cswdo'
 }
 
+// Deleting is for mistakes, not for finished work: the case maker may delete
+// their own case only before it is submitted for review; admins may also delete
+// cases under review, rejected or cancelled. Approved and released cases are
+// never deleted (an admin cancels them instead).
+const MAKER_DELETABLE_STATUSES = new Set<CaseStatus>(['intake', 'requirements', 'encoding'])
+const NEVER_DELETABLE_STATUSES = new Set<CaseStatus>(['approved', 'released'])
+
+export function canDeleteCase(
+  caseData: { status: CaseStatus; socialWorkerId: string | null },
+  user: Express.AuthUser | undefined,
+) {
+  if (!user || NEVER_DELETABLE_STATUSES.has(caseData.status)) return false
+  if (user.role === 'admin') return true
+  return Boolean(caseData.socialWorkerId && caseData.socialWorkerId === user.id && MAKER_DELETABLE_STATUSES.has(caseData.status))
+}
+
 export function casePermissions(
   caseData: { status: CaseStatus; socialWorkerId: string | null },
   user: Express.AuthUser | undefined,
@@ -134,7 +150,7 @@ export function casePermissions(
   const canModify = Boolean(user) && !workflowLocked && (
     canBypassOwnership || (isOwner && !ownerWorkflowLocked)
   )
-  const canDelete = Boolean(user) && ((user?.role === 'admin') || isOwner)
+  const canDelete = canDeleteCase(caseData, user)
   const canRelease = caseData.status === 'approved' && userCanRelease(user)
   const canCancel = user?.role === 'admin' && caseData.status !== 'cancelled'
   const canReassign = user?.role === 'admin' && caseData.status !== 'cancelled'
