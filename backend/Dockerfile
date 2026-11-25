@@ -8,7 +8,7 @@ RUN apt-get update -y && apt-get install -y \
 WORKDIR /app/backend
 
 COPY backend/package.json backend/package-lock.json ./
-RUN npm ci
+RUN npm ci --no-audit --no-fund --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000
 
 COPY backend/prisma ./prisma
 COPY backend/tsconfig.json ./

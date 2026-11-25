@@ -707,7 +707,7 @@ export async function deleteCase(req: Request, res: Response) {
   if (!canDeleteCase(caseData, req.user)) {
     throw new HttpError(403, ['approved', 'released'].includes(caseData.status)
       ? 'Approved and released cases cannot be deleted. An administrator can cancel the case instead.'
-      : 'Only an administrator, or the case maker before the case is submitted for review, can delete this case.')
+      : 'Only an administrator can delete cases.')
   }
 
   // The delete cascades to the case's details, approvals and status history, so
